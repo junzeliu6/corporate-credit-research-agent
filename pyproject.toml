@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=65"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "corporate-credit-research-agent"
+version = "0.4.0"
+description = "上市公司公开信息驱动的企业授信研究 Agent"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=1.10,<3",
+    "pdfplumber>=0.11,<1",
+    "requests>=2.31,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7,<9",
+]
+
+[project.scripts]
+credit-research-agent = "credit_research_agent.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+credit_research_agent = ["data/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"
+

@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments and local configuration
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# Build output
+build/
+dist/
+*.egg-info/
+
+# Downloaded source documents and parser output (V0.2+)
+data/cache/
+data/downloads/
+data/evidence/
+data/parsed/
+*.pdf
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+

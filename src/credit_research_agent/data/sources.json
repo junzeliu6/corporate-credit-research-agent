@@ -1,0 +1,58 @@
+[
+  {
+    "source_id": "S01",
+    "entity_id": "CN-A-SZSE-002603",
+    "title": "石家庄以岭药业股份有限公司2025年年度报告",
+    "source_type": "annual_report",
+    "publisher": "巨潮资讯网（上市公司公告）",
+    "url": "https://static.cninfo.com.cn/finalpage/2026-04-28/1225205683.PDF",
+    "published_at": "2026-04-28",
+    "report_period": "FY2025",
+    "trusted_tier": 1,
+    "status": "registered",
+    "accessed_at": null,
+    "local_path": null,
+    "page_or_section": null,
+    "notes": "人工核实的官方披露种子；静态目录不代表每台运行环境都已下载或解析，实际状态以本地清单为准。"
+  },
+  {
+    "source_id": "S02",
+    "entity_id": null,
+    "title": "巨潮资讯网官方信息披露平台",
+    "source_type": "disclosure_portal",
+    "publisher": "深圳证券信息有限公司",
+    "url": "https://www.cninfo.com.cn/",
+    "published_at": null,
+    "report_period": null,
+    "trusted_tier": 1,
+    "status": "registered",
+    "notes": "优先用于检索上市公司原始公告。"
+  },
+  {
+    "source_id": "S03",
+    "entity_id": null,
+    "title": "深圳证券交易所官方网站",
+    "source_type": "exchange_website",
+    "publisher": "深圳证券交易所",
+    "url": "https://www.szse.cn/",
+    "published_at": null,
+    "report_period": null,
+    "trusted_tier": 1,
+    "status": "registered",
+    "notes": "交易所主体信息及公告核验入口。"
+  },
+  {
+    "source_id": "S04",
+    "entity_id": "CN-A-SZSE-002603",
+    "title": "以岭药业官方网站",
+    "source_type": "company_website",
+    "publisher": "石家庄以岭药业股份有限公司",
+    "url": "https://www.yiling.cn/",
+    "published_at": null,
+    "report_period": null,
+    "trusted_tier": 1,
+    "status": "registered",
+    "notes": "用于核对公司公开介绍及投资者关系资料；具体事实仍需逐条登记来源。"
+  }
+]
+

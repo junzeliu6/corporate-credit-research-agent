@@ -1,0 +1,131 @@
+{
+  "schema_version": "0.4.0",
+  "identity": {
+    "entity_id": "CN-A-SZSE-002603",
+    "legal_name": "石家庄以岭药业股份有限公司",
+    "english_name": "Shijiazhuang Yiling Pharmaceutical Co., Ltd.",
+    "short_name": "以岭药业",
+    "ticker": "002603.SZ",
+    "security_code": "002603",
+    "exchange": "深圳证券交易所",
+    "country_of_incorporation": "中国",
+    "entity_scope": "consolidated",
+    "evidence_ids": [
+      "E001",
+      "E002",
+      "E003"
+    ]
+  },
+  "generated_at": "2026-10-21T07:48:36.626907+00:00",
+  "facts": [
+    {
+      "fact_id": "F001",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "identity",
+      "field_name": "legal_name",
+      "value": "石家庄以岭药业股份有限公司",
+      "claim": "上市主体的中文法定名称为石家庄以岭药业股份有限公司。",
+      "entity_scope": "listed_company",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E001"
+      ]
+    },
+    {
+      "fact_id": "F002",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "identity",
+      "field_name": "short_name",
+      "value": "以岭药业",
+      "claim": "上市主体的证券简称为以岭药业。",
+      "entity_scope": "listed_company",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E002"
+      ]
+    },
+    {
+      "fact_id": "F003",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "identity",
+      "field_name": "security_code",
+      "value": "002603",
+      "claim": "上市主体的证券代码为002603。",
+      "entity_scope": "listed_company",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E002"
+      ]
+    },
+    {
+      "fact_id": "F004",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "identity",
+      "field_name": "exchange",
+      "value": "深圳证券交易所",
+      "claim": "上市主体在深圳证券交易所上市。",
+      "entity_scope": "listed_company",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E003"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "E001",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 6,
+      "line_number": 6,
+      "page_or_section": "第二节 公司简介和主要财务指标 / 一、公司信息",
+      "quote": "公司的中文名称 石家庄以岭药业股份有限公司",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E002",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 6,
+      "line_number": 4,
+      "page_or_section": "第二节 公司简介和主要财务指标 / 一、公司信息",
+      "quote": "股票简称 以岭药业 股票代码 002603",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E003",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 6,
+      "line_number": 5,
+      "page_or_section": "第二节 公司简介和主要财务指标 / 一、公司信息",
+      "quote": "股票上市证券交易所 深圳证券交易所",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    }
+  ],
+  "sources": [
+    {
+      "source_id": "S01",
+      "entity_id": "CN-A-SZSE-002603",
+      "title": "石家庄以岭药业股份有限公司2025年年度报告",
+      "source_type": "annual_report",
+      "publisher": "巨潮资讯网（上市公司公告）",
+      "url": "https://static.cninfo.com.cn/finalpage/2026-04-28/1225205683.PDF",
+      "published_at": "2026-04-28",
+      "report_period": "FY2025",
+      "trusted_tier": 1,
+      "status": "parsed",
+      "accessed_at": "2026-10-21T07:15:24.742995+00:00",
+      "local_path": "S01.pdf",
+      "page_or_section": "PDF第6页",
+      "notes": "人工核实的官方披露种子；静态目录不代表每台运行环境都已下载或解析，实际状态以本地清单为准。"
+    }
+  ],
+  "limitations": [
+    "当前仅验证上市主体身份字段，尚未构建业务、股权、行业或财务事实。",
+    "verified 表示与指定 PDF 页面的提取原文精确匹配，不代表替代人工尽调或审计确认。"
+  ]
+}
