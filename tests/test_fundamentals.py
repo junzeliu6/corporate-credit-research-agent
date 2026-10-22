@@ -3,7 +3,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone
 
 import pytest
-from pydantic import ValidationError
+from pydantic.v1 import ValidationError
 
 from credit_research_agent.company import CompanyResolver
 from credit_research_agent.documents import (

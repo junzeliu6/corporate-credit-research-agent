@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 from xml.sax.saxutils import escape
 
-from pydantic import BaseModel, Field, validator
+from pydantic.v1 import BaseModel, Field, validator
 
 from credit_research_agent.models import (
     CompanyIdentity,

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, List, Optional, Sequence
 
 import pdfplumber
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 
 from credit_research_agent.documents import (
     DownloadResult,

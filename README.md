@@ -2,7 +2,7 @@
 
 企业授信研究Agent（Corporate Credit Research Agent）是一个面向银行对公场景的学习型项目：从上市公司公开披露出发，逐步构建可追溯的企业研究辅助 Agent。
 
-当前代码版本是 **V1.3：Skill 运行时与确定性 Tool Calling**；需求基线为 **v5**。`ownership-structure` 已通过白名单注册、任务选择、只读加载、真实 Tool 调用及执行追踪完成运行时接入；`financial-analysis` 可被识别和加载，但因确定性财务 Tools 尚未实现而保持 `spec_only`。本项目不是授信审批系统，不给出授信额度、贷款定价或具有审批效力的结论。
+当前代码版本是 **V1.3B：DeepSeek LLM Agent Runtime**；需求基线为 **v5**。V1.3A 已完成白名单 Skill 注册、选择、只读加载、真实 Tool 调用及追踪；V1.3B 使用 OpenAI Agents SDK 建立 Mock/Live 隔离的单 Agent Loop，并只向模型开放现有 `ownership-structure` 高层 Tool。`financial-analysis` 仍为 `spec_only`，V1.4 暂未启动。本项目不是授信审批系统，不给出授信额度、贷款定价或具有审批效力的结论。
 
 ## V0.1—V0.4 已实现
 
@@ -55,7 +55,7 @@
 - 输出 `ownership.json`、展示图 JSON、DOT、高清 SVG/PNG、比例校验 JSON、文字说明、来源和待核查清单；本机无 Graphviz 时明确使用分支感知的内部树状 SVG/PNG 降级引擎。
 - V1.2 未调用 LLM，不产生模型 API 费用。
 
-## V1.3 已实现
+## V1.3A 已实现
 
 - 新增白名单 `SkillRegistry`，只登记项目内批准的 `ownership-structure` 与 `financial-analysis`，记录名称、描述、相对路径、版本、状态、Tool 名称和 SHA-256。
 - 新增确定性 `SkillSelector`；根据任务触发词选择一个 Skill，未知任务和多 Skill 歧义任务均显式失败，不让模型绕过白名单。
@@ -64,7 +64,20 @@
 - 运行时实际调用 V1.2 唯一实现 `build_ownership_artifacts`，并检查10个声明制品确实落盘；没有复制下载、PDF解析、来源或绘图逻辑。
 - CLI 新增 `--run-skill TASK --skill-source S01`；任务和官方来源必须显式给出，失败也会保存机器可读追踪。
 - `financial-analysis` 本轮只注册为 `spec_only`；选中后先完成只读加载，再明确返回“确定性 Tools 尚未实现”，不会假装完成财务分析。
-- V1.3 未安装或调用 OpenAI Agents SDK，也未调用 LLM API，因此无模型费用。当前运行时边界可在后续直接封装为 SDK function tool。
+- V1.3A 没有调用 LLM API，因此无模型费用；其受控入口已在 V1.3B 直接封装为 SDK Function Tool。
+
+## V1.3B 已实现（真实 API 待验证）
+
+- 新增独立 DeepSeek Provider 配置，固定默认 Base URL `https://api.deepseek.com`、模型 `deepseek-flash`、密钥变量 `DEEPSEEK_API_KEY`；`.env` 被 Git 忽略，`.env.example` 不含真实密钥。
+- 通过 OpenAI Agents SDK 的 `Agent`、`Runner`、`AsyncOpenAI` 与 `OpenAIChatCompletionsModel` 建立单 Agent Loop；首版用 `extra_body={"thinking":{"type":"disabled"}}` 关闭思考模式。
+- 默认 `mock` 使用 SDK `ScriptedModel`，不会创建网络客户端：第一轮模拟模型选择股权 Tool，Tool 返回后第二轮生成有来源的说明。
+- `live` 必须显式选择、检测到密钥，并再加 `--confirm-live`；发送前在 stderr 输出脱敏 Provider、模型、thinking、最大轮次、Tool 次数、Token 和重试限制，用户可不确认而取消。
+- 唯一 Function Tool `run_ownership_research` 只接收证券代码与来源编号，不接收路径、Python 或 Shell；内部复用 V1.3A `SkillRuntime` 和 V1.2 `build_ownership_artifacts`。
+- Tool 只向模型返回压缩后的已核实关系、控制关系、比例校验、来源、缺失信息与产物路径，不重复发送完整 PDF 或股权大 JSON。
+- `AgentExecutionTrace` 区分模型调用、模型选择 Tool、Registry/Loader/Skill Runtime、Python Tool、比例校验与产物；记录 Token 使用，费用金额以 DeepSeek 控制台账单为准。
+- 最终回答会再次校验 `[Sxx]` 与百分比是否存在于 Tool 结果；未知来源或未经证实比例会令运行失败，而不会直接交付。
+- 领域数据模型暂通过 Pydantic 2 提供的 `pydantic.v1` 兼容命名空间保持 V0—V1.3A 语义；V1.3B 配置与 Tool 输入使用 Pydantic 2。
+- 已完成离线 Mock、错误参数、轮次/Tool 限制、密钥安全、无网络、证据关联、CLI 与真实 S01 缓存集成测试。尚未发送任何真实 DeepSeek 请求，不能把 Mock 通过表述为 Live 兼容性成功。
 
 当前仍未实现完整报告渲染、财务字段结构化、财务分析、RAG、MCP 或 Streamlit。这些能力按 `ROADMAP.md` 分阶段引入。
 
@@ -100,7 +113,9 @@ corporate-credit-research-agent/
 │  ├─ fundamentals.py        # V1.1 基本面构建与产物接口
 │  ├─ ownership.py           # V1.2 股权/比例校验、聚合、建图和SVG/PNG渲染
 │  ├─ skills.py              # V1.3 Skill白名单、任务选择和只读加载
-│  ├─ skill_runtime.py       # V1.3确定性Tool Calling与执行追踪
+│  ├─ skill_runtime.py       # V1.3A确定性Tool Calling与执行追踪
+│  ├─ llm_config.py          # V1.3B DeepSeek配置、密钥与SDK模型设置
+│  ├─ agent_runtime.py       # V1.3B主Agent、Function Tool、限制和执行追踪
 │  ├─ pdf_parser.py          # 逐页提取、质量摘要和章节定位
 │  └─ cli.py                 # 企业识别、来源处理和Skill运行入口
 ├─ examples/
@@ -125,6 +140,7 @@ corporate-credit-research-agent/
 │  ├─ integration/test_yiling_fundamentals.py
 │  ├─ integration/test_yiling_ownership.py
 │  ├─ integration/test_yiling_skill_runtime.py
+│  ├─ integration/test_yiling_agent_runtime.py
 │  ├─ test_company.py
 │  ├─ test_sources.py
 │  ├─ test_downloader.py
@@ -133,7 +149,10 @@ corporate-credit-research-agent/
 │  ├─ test_ownership.py
 │  ├─ test_skills.py
 │  ├─ test_skill_runtime.py
+│  ├─ test_llm_config.py
+│  ├─ test_agent_runtime.py
 │  └─ test_cli.py
+├─ .env.example
 ├─ pyproject.toml
 ├─ SKILLS_SPEC.md
 ├─ V0_AUDIT.md
@@ -249,6 +268,44 @@ python -m credit_research_agent "002603.SZ" `
 
 这条命令会先复用来源下载与PDF解析，再选择并只读加载 `ownership-structure`，最后调用现有 `build_ownership_artifacts`。`SkillExecutionTrace` 保存 Skill 版本/哈希、匹配触发词、Tool 名称、事件顺序、成功/失败状态和制品路径；它不保存或执行来自外部资料的指令。
 
+通过 V1.3B 默认 Mock Agent 执行端到端流程（不会调用外部 LLM）：
+
+```powershell
+python -m credit_research_agent "002603.SZ" `
+  --run-agent "请分析以岭药业的股权结构，生成股权穿透图，并说明主要股东与实际控制关系" `
+  --agent-source S01 `
+  --llm-mode mock `
+  --ownership-dir "data/ownership"
+```
+
+配置一次受控 Live 测试前，复制 `.env.example` 为 `.env` 并填写密钥：
+
+```powershell
+Copy-Item .env.example .env
+# 在本地 .env 中填写 DEEPSEEK_API_KEY；不要提交该文件。
+```
+
+先省略确认参数查看脱敏配置并取消请求：
+
+```powershell
+python -m credit_research_agent "002603.SZ" `
+  --run-agent "请分析以岭药业的股权结构并生成股权穿透图" `
+  --agent-source S01 `
+  --llm-mode live
+```
+
+人工核对 Provider、模型、轮次、Tool次数和Token限制后，只有显式加入 `--confirm-live` 才会发送请求：
+
+```powershell
+python -m credit_research_agent "002603.SZ" `
+  --run-agent "请分析以岭药业的股权结构并生成股权穿透图" `
+  --agent-source S01 `
+  --llm-mode live `
+  --confirm-live
+```
+
+程序预算与Token限制不是 DeepSeek 账单的绝对硬上限；实际费用和缓存计费以平台控制台为准。本仓库未执行过上述 Live 命令。
+
 输出中的 `company` 是规范化上市主体；`sources` 是静态来源种子；`download` 是本机实际获取结果。`S01.status = registered` 只表示来源目录登记状态，不能替代实际下载清单。
 
 ## 设计取舍
@@ -297,9 +354,13 @@ V0.3 的目标是逐页文本和可靠页码，不是马上做复杂表格还原
 
 25%/5%阈值、聚合和5层限制都是展示规则，不应修改披露事实。V1.2 先校验 `OwnershipDataset`，再生成独立 `OwnershipGraph`；聚合节点保留成员及原边编号，第6层只在图上截断。这样后续修改展示策略时无需重新解释年报，也能检查图和原始证据是否一致。
 
-### 为什么 V1.3 先使用确定性 Skill 路由
+### 为什么 V1.3A 先使用确定性 Skill 路由
 
-Skill 白名单和 Tool 权限属于应用安全边界，应当可测试、可复现。V1.3 因此先用关键词完成单 Skill 路由，并在调用前验证文件路径与哈希；LLM 将来可以负责理解更自然的任务描述，但不能自行注册 Skill、改变 Tool 白名单或替代比例校验。OpenAI Agents SDK 适合在应用持有工具实现、状态和审批策略时承接运行循环，本项目会在确有模型编排需求时把当前运行时封装为 function tool，而不是让首个付费调用成为 V1.3 的验收前提。
+Skill 白名单和 Tool 权限属于应用安全边界，应当可测试、可复现。V1.3A 因此先用关键词完成单 Skill 路由，并在调用前验证文件路径与哈希；V1.3B 的 LLM 负责理解更自然的任务描述，但不能自行注册 Skill、改变 Tool 白名单或替代比例校验。OpenAI Agents SDK 在应用持有工具实现、状态和审批策略的前提下承接运行循环；当前确定性运行时已经封装为Function Tool，而首个付费调用仍不是离线验收前提。
+
+### V1.3B 为什么同时保留 Mock 与 Live
+
+Agent Loop、参数校验、Skill加载和 Tool 结果回传都可以离线验证，不应以付费 API 可用性作为日常测试前提。Mock 使用 Agents SDK 自带的脚本模型，验证的仍是同一个 Runner 与 Function Tool 边界；Live 只替换模型实现。二者不能等同：DeepSeek 对 Tool Calling、`thinking` 关闭参数、Token usage 与错误响应的真实兼容性仍需创建密钥后做一次受控测试。
 
 100%完整性同样按原始数据逐个被持股主体计算。只有同一基准日、同一股本口径且存在人工核验声明时，展示层才允许用差额生成“其他未单列股东”；否则分支保持 `incomplete`，正式绘图器拒绝输出。LLM 不参与比例加总。
 
@@ -374,7 +435,7 @@ Skill 白名单和 Tool 权限属于应用安全边界，应当可测试、可�
 - 本机已安装 Graphviz 16.1.0；当前示例 SVG/PNG 由 `graphviz-dot` 生成，内部 `internal-tree-fallback` 继续作为无外部依赖的降级路径
 - 未调用LLM；比例加总、差额和正式出图资格全部由确定性Python完成
 
-### 2026-10-21 V1.3 Skill 运行时验证
+### 2026-10-21 V1.3A Skill 运行时验证
 
 - 真实任务：`生成股权结构图并核验直接股东持股比例`
 - 主体/来源：`002603.SZ` / `S01`，下载命中已校验缓存；229页全部提取成功
@@ -384,6 +445,14 @@ Skill 白名单和 Tool 权限属于应用安全边界，应当可测试、可�
 - 执行追踪：`examples/V1.3_skill_execution_trace.json`；独立产物：`examples/v1_3_runtime/CN-A-SZSE-002603/`
 - 本次受限子进程无法执行用户目录中的 `dot`，因此真实 V1.3 样例如实记录 `internal-tree-fallback`；V1.2 的 Graphviz 16.1.0 样例及双路径测试结论不变
 - 未调用 LLM/API；没有模型费用
+
+### 2026-10-22 V1.3B Mock Agent 验证
+
+- Provider配置：`deepseek` / `https://api.deepseek.com` / `deepseek-flash`；thinking固定为disabled
+- 默认模式：Mock，无密钥可运行，不创建DeepSeek/OpenAI网络客户端
+- Agent链路：模型选择 `run_ownership_research` → Registry/Loader加载 `ownership-structure` → V1.2 Tool构建与比例校验 → 压缩事实返回模型 → 最终来源/比例校验
+- 真实S01缓存集成：成功生成SVG/PNG，最终说明包含31.53%及`[S01]`，Agent和Skill各自留下独立轨迹
+- Live：能力和保护条件已建立，但尚未创建/使用项目密钥，也未产生任何付费请求；兼容性状态为“未验证”
 
 ## 数据与合规边界
 
@@ -399,14 +468,16 @@ V0回归：41项
 V1.1基本面模型/构建/CLI与真实S01：8项
 V1.2股权规则/构建：22项
 V1.2真实S01股权集成：1项（本机运行产物不存在时明确跳过）
-V1.3注册/选择/加载/运行时/CLI：10项
-V1.3真实S01运行时集成：1项（本机运行产物不存在时明确跳过）
-本次本机合计：83 passed（V1.2 Graphviz启用路径此前亦通过）
+V1.3A注册/选择/加载/运行时/CLI：10项
+V1.3A真实S01运行时集成：1项（本机运行产物不存在时明确跳过）
+V1.3B配置/密钥/Mock Agent/限制/证据/CLI：16项
+V1.3B真实S01 Mock Agent集成：1项（本机运行产物不存在时明确跳过）
+本次本机目标合计：100项（最终结果以 `V1_3B_STATUS.md` 的实测记录为准）
 ```
 
 网络请求使用离线假响应测试，因此日常 `pytest` 不依赖巨潮资讯是否可访问。
 
 ## 下一阶段
 
-V1.3 已完成。下一步是 V1.4：用现有基本面与股权结构化结果生成带正文 `[S01]` 引用、来源附录、股权图和待核查清单的 Markdown 报告初稿。财务确定性数据与 `financial-analysis` 执行仍按 V2 开发，不在 V1.4 用推断补齐。详见 `ROADMAP.md`。
+先创建 DeepSeek API Key，并按 README 的“预览→显式确认”流程执行一次小规模 Live 兼容性测试，核对 Tool Calling、关闭thinking、usage与错误处理。确认后才把 V1.3B 标记为真实模型已验证；随后再启动 V1.4 报告初稿。财务确定性数据与 `financial-analysis` 执行仍按 V2 开发。详见 `ROADMAP.md`。
 

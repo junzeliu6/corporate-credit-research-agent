@@ -10,7 +10,7 @@ from enum import Enum
 from pathlib import Path
 from typing import List, Optional, Protocol
 
-from pydantic import BaseModel, Field
+from pydantic.v1 import BaseModel, Field
 
 from credit_research_agent.models import SourceRecord
 

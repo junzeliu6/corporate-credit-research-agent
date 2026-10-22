@@ -1,0 +1,19 @@
+digraph ownership {
+  graph [rankdir=TB, bgcolor="white", pad=0.25, nodesep=0.55, ranksep=0.95, splines=polyline, ordering=out, newrank=true, dpi=200];
+  node [shape=box, style="rounded,filled", fontname="Microsoft YaHei", fontsize=11, color="#9CA3AF", penwidth=1.0, margin="0.16,0.10"];
+  edge [color="#4B5563", penwidth=1.25, arrowsize=0.72];
+  "CN-A-SZSE-002603" [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1"><TR><TD>石家庄以岭药业股份有限公司</TD></TR></TABLE>>, fillcolor="#E8F1FB"];
+  "ORG-YILING-MEDTECH" [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1"><TR><TD>以岭医药科技有限公司</TD></TR><TR><TD><FONT POINT-SIZE="10" COLOR="#374151">31.53%</FONT></TD></TR></TABLE>>, fillcolor="#F8FAFC"];
+  "PERSON-WU-RUI" [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1"><TR><TD>吴瑞</TD></TR><TR><TD><FONT POINT-SIZE="10" COLOR="#374151">2.34%</FONT></TD></TR></TABLE>>, fillcolor="#FFF8E7"];
+  "PERSON-WU-XIANGJUN" [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1"><TR><TD>吴相君</TD></TR><TR><TD><FONT POINT-SIZE="10" COLOR="#374151">20.81%</FONT></TD></TR></TABLE>>, fillcolor="#FFF8E7"];
+  "RESIDUAL::CN-A-SZSE-002603::total_ordinary_share_capital" [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1"><TR><TD>其他未单列股东</TD></TR><TR><TD><FONT POINT-SIZE="10" COLOR="#374151">45.32%</FONT></TD></TR></TABLE>>, fillcolor="#F3F4F6"];
+  "PERSON-WU-YILING" [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1"><TR><TD>吴以岭</TD></TR><TR><TD><FONT POINT-SIZE="10" COLOR="#374151">100.00%</FONT></TD></TR></TABLE>>, fillcolor="#FFF8E7"];
+  { rank=same; "CN-A-SZSE-002603"; }
+  { rank=same; "ORG-YILING-MEDTECH"; "PERSON-WU-RUI"; "PERSON-WU-XIANGJUN"; "RESIDUAL::CN-A-SZSE-002603::total_ordinary_share_capital"; }
+  { rank=same; "PERSON-WU-YILING"; }
+  "CN-A-SZSE-002603" -> "ORG-YILING-MEDTECH" [dir=back, arrowtail=normal, arrowhead=none, style=solid];
+  "CN-A-SZSE-002603" -> "PERSON-WU-XIANGJUN" [dir=back, arrowtail=normal, arrowhead=none, style=solid];
+  "CN-A-SZSE-002603" -> "PERSON-WU-RUI" [dir=back, arrowtail=normal, arrowhead=none, style=solid];
+  "ORG-YILING-MEDTECH" -> "PERSON-WU-YILING" [dir=back, arrowtail=normal, arrowhead=none, style=solid];
+  "CN-A-SZSE-002603" -> "RESIDUAL::CN-A-SZSE-002603::total_ordinary_share_capital" [dir=back, arrowtail=normal, arrowhead=none, style=solid];
+}

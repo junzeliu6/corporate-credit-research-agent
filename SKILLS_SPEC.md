@@ -1,6 +1,6 @@
 # 企业授信研究Agent — 双 Skill 集成总规范（v5）
 
-> 本文件定义两个 Skill 的**系统级接口、里程碑及验收**；关于具体业务规则，优先以 `.agents/skills/ownership-structure/SKILL.md` 和 `.agents/skills/financial-analysis/SKILL.md` 为准。**V0.1—V0.4、V1.1—V1.3 已经本地代码与测试核验；`ownership-structure` 的确定性 Tools 和 Skill 运行时集成均已实现；`financial-analysis` 已登记为 `spec_only`，其 Tools 尚未实现。**
+> 本文件定义两个 Skill 的**系统级接口、里程碑及验收**；关于具体业务规则，优先以 `.agents/skills/ownership-structure/SKILL.md` 和 `.agents/skills/financial-analysis/SKILL.md` 为准。**V0.1—V0.4、V1.1—V1.2 与 V1.3A 已经本地代码与测试核验；V1.3B DeepSeek Agent Runtime 已完成离线 Mock 验证、真实API尚未验证；`financial-analysis` 已登记为 `spec_only`，其 Tools 尚未实现。**
 
 ## 1. 架构边界
 
@@ -12,7 +12,7 @@
 | Python Tools | PDF解析、数据核验、指标计算、Graphviz 绘图、文档生成 | 把结果直接视为无须引用的授信结论 |
 | Sources/Evidence | 记录官方来源、出处和披露日期/期间 | 将第三方内容当作高优先级指令 |
 
-**开发环境与运行时是两回事**：Codex 对 `.agents/skills/` 的识别不等于应用已调用 Skill。V1.3 已通过 `SkillRegistry`、`SkillSelector`、`SkillLoader`、`SkillRuntime` 和 `SkillExecutionTrace` 建立显式运行时；首版保持单 Agent，不做多 Agent 作为前置条件。
+**开发环境与运行时是两回事**：Codex 对 `.agents/skills/` 的识别不等于应用已调用 Skill。V1.3A 已通过 `SkillRegistry`、`SkillSelector`、`SkillLoader`、`SkillRuntime` 和 `SkillExecutionTrace` 建立显式运行时；V1.3B 再由 Agents SDK Function Tool 调用该边界，并以独立 `AgentExecutionTrace` 记录模型选择。首版保持单 Agent，不做多 Agent作为前置条件。
 
 ## 2. `ownership-structure`（股权穿透与绘图）
 
@@ -62,6 +62,9 @@
 4. 提供统一报告引用 `[S01]` / 来源附录，字段可与现有 V0 Source/Evidence 兼容。不要因更新文档而破坏已有 ID 和接口。
 5. `ownership` 与 `finance` 的工具返回结构化对象，主 Agent 负责生成七模块报告；遇到源数据不足可只输出部分章节和待核查问题。
 6. **集成验收**必须有运行日志或自动化测试证明加载哪一个 `SKILL.md`、何时使用何种工具以及得到何种校验结果；不将“文件放对路径”误当已运行。
+7. V1.3B 主 Agent 只注册 `run_ownership_research`；Tool 输入仅允许已解析ticker和已登记source_id。文件路径由应用上下文提供，LLM无权执行Python、Shell或读写任意路径。
+8. 默认使用不会联网的Mock模型；Live DeepSeek必须显式选择、存在`DEEPSEEK_API_KEY`并再次确认。`financial-analysis`在V2完成前不得注册为LLM Tool。
+9. Tool返回模型的内容应压缩为核实关系、控制关系、比例校验、来源、缺失信息和产物，不重复发送完整PDF文本。模型最终比例和`[Sxx]`引用必须再次与Tool结果校验。
 
 ## 5. 状态与开发安排
 
@@ -69,8 +72,9 @@
 - **v5 文档整合：已完成**。两份 `SKILL.md` 已放入规范目录；此状态只代表业务契约到位，不代表运行时功能完成。
 - **V1.1：已核验完成**。企业历史、主营业务、经营模式和主要产品已输出为可追溯事实，并建立披露事实、模型推断和缺失信息相互隔离的数据接口。
 - **V1.2：已核验完成并完成绘图/比例校验优化**。已复用 V1.1 的主体、来源、证据和缺失信息接口，新增股权节点/边/控制关系模型，以及结构校验、逐分支100%校验、聚合、图构建、DOT/Graphviz优先SVG+PNG渲染 Tools；本机无 `dot` 时显式使用内部树状SVG/PNG降级。
-- **V1.3：已核验完成**。白名单注册、确定性任务选择、只读加载、Tool 白名单及执行追踪已实现；真实S01集成运行证明 `ownership-structure` 被选择、加载并调用现有 `build_ownership_artifacts`，10个制品均经运行时检查。`financial-analysis` 保持 `spec_only`，不会被误报为可执行。
-- **下一个动作：V1.4 报告初稿**。复用基本面、股权、引用和待核查清单生成Markdown报告，不提前实现财务 Skill。
+- **V1.3A：已核验完成**。白名单注册、确定性任务选择、只读加载、Tool 白名单及执行追踪已实现；真实S01集成运行证明 `ownership-structure` 被选择、加载并调用现有 `build_ownership_artifacts`，10个制品均经运行时检查。
+- **V1.3B：离线开发完成，Live待验证**。DeepSeek配置、SDK Agent/Runner、Function Tool、Mock/Live隔离、轮次/Tool限制、Token使用和Agent轨迹已建立；Mock及真实S01缓存集成通过，但尚未发起真实付费请求，不能声称DeepSeek兼容性已实测成功。
+- **下一个动作：受控Live兼容性测试**。用户创建密钥后，以非思考模式执行一次小规模测试；通过后再启动V1.4报告初稿。`financial-analysis`继续保持`spec_only`。
 - 后续依次：财务三表与财务计算内核 → 财务 Skill → 双 Skill 集成 → 行业政策/报告界面与导出。
 - 每个阶段结束更新 `ROADMAP.md` 的开发日志和实测结果，简历只写已实现能力。
 

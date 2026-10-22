@@ -12,7 +12,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Mapping, Sequence, Tuple
 
-from pydantic import BaseModel, Field
+from pydantic.v1 import BaseModel, Field
 
 
 class SkillRuntimeStatus(str, Enum):

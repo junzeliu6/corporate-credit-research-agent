@@ -13,7 +13,7 @@ from typing import Callable, Optional, Sequence
 from urllib.parse import urlparse
 
 import requests
-from pydantic import BaseModel, ValidationError
+from pydantic.v1 import BaseModel, ValidationError
 
 from credit_research_agent.documents import DownloadFailureRecord, DownloadResult
 from credit_research_agent.models import SourceRecord, SourceType

@@ -2,7 +2,8 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from pydantic import BaseModel
+import pytest
+from pydantic.v1 import BaseModel
 
 from credit_research_agent import cli
 from credit_research_agent.documents import DownloadResult, ExtractionArtifacts
@@ -506,3 +507,122 @@ def test_cli_run_skill_reuses_document_pipeline_and_runtime(
     assert exit_code == 0
     assert output["skill_run"]["selected_skill"] == "ownership-structure"
     assert output["skill_run"]["tool_name"] == "build_ownership_artifacts"
+
+
+def test_cli_run_agent_requires_explicit_source(capsys) -> None:
+    exit_code = cli.main(["以岭药业", "--run-agent", "生成股权结构图"])
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 9
+    assert output["agent_error"]["code"] == "missing_agent_source"
+
+
+def test_cli_live_preview_requires_confirmation_without_downloading(
+    monkeypatch, capsys
+) -> None:
+    secret = "sk-live-preview-must-stay-secret"
+    monkeypatch.setenv("DEEPSEEK_API_KEY", secret)
+
+    class ForbiddenDownloader:
+        def download(self, *args, **kwargs):
+            pytest.fail("未确认Live前不应下载资料或调用模型")
+
+    monkeypatch.setattr(cli, "OfficialPdfDownloader", ForbiddenDownloader)
+
+    exit_code = cli.main(
+        [
+            "002603.SZ",
+            "--run-agent",
+            "生成股权结构图",
+            "--agent-source",
+            "S01",
+            "--llm-mode",
+            "live",
+        ]
+    )
+    captured = capsys.readouterr()
+    output = json.loads(captured.out)
+
+    assert exit_code == 9
+    assert output["agent_error"]["code"] == "live_confirmation_required"
+    assert output["agent_config"]["model"] == "deepseek-flash"
+    assert secret not in captured.out
+    assert secret not in captured.err
+    assert "live_request_preview" in captured.err
+
+
+def test_cli_mock_agent_reuses_document_pipeline_and_runtime(
+    tmp_path, monkeypatch, capsys
+) -> None:
+    class FakeDownloader:
+        def download(self, source, destination_dir, *, force=False):
+            return DownloadResult(
+                source_id="S01",
+                source_title=source.title,
+                source_url=str(source.url),
+                file_path=tmp_path / "S01.pdf",
+                manifest_path=tmp_path / "S01.metadata.json",
+                accessed_at=datetime(2026, 10, 22, tzinfo=timezone.utc),
+                final_url=str(source.url),
+                http_status=200,
+                bytes_written=1,
+                sha256="a" * 64,
+                from_cache=True,
+            )
+
+    extraction = ExtractionArtifacts(
+        source_id="S01",
+        summary_path=tmp_path / "parsed" / "S01" / "summary.json",
+        pages_path=tmp_path / "parsed" / "S01" / "pages.jsonl",
+        sample_path=tmp_path / "parsed" / "S01" / "sample.json",
+        total_pages=229,
+        pages_with_text=229,
+        failed_pages=0,
+    )
+
+    class FakeAgentResult(BaseModel):
+        final_output: str
+        selected_skill: str
+        tool_name: str
+        trace_path: Path
+
+    class FakeAgentRuntime:
+        def __init__(self, project_root, config):
+            assert config.mode.value == "mock"
+            assert config.api_key is None
+
+        def run_sync(self, **kwargs):
+            assert kwargs["task"] == "生成股权结构图"
+            assert kwargs["identity"].ticker == "002603.SZ"
+            assert kwargs["source"].source_id == "S01"
+            assert kwargs["pages_path"] == extraction.pages_path
+            assert kwargs["confirmed_live"] is False
+            return FakeAgentResult(
+                final_output="以岭医药科技有限公司持股31.53%[S01]",
+                selected_skill="ownership-structure",
+                tool_name="build_ownership_artifacts",
+                trace_path=kwargs["trace_output"],
+            )
+
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    monkeypatch.setattr(cli, "OfficialPdfDownloader", FakeDownloader)
+    monkeypatch.setattr(cli, "extract_to_artifacts", lambda *args, **kwargs: extraction)
+    monkeypatch.setattr(cli, "CreditResearchAgentRuntime", FakeAgentRuntime)
+
+    exit_code = cli.main(
+        [
+            "002603.SZ",
+            "--run-agent",
+            "生成股权结构图",
+            "--agent-source",
+            "S01",
+            "--agent-trace-output",
+            str(tmp_path / "agent_trace.json"),
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert output["agent_config"]["mode"] == "mock"
+    assert output["agent_run"]["selected_skill"] == "ownership-structure"
+    assert output["agent_run"]["tool_name"] == "build_ownership_artifacts"

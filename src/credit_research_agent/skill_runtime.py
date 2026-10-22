@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic.v1 import BaseModel, Field
 
 from credit_research_agent.models import CompanyIdentity, SourceRecord
 from credit_research_agent.ownership import OwnershipArtifacts, build_ownership_artifacts

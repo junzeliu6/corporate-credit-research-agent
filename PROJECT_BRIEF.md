@@ -1,6 +1,6 @@
 # 企业授信研究Agent — 上市公司公开信息驱动的企业授信研究 Agent
 
-> 版本：2026-10-21 / v5 需求基线（整合两份完整 Skill 规范）。状态：**V0.1—V0.4、V1.1 与 ownership-structure 的 V1.2 确定性 Tools 已经本地代码、真实年报产物和测试核验；两个 Skill 的 Agent 运行时选择/加载尚未实现，financial-analysis Tools 尚未开发**。
+> 版本：2026-10-22 / v5 需求基线（整合两份完整 Skill 规范）。状态：**V0.1—V0.4、V1.1、ownership-structure 的 V1.2 确定性 Tools、V1.3A Skill Runtime 及 V1.3B LLM Agent Runtime 的离线能力已经本地代码、真实年报产物和测试核验；V1.3B 真实DeepSeek API兼容性等待受控验证，V1.4暂未启动，financial-analysis Tools尚未开发**。
 > 本版本替代此前“从用户上传 Excel 开始”的旧版范围定义。
 
 ## 项目命名约定
@@ -66,11 +66,12 @@
 不抓取需要登录/验证码/绕过反爬/无授权的数据库。要对网络失败、PDF无法提取、来源冲突、同名实体、期间不一致、资料不足设计降级处理。
 
 ## 6. Agent 技术设计与取舍
-- Python + Pandas + Pydantic + pdfplumber + requests；pytest。V0 已选择 pdfplumber 做逐页文本与物理页码提取、Requests 做少量同步官方 PDF 下载；财务表格结构化如需新增解析器，应先用真实年报与离线 fixture 比较后再决定，不替换稳定 V0 接口。
-- 核心采用一个单 Agent + Tool Calling；其编排负责实体识别、资料检索、解析任务选择、报告综合。
+- Python + Pandas + Pydantic + pdfplumber + requests + OpenAI Agents SDK；pytest。V0 已选择 pdfplumber 做逐页文本与物理页码提取、Requests 做少量同步官方 PDF 下载；财务表格结构化如需新增解析器，应先用真实年报与离线 fixture 比较后再决定，不替换稳定 V0 接口。
+- 核心采用一个单 Agent + Tool Calling；V1.3A 已完成不依赖模型的白名单 Skill Runtime，V1.3B 以 DeepSeek 为首个 Provider，通过 SDK 的 OpenAI Chat Completions 兼容层建立模型驱动的 Agent Loop。
 - 文件解析、计算、图表绘制、来源管理采用确定性 Python 工具；LLM 负责摘要、分类、异常解释和问题梳理。
 - **明确开发两个可测试的 Agent Skills**：`ownership-structure`（逐层穿透、控制关系核验、股权图）和 `financial-analysis`（重大科目变化、原因合理性核查及授信分析）。正式操作规则分别见 `.agents/skills/ownership-structure/SKILL.md` 和 `.agents/skills/financial-analysis/SKILL.md`；整合要求见 `SKILLS_SPEC.md`。
-- Skill 是专业流程规范和可复用资源；绘图、计算和文件解析使用确定性 Python Tools。运行时 Agent 必须显式支持技能选择、加载和调用；不要误认为开发环境中的 Codex 自动发现 Skill，就代表 OpenAI Agents SDK 的应用也会自动使用。
+- Skill 是专业流程规范和可复用资源；绘图、计算和文件解析使用确定性 Python Tools。运行时 Agent 必须显式支持技能选择、加载和调用；V1.3A 已做到 Registry/Selector/Loader/Tool 的确定性调用，V1.3B 已把这一高层入口封装为受限 Function Tool，而未复制底层实现。不要误认为开发环境中的 Codex 自动发现 Skill，就代表应用运行时自动使用。
+- LLM 配置独立于业务代码，默认 Mock 模式。首个 Live Provider 使用 `DEEPSEEK_API_KEY`、`https://api.deepseek.com` 和 `deepseek-flash`；Live 必须显式选择并确认，密钥不得进入日志、Git 或 Codex 自身模型供应商配置。初期固定关闭 thinking，真实兼容性测试需单独授权。
 - RAG/MCP 按需要引入，不为堆栈而堆栈。
 - 第一轮使用 CLI 即可，Streamlit 和 Word 导出留至主要功能跑通以后。
 - 研究信息先生成结构化 JSON，再渲染 Markdown/Word 报告；不要直接让模型一次性编造长报告。
@@ -78,7 +79,7 @@
 ## 7. 成功标准
 - 对 `以岭药业` / `002603.SZ` 可以稳定识别研究主体、整理真实来源清单，并处理可公开获取的至少一份年报。
 - 七个模块有清晰结构，信息缺失时透明留空；财务指标可复算，主体/货币/期间无混淆。
-- 两个 Skill 均具有 `SKILL.md`、明确触发条件/工作流程、实际工具实现和测试；有运行日志或集成测试证明 Agent 能选择和使用它们。
+- 两个 Skill 均具有 `SKILL.md` 与明确触发条件/工作流程；`ownership-structure` 需具备实际工具、Agent调用和测试，`financial-analysis` 在V2完成前必须保持 `spec_only`，不得为了满足形式验收而暴露给模型。
 - 报告重要事实有来源编号，能点开原文链接。
 - 有独立的待补充资料与尽调问题清单。
 - 具有自动化测试和可复现演示；简历只描述已实现、已验证的功能。
@@ -87,5 +88,5 @@
 
 - **股权穿透与绘图**：从目标企业出发向股东逐层追溯；图中**目标企业在最上方**、股东按分支向下展开，箭头由股东指向被持股企业；**最多展示 5 层（含目标企业）**。单个自然人持股**严格大于 25%**原则上单列；一般机构股东**低于 5%**且不影响控制链时可聚合。控股股东、实际控制人、一致行动人和其他关键主体无论比例多少均优先单列。每个被展开主体的可比直接股东比例应以确定性Python校验至100%（默认容差±0.01个百分点）；缺口无依据时不得补足或生成正式图。任何比例/控制判断都须有出处；无法穿透标记未核实。
 - **授信财务分析**：优先分析货币资金、应收账款、预付款项、固定资产、短期借款、应付账款、主营业务收入、经营现金流，兼顾存货与其他重大项目。每项按照“**上期金额 → 本期金额 → 增减金额和比例 → 已披露原因或假设 → 合理性分析 → 授信关注/尽调问题**”输出。**同比变化绝对值达到或超过 20%**必须触发重点分析，低于阈值的重大金额、现金流异常等仍需关注。不得臆造存款银行、授信银行、前五大回款或银行流水。
-- 两份完整版 Skill 文件是业务需求基线，不代表运行时加载已经实现；ownership-structure 的确定性 Tools 已实现，financial-analysis Tools 尚未实现。具体状态只以 `ROADMAP.md`、代码和实测记录为准。
+- 两份完整版 Skill 文件是业务需求基线；V1.3A 已实现运行时选择和只读加载。ownership-structure 的确定性 Tools 已实现并完成运行时调用验证，financial-analysis Tools 尚未实现且保持 `spec_only`。具体状态只以 `ROADMAP.md`、代码和实测记录为准。
 - V0 下载、PDF逐页解析、主体识别及 Source/Evidence 编号体系作为两个 Skill 的共享底座；后续只能增量扩展，不复制第二套来源或证据系统。

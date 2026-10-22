@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 
 from credit_research_agent.company import CompanyResolver
 from credit_research_agent.skill_runtime import (

@@ -1,6 +1,6 @@
 # 企业授信研究Agent — 公共信息研究 Agent 开发路线（v5：双 Skill 集成）
 
-> V0.1—V0.4、V1.1—V1.3 已由本地代码、真实年报产物和测试核验完成；`ownership-structure` 已接入白名单 Skill 运行时并实际调用确定性 Tool。下一阶段为 V1.4；首个标的`以岭药业 / 002603.SZ`，默认不上传资料。
+> V0.1—V0.4、V1.1—V1.2、V1.3A 与 V1.3B 离线实现已由本地代码、真实年报产物和测试核验；`ownership-structure` 已接入白名单确定性 Skill Runtime 与 SDK Agent Loop。V1.3B 的真实 DeepSeek API 兼容性等待用户创建密钥后受控验证，V1.4 暂不启动；首个标的`以岭药业 / 002603.SZ`，默认不上传资料。
 
 ## [x] V0：上市公司数据入口与证据基础
 - [x] **V0.1** 建立项目骨架、最少依赖、README、实体识别/映射（`以岭药业`、`002603`、`002603.SZ`→`石家庄以岭药业股份有限公司 / 002603.SZ`）及官方来源种子目录；编写离线测试。首个种子为2025年年报（`https://static.cninfo.com.cn/finalpage/2026-04-28/1225205683.PDF`）；同时登记深交所、巨潮资讯和公司官网。V0.1不要求真实下载，也不需要立即写通用搜索引擎。
@@ -20,7 +20,8 @@
 ## [ ] V1：企业研究初稿与单 Agent
 - [x] **V1.1 企业基本面事实抽取**：复用 `CompanyResolver`、`SourceCatalog`、`PdfTextExtractor`、`EvidenceBuilder`，将发展历史、主营业务、经营模式和主要产品分模块抽取为带 `Fxxx/Exxx/Sxx` 引用的结构化结果；先不追求覆盖所有年份。
 - [x] **V1.2 `ownership-structure` 确定性内核**：定义股权节点、边、控制关系、基准日、核验状态及展示配置，并实现 `validate_ownership_facts`、`validate_ownership_percentages`、`aggregate_ownership_holders`、`build_ownership_graph`、`render_ownership_graph`。逐个被展开主体校验同一时点/股本口径的100%完整性；只有全部通过的 `formal_ready` 图才输出SVG/PNG。公开资料检索/下载/PDF读取继续复用 V0，不复制第二套管线。
-- [x] **V1.3 Skill 运行时机制与 Agent Tool Calling**：实现白名单 `SkillRegistry`（`name`、`description`、路径、版本/哈希）、按任务选择的 `SkillSelector`、只读 `SkillLoader` 及 `SkillExecutionTrace`。调用顺序固定为“解析主体 → 获取/校验来源 → 选择并加载 Skill → 调用确定性 Tools → 校验结构化结果 → 生成引用/文字”；真实S01集成测试已证明 `ownership-structure` 被选择、加载并实际调用 `build_ownership_artifacts`。本阶段无需LLM判断即可满足验收，未引入多 Agent 或付费 API 调用。
+- [x] **V1.3A 确定性 Skill Runtime**：实现白名单 `SkillRegistry`（`name`、`description`、路径、版本/哈希）、按任务选择的 `SkillSelector`、只读 `SkillLoader` 及 `SkillExecutionTrace`。调用顺序固定为“解析主体 → 获取/校验来源 → 选择并加载 Skill → 调用确定性 Tools → 校验结构化结果 → 生成引用/文字”；真实S01集成测试已证明 `ownership-structure` 被选择、加载并实际调用 `build_ownership_artifacts`。本阶段没有LLM判断、Agent Loop 或付费 API 调用。
+- [x] **V1.3B DeepSeek LLM Agent Runtime（离线完成，Live待验证）**：使用 OpenAI Agents SDK 的 `Agent`、`Runner` 和受限 Function Tool 接入 DeepSeek OpenAI 兼容接口。默认 Mock 模式且禁止联网；Live 模式必须显式选择、存在 `DEEPSEEK_API_KEY` 并由用户确认。第一阶段只向模型开放 `ownership-structure` 高层 Tool，运行时真实经过 Registry、Loader 与现有确定性内核，并记录模型选择、Skill加载、Tool调用、比例校验、产物和Token使用轨迹。先使用 `thinking: {"type": "disabled"}`；代码和离线验收完成，但尚未发起真实付费请求，推理模式与真实API兼容性均未声称完成验证。
 - [ ] **V1.4 报告初稿**：Markdown 渲染正文`[S01]`引用、来源附录、股权图和待核查信息；数据不足时允许只输出局部结果和明确限制。
 
 **V1 验收测试**：
@@ -30,6 +31,7 @@
 - 图中目标公司置顶；节点只显示名称和比例，箭头从股东指向被持股企业；SVG/PNG可渲染且无来源/控制说明文字或虚线。
 - 以岭药业端到端案例只使用经核验披露，不将虚构 fixture 或未知比例写入真实图。
 - 运行日志或集成测试证明 `ownership-structure` 被选择、加载并调用了实际 Tool；只存在 `SKILL.md` 不算验收通过。
+- V1.3B Mock 测试不得产生任何外部 LLM 请求；Live 模式缺少密钥、缺少显式确认或超出轮次/Tool次数时必须安全终止。模型分析中的比例和来源编号必须能在 Tool 返回的结构化事实与证据中找到。
 
 ## [ ] V2：财务与行业研究
 - [ ] **V2.1 可比财务事实层**：真实发现并登记 2024/2023 年官方年报，不猜测 URL；从 2024、2025 合并财务报表及附注提取三表数据，必要时使用 2023 期初余额。每个数据点保留原始科目、期间、币种、单位、合并/母公司口径、`source_id` 和页码；表格结构化结果必须回看原文核验。
@@ -163,3 +165,19 @@
 - 测试：V1.3注册/选择/加载/运行时/CLI及真实S01集成共新增11项；最终全量回归为 `83 passed`。
 - LLM/费用：本阶段未安装或调用OpenAI Agents SDK，未调用LLM API，未产生模型费用。确定性运行时已形成可供后续SDK function tool复用的受控边界。
 - 下一阶段：V1.4报告初稿；复用已核实基本面、股权、引用和待核查结果，不提前开发`financial-analysis` Tools。
+
+### 2026-10-22 — V1.3B DeepSeek LLM Agent Runtime 启动
+
+- 路线拆分：原 V1.3 正式标记为已完成的 V1.3A；V1.3B 负责真实 LLM Provider 配置、主 Agent、Agent Loop、Function Calling、Mock/Live 隔离及运行轨迹；V1.4 暂不启动。
+- Provider 决策：首个真实模型供应商为 DeepSeek，默认模型 `deepseek-flash`、Base URL `https://api.deepseek.com`、密钥环境变量 `DEEPSEEK_API_KEY`；业务模块不得硬编码或输出密钥。
+- 安全边界：默认 Mock；本阶段只建立 Live 能力，不自动发起付费请求。暂时只开放已实现的 `ownership-structure`，`financial-analysis` 保持 `spec_only`。
+- 兼容策略：通过 OpenAI Agents SDK 的自定义 OpenAI Chat Completions 模型接入；初期固定关闭 DeepSeek thinking，待验证 `reasoning_content` 多轮传递后再评估推理模式。
+
+### 2026-10-22 — V1.3B 离线实现与验收完成
+
+- 新增 `llm_config.py`：DeepSeek Provider、环境变量/`.env`密钥读取、脱敏配置、关闭thinking、请求超时、有限重试、输出Token限制及 `AsyncOpenAI + OpenAIChatCompletionsModel` 构造。
+- 新增 `agent_runtime.py`：主Agent Instructions、SDK Runner、唯一白名单 `run_ownership_research` Function Tool、最大轮次/Tool次数、错误处理、Token使用、Agent执行轨迹及来源/比例后置校验。
+- Mock/Live隔离：默认SDK `ScriptedModel`完成两轮Agent Loop且不创建网络客户端；Live同时要求模式、密钥和`--confirm-live`，发送前展示脱敏配置。未执行任何真实DeepSeek请求。
+- 真实S01 Mock链路：模型选择Tool后，Registry确认并由Loader只读加载`ownership-structure/SKILL.md`，复用`build_ownership_artifacts`完成比例校验与绘图，再输出带`[S01]`的说明；Agent和Skill轨迹分别落盘。
+- 依赖：`openai-agents 0.21.1`、`openai 3.36.0`、`pydantic 2.14.1`、`python-dotenv 1.2.4`；旧领域模型通过`pydantic.v1`兼容命名空间保留既有语义。
+- 实际测试：`.venv\Scripts\python.exe -m pytest -q`，结果`100 passed in 5.16s`；另以安装后的CLI完成真实S01缓存端到端Mock演示。下一步仅做一次用户确认的Live兼容性测试，不启动V1.4。

@@ -9,7 +9,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic.v1 import BaseModel, Field, ValidationError
 
 from credit_research_agent.documents import DownloadResult
 from credit_research_agent.evidence import (

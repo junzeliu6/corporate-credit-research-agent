@@ -6,7 +6,7 @@ from datetime import date, datetime
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import AnyHttpUrl, BaseModel, Field, root_validator, validator
+from pydantic.v1 import AnyHttpUrl, BaseModel, Field, root_validator, validator
 
 
 class EntityScope(str, Enum):
