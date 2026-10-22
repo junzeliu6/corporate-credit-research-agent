@@ -42,6 +42,25 @@ class FactCategory(str, Enum):
     INDUSTRY = "industry"
 
 
+class ResearchModule(str, Enum):
+    """事实或信息缺口所属的研究模块。"""
+
+    COMPANY_IDENTITY = "company_identity"
+    DEVELOPMENT_HISTORY = "development_history"
+    MAIN_BUSINESS = "main_business"
+    OPERATING_MODEL = "operating_model"
+    MAIN_PRODUCTS = "main_products"
+    OWNERSHIP_STRUCTURE = "ownership_structure"
+
+
+class StatementType(str, Enum):
+    """区分原始披露、模型推断与缺失信息。"""
+
+    DISCLOSED_FACT = "disclosed_fact"
+    MODEL_INFERENCE = "model_inference"
+    MISSING_INFO = "missing_info"
+
+
 class EvidenceStatus(str, Enum):
     VERIFIED = "verified"
     CONFLICTING = "conflicting"
@@ -124,6 +143,8 @@ class FactRecord(BaseModel):
     fact_id: str
     entity_id: str
     category: FactCategory
+    research_module: ResearchModule = ResearchModule.COMPANY_IDENTITY
+    statement_type: StatementType = StatementType.DISCLOSED_FACT
     field_name: str
     value: str
     claim: str
@@ -135,6 +156,63 @@ class FactRecord(BaseModel):
     def validate_fact_id(cls, value: str) -> str:
         if len(value) != 4 or not value.startswith("F") or not value[1:].isdigit():
             raise ValueError("fact_id 必须采用 F001 形式")
+        return value
+
+    @validator("statement_type")
+    def facts_must_be_disclosed(cls, value: StatementType) -> StatementType:
+        if value is not StatementType.DISCLOSED_FACT:
+            raise ValueError("FactRecord 只保存年报披露事实，推断和缺失信息必须使用独立模型")
+        return value
+
+
+class ModelInference(BaseModel):
+    """模型或分析人员基于事实形成的推断；不得混入 FactRecord。"""
+
+    inference_id: str
+    entity_id: str
+    research_module: ResearchModule
+    statement_type: StatementType = StatementType.MODEL_INFERENCE
+    statement: str = Field(min_length=1)
+    supporting_fact_ids: List[str] = Field(min_items=1)
+    evidence_ids: List[str] = Field(min_items=1)
+    confidence_note: Optional[str] = None
+
+    @validator("inference_id")
+    def validate_inference_id(cls, value: str) -> str:
+        if len(value) != 4 or not value.startswith("I") or not value[1:].isdigit():
+            raise ValueError("inference_id 必须采用 I001 形式")
+        return value
+
+    @validator("statement_type")
+    def inference_type_is_fixed(cls, value: StatementType) -> StatementType:
+        if value is not StatementType.MODEL_INFERENCE:
+            raise ValueError("ModelInference.statement_type 必须为 model_inference")
+        return value
+
+
+class MissingInformation(BaseModel):
+    """当前证据无法确认的事项；明确记录原因而不是补造答案。"""
+
+    missing_id: str
+    entity_id: str
+    research_module: ResearchModule
+    statement_type: StatementType = StatementType.MISSING_INFO
+    topic: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    reason: str = Field(min_length=1)
+    related_fact_ids: List[str] = Field(default_factory=list)
+    evidence_ids: List[str] = Field(default_factory=list)
+
+    @validator("missing_id")
+    def validate_missing_id(cls, value: str) -> str:
+        if len(value) != 4 or not value.startswith("M") or not value[1:].isdigit():
+            raise ValueError("missing_id 必须采用 M001 形式")
+        return value
+
+    @validator("statement_type")
+    def missing_type_is_fixed(cls, value: StatementType) -> StatementType:
+        if value is not StatementType.MISSING_INFO:
+            raise ValueError("MissingInformation.statement_type 必须为 missing_info")
         return value
 
 
@@ -176,6 +254,52 @@ class EvidenceBundle(BaseModel):
             missing = set(identity.evidence_ids) - evidence_id_set
             if missing:
                 raise ValueError(f"主体引用了不存在的证据：{sorted(missing)}")
+        return values
+
+    class Config:
+        allow_mutation = False
+
+
+class FundamentalResearchBundle(EvidenceBundle):
+    """V1.1 企业基本面输出，显式隔离事实、推断和缺失信息。"""
+
+    schema_version: str = "1.1.0"
+    inferences: List[ModelInference] = Field(default_factory=list)
+    missing_information: List[MissingInformation] = Field(default_factory=list)
+
+    @root_validator
+    def validate_fundamental_references(cls, values):
+        facts = values.get("facts") or []
+        evidence = values.get("evidence") or []
+        inferences = values.get("inferences") or []
+        missing_information = values.get("missing_information") or []
+
+        fact_ids = {item.fact_id for item in facts}
+        evidence_ids = {item.evidence_id for item in evidence}
+
+        inference_ids = [item.inference_id for item in inferences]
+        missing_ids = [item.missing_id for item in missing_information]
+        if len(inference_ids) != len(set(inference_ids)):
+            raise ValueError("inference_id 不得重复")
+        if len(missing_ids) != len(set(missing_ids)):
+            raise ValueError("missing_id 不得重复")
+
+        for item in inferences:
+            missing_facts = set(item.supporting_fact_ids) - fact_ids
+            missing_evidence = set(item.evidence_ids) - evidence_ids
+            if missing_facts or missing_evidence:
+                raise ValueError(
+                    f"推断 {item.inference_id} 存在悬空引用："
+                    f"facts={sorted(missing_facts)}, evidence={sorted(missing_evidence)}"
+                )
+        for item in missing_information:
+            missing_facts = set(item.related_fact_ids) - fact_ids
+            missing_evidence = set(item.evidence_ids) - evidence_ids
+            if missing_facts or missing_evidence:
+                raise ValueError(
+                    f"缺失信息 {item.missing_id} 存在悬空引用："
+                    f"facts={sorted(missing_facts)}, evidence={sorted(missing_evidence)}"
+                )
         return values
 
     class Config:

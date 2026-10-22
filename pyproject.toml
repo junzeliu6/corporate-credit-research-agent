@@ -4,13 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "corporate-credit-research-agent"
-version = "0.4.0"
+version = "1.2.0"
 description = "上市公司公开信息驱动的企业授信研究 Agent"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "pydantic>=1.10,<3",
     "pdfplumber>=0.11,<1",
+    "Pillow>=10,<13",
     "requests>=2.31,<3",
 ]
 
@@ -36,4 +37,7 @@ credit_research_agent = ["data/*.json"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "-ra"
+markers = [
+    "integration: 使用本机已验证的真实公开资料运行，资料不存在时跳过",
+]
 

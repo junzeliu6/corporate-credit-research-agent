@@ -1,0 +1,18 @@
+[
+  {
+    "source_id": "S01",
+    "entity_id": "CN-A-SZSE-002603",
+    "title": "石家庄以岭药业股份有限公司2025年年度报告",
+    "source_type": "annual_report",
+    "publisher": "巨潮资讯网（上市公司公告）",
+    "url": "https://static.cninfo.com.cn/finalpage/2026-04-28/1225205683.PDF",
+    "published_at": "2026-04-28",
+    "report_period": "FY2025",
+    "trusted_tier": 1,
+    "status": "parsed",
+    "accessed_at": "2026-10-21T07:15:24.742995+00:00",
+    "local_path": "S01.pdf",
+    "page_or_section": "PDF第6、97、98、99、100、217页",
+    "notes": "人工核实的官方披露种子；静态目录不代表每台运行环境都已下载或解析，实际状态以本地清单为准。"
+  }
+]

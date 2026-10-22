@@ -1,6 +1,6 @@
 # 企业授信研究Agent — 公共信息研究 Agent 开发路线（v5：双 Skill 集成）
 
-> V0.1—V0.4 已由本地代码和测试核验完成；v5 文档及两份 Skill 规范已纳入项目，但 Skill 对应的 Tools 与运行时调用尚未实现。下一阶段仍从 V1.1 开始；首个标的`以岭药业 / 002603.SZ`，默认不上传资料。
+> V0.1—V0.4、V1.1—V1.2 已由本地代码、真实年报产物和测试核验完成；`ownership-structure` 的确定性 Tools 已实现，Skill 运行时尚未开发。下一阶段为 V1.3；首个标的`以岭药业 / 002603.SZ`，默认不上传资料。
 
 ## [x] V0：上市公司数据入口与证据基础
 - [x] **V0.1** 建立项目骨架、最少依赖、README、实体识别/映射（`以岭药业`、`002603`、`002603.SZ`→`石家庄以岭药业股份有限公司 / 002603.SZ`）及官方来源种子目录；编写离线测试。首个种子为2025年年报（`https://static.cninfo.com.cn/finalpage/2026-04-28/1225205683.PDF`）；同时登记深交所、巨潮资讯和公司官网。V0.1不要求真实下载，也不需要立即写通用搜索引擎。
@@ -18,16 +18,16 @@
 - [x] 重跑现有离线测试，确认 V0 回归通过；未修改 `src/` 与 `tests/`。
 
 ## [ ] V1：企业研究初稿与单 Agent
-- [ ] **V1.1 企业基本面事实抽取**：复用 `CompanyResolver`、`SourceCatalog`、`PdfTextExtractor`、`EvidenceBuilder`，将发展历史、主营业务、经营模式和主要产品分模块抽取为带 `Fxxx/Exxx/Sxx` 引用的结构化结果；先不追求覆盖所有年份。
-- [ ] **V1.2 `ownership-structure` 确定性内核**：先定义股权节点、边、控制关系、基准日、核验状态及展示配置，再开发 Python Tools。建议接口为 `validate_ownership_facts`、`aggregate_ownership_holders`、`build_ownership_graph`、`render_ownership_graph`；公开资料检索/下载/PDF读取继续复用 V0，不复制第二套管线。Graphviz 只接收已校验结构化数据。
+- [x] **V1.1 企业基本面事实抽取**：复用 `CompanyResolver`、`SourceCatalog`、`PdfTextExtractor`、`EvidenceBuilder`，将发展历史、主营业务、经营模式和主要产品分模块抽取为带 `Fxxx/Exxx/Sxx` 引用的结构化结果；先不追求覆盖所有年份。
+- [x] **V1.2 `ownership-structure` 确定性内核**：定义股权节点、边、控制关系、基准日、核验状态及展示配置，并实现 `validate_ownership_facts`、`validate_ownership_percentages`、`aggregate_ownership_holders`、`build_ownership_graph`、`render_ownership_graph`。逐个被展开主体校验同一时点/股本口径的100%完整性；只有全部通过的 `formal_ready` 图才输出SVG/PNG。公开资料检索/下载/PDF读取继续复用 V0，不复制第二套管线。
 - [ ] **V1.3 Skill 运行时机制与 Agent Tool Calling**：实现白名单 `SkillRegistry`（`name`、`description`、路径、版本/哈希）、按任务选择的 `SkillSelector`、只读 `SkillLoader` 及 `SkillExecutionTrace`。调用顺序固定为“解析主体 → 获取/校验来源 → 选择并加载 Skill → 调用确定性 Tools → 校验结构化结果 → 生成引用/文字”；Codex 能发现文件不视为 Agents SDK 已接入。此阶段再引入所需的 OpenAI Agents SDK/LLM API，不提前构建多 Agent。
 - [ ] **V1.4 报告初稿**：Markdown 渲染正文`[S01]`引用、来源附录、股权图和待核查信息；数据不足时允许只输出局部结果和明确限制。
 
 **V1 验收测试**：
 
 - 现有 41 项 V0 测试持续通过；V1.1 的每条事实均能回溯到来源和页码/章节。
-- 股权离线虚构 fixture 覆盖 1—5 层、第 6 层截断，24.99/25/25.01% 自然人，4.99/5/5.01% 机构，一致行动人优先、国资参股与控制区分、环路/重复节点、日期冲突和来源缺失。
-- 图中目标公司置顶；节点、边、文字与 JSON 一致；SVG 可渲染，任一边无来源时不得标为已核实。
+- 股权离线虚构 fixture 覆盖 1—5 层、第 6 层截断，24.99/25/25.01% 自然人，4.99/5/5.01% 机构，逐分支100%、85%不完整、105%异常、小股东合并、重要自然人保留、国资参股与控制区分、环路/重复节点、日期冲突和来源缺失。
+- 图中目标公司置顶；节点只显示名称和比例，箭头从股东指向被持股企业；SVG/PNG可渲染且无来源/控制说明文字或虚线。
 - 以岭药业端到端案例只使用经核验披露，不将虚构 fixture 或未知比例写入真实图。
 - 运行日志或集成测试证明 `ownership-structure` 被选择、加载并调用了实际 Tool；只存在 `SKILL.md` 不算验收通过。
 
@@ -116,3 +116,39 @@
 - 明确开发顺序：V1.1 基本面证据 → V1.2 股权确定性内核 → V1.3 SkillRegistry/Agent 调用 → V1.4 初版报告 → V2.1 可比财务事实 → V2.2 财务计算 → V2.3 财务 Skill → V2.5 双 Skill 集成。
 - 实际测试命令：`.venv\Scripts\python.exe -m pytest -q`；整合前结果：`41 passed in 0.77s`，文档整合后最终回归：`41 passed in 0.85s`。
 - 遗留问题：Git 仓库目前尚无 commit 且项目文件均未跟踪；是否建立 V0.4/v5 文档整合基线提交需用户确认，本轮未执行 commit。
+
+### 2026-10-21 — V1.1 企业基本面事实抽取完成
+
+- 数据模型：新增 `ResearchModule`、`StatementType`、`ModelInference`、`MissingInformation` 和 `FundamentalResearchBundle`；`FactRecord` 只允许 `disclosed_fact`，推断与缺失信息不能伪装成事实。
+- 复用接口：继续使用 `CompanyResolver`、`SourceCatalog`、`OfficialPdfDownloader`、`PdfTextExtractor`、`EvidenceBuilder`、`SourceRecord`、`FactRecord` 和 `EvidenceRecord`，未复制下载/PDF/来源系统。
+- 基本面构建：新增 `fundamentals.py` 与人工审阅的 `fundamentals_seeds.json`，支持跨 PDF 换行的事实值校验、双哈希、精确原文匹配、悬空引用校验和失败记录。
+- CLI：新增 `--build-fundamentals`，输出结构化 JSON 与 `[S01]` 引用附录；包版本更新为 `1.1.0`。
+- 真实年报结果：S01 共生成21条披露事实、19条证据、0条模型推断和3条缺失信息；模块分布为身份4、发展历史3、主营业务2、经营模式8、主要产品4；引用PDF第6、10、27、28、128页。
+- LLM：本阶段未调用任何 LLM API，未产生模型费用。人工审阅种子只生成候选契约，最终事实仍必须通过哈希一致的原文精确匹配。
+- 测试：先执行 V1.1 模块与真实年报测试，`16 passed in 0.70s`；最终执行 `.venv\Scripts\python.exe -m pytest -q`，结果 `49 passed in 0.90s`。
+- 安装验证：虚拟环境中的旧版0.4.0包已用本地源码离线更新到1.1.0；实际 CLI 命中缓存完成229页解析和基本面产物构建。
+- 遗留问题：前身企业2001年前完整沿革、统一盈利模式、各单品收入/占比尚未从当前证据链确认；V1.2才开始股权结构模型与确定性Tools。
+
+### 2026-10-21 — V1.2 股权结构确定性内核初版完成
+
+- 数据模型：新增股权节点、持股/表决权边、控制关系、国资控制判断、基准日、核验状态、展示配置、原始数据集与展示图模型；控制关系不由比例自动推断。
+- 确定性 Tools：实现 `validate_ownership_facts`、`aggregate_ownership_holders`、`build_ownership_graph`、`render_ownership_graph`，原始事实与聚合/裁剪后的展示图分离。
+- 规则边界：覆盖自然人24.99/25/25.01%、机构4.99/5/5.01%、重要控制主体例外、1—5层及第6层截断、无证据不补足100%、国资参股与控制区分。
+- 异常校验：覆盖来源/证据缺失、重复节点/关系、日期与比例冲突、合计超过100%、环路和图/JSON一致性；任一已核实边缺少来源时拒绝建图。
+- 真实S01结果：基准日2025-12-31，5个节点、4条持股边、1条表决权边、4条控制关系、16条证据和2条缺失信息；引用PDF第6、97、98、99、100、217页。
+- 真实持股事实：以岭医药科技有限公司31.53%、吴相君20.81%、吴瑞2.34%、吴以岭持有以岭医药科技有限公司100.00%；实际控制人/一致行动和最终控制方依据年报分别建模。
+- 产物：原始数据JSON、展示图JSON、DOT、SVG和`[S01]`引用；本机未安装Graphviz `dot`，示例明确记录为`internal-svg-fallback`，没有冒充Graphviz成功。
+- LLM：本阶段未调用LLM API，未产生模型费用；也未实现SkillRegistry或Agent Tool Calling。
+- 测试：股权模块/CLI/真实年报集成与全量回归均通过，最终 `.venv\Scripts\python.exe -m pytest -q` 为 `67 passed`。
+- 遗留问题：完整股东名册无法由前十名股东表补足；第100页产权关系方框图的图像文字未被当前PDF文本层提取；下一阶段为V1.3 Skill运行时机制。
+
+### 2026-10-21 — V1.2 股权图与比例完整性优化
+
+- 新增 `validate_ownership_percentages`，以单个被持股主体为单位按同一基准日和股本口径加总；默认容差±0.01个百分点，85%保持不完整，105%报错，未通过时拒绝正式出图。
+- 只有存在同口径、同一时点的人工核验声明时，才在展示层生成“其他未单列股东”确定性差额；原始股东节点、边和证据不变。
+- Graphviz DOT及内部降级渲染统一为目标公司置顶、股东按分支向下、箭头由下方股东指向上方被持股企业；节点仅含名称与比例，控制关系/来源/状态移到图外。
+- 产物扩展为 `ownership.json`、展示图JSON、DOT、`ownership_structure.svg/png`、`ownership_summary.md`、`ownership_validation.json`、来源及待核查清单。
+- 真实S01展示图为6个节点、5条持股线；目标公司分支54.68%+计算差额45.32%=100%，以岭医药科技分支100%，均通过校验。计算差额不代表某一具体股东。
+- 已安装并验证官方Graphviz 16.1.0；当前示例使用`graphviz-dot`生成SVG/PNG并完成目视检查，内部`internal-tree-fallback`继续保留。两种路径均无节点重叠或交叉线。
+- 全量测试：降级路径为`72 passed in 1.93s`；Graphviz启用路径使用独立临时目录复核为`72 passed in 5.20s`。
+- 仍未实现 SkillRegistry/Agent Tool Calling；下一阶段仍为V1.3，不提前开发financial-analysis Skill。

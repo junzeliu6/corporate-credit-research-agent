@@ -6,6 +6,8 @@ from credit_research_agent import cli
 from credit_research_agent.documents import DownloadResult, ExtractionArtifacts
 from credit_research_agent.downloader import DownloadError
 from credit_research_agent.evidence import EvidenceArtifacts, EvidenceBuildError
+from credit_research_agent.fundamentals import FundamentalArtifacts
+from credit_research_agent.ownership import OwnershipArtifacts
 from credit_research_agent.pdf_parser import PdfExtractionError
 
 
@@ -274,3 +276,151 @@ def test_cli_evidence_failure_is_explicit(tmp_path, monkeypatch, capsys) -> None
         "message": "模拟证据不匹配",
     }
 
+
+def test_cli_build_fundamentals_runs_reused_document_pipeline(
+    tmp_path, monkeypatch, capsys
+) -> None:
+    class FakeDownloader:
+        def download(self, source, destination_dir, *, force=False):
+            return DownloadResult(
+                source_id="S01",
+                source_title=source.title,
+                source_url=str(source.url),
+                file_path=tmp_path / "S01.pdf",
+                manifest_path=tmp_path / "S01.metadata.json",
+                accessed_at=datetime(2026, 10, 21, tzinfo=timezone.utc),
+                final_url=str(source.url),
+                http_status=200,
+                bytes_written=1,
+                sha256="a" * 64,
+                from_cache=True,
+            )
+
+    extraction = ExtractionArtifacts(
+        source_id="S01",
+        summary_path=tmp_path / "parsed" / "S01" / "summary.json",
+        pages_path=tmp_path / "parsed" / "S01" / "pages.jsonl",
+        sample_path=tmp_path / "parsed" / "S01" / "sample.json",
+        total_pages=229,
+        pages_with_text=229,
+        failed_pages=0,
+    )
+
+    def fake_extract(*args, **kwargs):
+        return extraction
+
+    def fake_build(**kwargs):
+        assert kwargs["identity"].ticker == "002603.SZ"
+        assert kwargs["source"].source_id == "S01"
+        assert kwargs["pages_path"] == extraction.pages_path
+        return FundamentalArtifacts(
+            entity_id="CN-A-SZSE-002603",
+            fundamentals_path=tmp_path / "fundamentals.json",
+            citations_path=tmp_path / "citations.md",
+            fact_count=21,
+            evidence_count=19,
+            inference_count=0,
+            missing_information_count=3,
+            module_fact_counts={
+                "company_identity": 4,
+                "development_history": 3,
+                "main_business": 2,
+                "operating_model": 8,
+                "main_products": 4,
+            },
+            source_count=1,
+        )
+
+    monkeypatch.setattr(cli, "OfficialPdfDownloader", FakeDownloader)
+    monkeypatch.setattr(cli, "extract_to_artifacts", fake_extract)
+    monkeypatch.setattr(cli, "build_fundamental_artifacts", fake_build)
+
+    exit_code = cli.main(["002603.SZ", "--build-fundamentals", "S01"])
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert output["fundamentals"]["fact_count"] == 21
+    assert output["fundamentals"]["inference_count"] == 0
+    assert output["fundamentals"]["module_fact_counts"]["operating_model"] == 8
+
+
+def test_cli_build_ownership_runs_reused_document_pipeline(
+    tmp_path, monkeypatch, capsys
+) -> None:
+    class FakeDownloader:
+        def download(self, source, destination_dir, *, force=False):
+            return DownloadResult(
+                source_id="S01",
+                source_title=source.title,
+                source_url=str(source.url),
+                file_path=tmp_path / "S01.pdf",
+                manifest_path=tmp_path / "S01.metadata.json",
+                accessed_at=datetime(2026, 10, 21, tzinfo=timezone.utc),
+                final_url=str(source.url),
+                http_status=200,
+                bytes_written=1,
+                sha256="a" * 64,
+                from_cache=True,
+            )
+
+    extraction = ExtractionArtifacts(
+        source_id="S01",
+        summary_path=tmp_path / "parsed" / "S01" / "summary.json",
+        pages_path=tmp_path / "parsed" / "S01" / "pages.jsonl",
+        sample_path=tmp_path / "parsed" / "S01" / "sample.json",
+        total_pages=229,
+        pages_with_text=229,
+        failed_pages=0,
+    )
+
+    def fake_build(**kwargs):
+        assert kwargs["identity"].ticker == "002603.SZ"
+        assert kwargs["pages_path"] == extraction.pages_path
+        assert kwargs["summary_output"] == tmp_path / "ownership_summary.md"
+        assert kwargs["validation_output"] == tmp_path / "ownership_validation.json"
+        assert kwargs["sources_output"] == tmp_path / "ownership_sources.json"
+        assert kwargs["questions_output"] == tmp_path / "ownership_questions.md"
+        return OwnershipArtifacts(
+            entity_id="CN-A-SZSE-002603",
+            dataset_path=tmp_path / "ownership_dataset.json",
+            graph_path=tmp_path / "ownership_graph.json",
+            svg_path=tmp_path / "ownership.svg",
+            png_path=tmp_path / "ownership.png",
+            dot_path=tmp_path / "ownership.dot",
+            citations_path=tmp_path / "citations.md",
+            summary_path=tmp_path / "ownership_summary.md",
+            validation_path=tmp_path / "ownership_validation.json",
+            sources_path=tmp_path / "ownership_sources.json",
+            questions_path=tmp_path / "ownership_questions.md",
+            render_engine="internal-tree-fallback",
+            node_count=5,
+            edge_count=5,
+            control_relationship_count=4,
+            missing_information_count=2,
+        )
+
+    monkeypatch.setattr(cli, "OfficialPdfDownloader", FakeDownloader)
+    monkeypatch.setattr(cli, "extract_to_artifacts", lambda *args, **kwargs: extraction)
+    monkeypatch.setattr(cli, "build_ownership_artifacts", fake_build)
+
+    exit_code = cli.main(
+        [
+            "002603.SZ",
+            "--build-ownership",
+            "S01",
+            "--ownership-summary-output",
+            str(tmp_path / "ownership_summary.md"),
+            "--ownership-validation-output",
+            str(tmp_path / "ownership_validation.json"),
+            "--ownership-sources-output",
+            str(tmp_path / "ownership_sources.json"),
+            "--ownership-questions-output",
+            str(tmp_path / "ownership_questions.md"),
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert output["ownership"]["node_count"] == 5
+    assert output["ownership"]["edge_count"] == 5
+    assert output["ownership"]["render_engine"] == "internal-tree-fallback"

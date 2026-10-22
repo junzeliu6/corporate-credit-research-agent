@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.pytest_tmp*/
 .mypy_cache/
 .ruff_cache/
 .coverage
@@ -23,6 +24,8 @@ dist/
 data/cache/
 data/downloads/
 data/evidence/
+data/fundamentals/
+data/ownership/
 data/parsed/
 *.pdf
 

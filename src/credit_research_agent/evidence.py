@@ -26,6 +26,7 @@ from credit_research_agent.models import (
     EvidenceStatus,
     FactCategory,
     FactRecord,
+    ResearchModule,
     SourceRecord,
     SourceStatus,
     VerificationMethod,
@@ -53,6 +54,7 @@ class FactSeed(BaseModel):
     fact_id: str
     entity_id: str
     category: FactCategory
+    research_module: ResearchModule = ResearchModule.COMPANY_IDENTITY
     field_name: str
     value: str
     claim: str
@@ -118,6 +120,12 @@ def load_parsed_pages(path: Path) -> Dict[int, ParsedPage]:
     if not pages:
         raise EvidenceBuildError("empty_pages_artifact", "逐页文本文件为空")
     return pages
+
+
+def _normalise_fact_text(value: str) -> str:
+    """忽略 PDF 换行和空格差异，但不改写原始证据内容。"""
+
+    return "".join(value.split())
 
 
 class EvidenceBuilder:
@@ -201,21 +209,24 @@ class EvidenceBuilder:
         for seed in seeds.facts:
             if seed.entity_id != identity.entity_id:
                 continue
-            identity_value = getattr(identity, seed.field_name, None)
-            if identity_value != seed.value:
-                raise EvidenceBuildError(
-                    "identity_value_mismatch",
-                    f"事实 {seed.fact_id} 的值与主体登记字段 {seed.field_name} 不一致",
-                )
+            if seed.category is FactCategory.IDENTITY:
+                identity_value = getattr(identity, seed.field_name, None)
+                if identity_value != seed.value:
+                    raise EvidenceBuildError(
+                        "identity_value_mismatch",
+                        f"事实 {seed.fact_id} 的值与主体登记字段 {seed.field_name} 不一致",
+                    )
             missing = set(seed.evidence_ids) - set(evidence_by_id)
             if missing:
                 raise EvidenceBuildError(
                     "missing_evidence_reference",
                     f"事实 {seed.fact_id} 缺少证据：{sorted(missing)}",
                 )
-            if not any(
-                seed.value in evidence_by_id[evidence_id].quote
-                for evidence_id in seed.evidence_ids
+            combined_evidence_text = "".join(
+                evidence_by_id[evidence_id].quote for evidence_id in seed.evidence_ids
+            )
+            if _normalise_fact_text(seed.value) not in _normalise_fact_text(
+                combined_evidence_text
             ):
                 raise EvidenceBuildError(
                     "fact_value_not_in_evidence",
@@ -226,6 +237,7 @@ class EvidenceBuilder:
                     fact_id=seed.fact_id,
                     entity_id=seed.entity_id,
                     category=seed.category,
+                    research_module=seed.research_module,
                     field_name=seed.field_name,
                     value=seed.value,
                     claim=seed.claim,
@@ -235,18 +247,25 @@ class EvidenceBuilder:
                 )
             )
 
-        referenced_evidence_ids = sorted(
-            {evidence_id for fact in fact_records for evidence_id in fact.evidence_ids}
+        identity_evidence_ids = sorted(
+            {
+                evidence_id
+                for fact in fact_records
+                if fact.category is FactCategory.IDENTITY
+                for evidence_id in fact.evidence_ids
+            }
         )
         verified_identity = identity.copy(
-            update={"evidence_ids": referenced_evidence_ids}
+            update={"evidence_ids": identity_evidence_ids}
         )
+        referenced_pages = sorted({item.page_number for item in evidence_records})
+        page_text = "、".join(str(page) for page in referenced_pages)
         processed_source = source.copy(
             update={
                 "status": SourceStatus.PARSED,
                 "accessed_at": download.accessed_at,
                 "local_path": Path(download.file_path).name,
-                "page_or_section": "PDF第6页",
+                "page_or_section": f"PDF第{page_text}页",
             }
         )
         return EvidenceBundle(
@@ -256,7 +275,7 @@ class EvidenceBuilder:
             evidence=evidence_records,
             sources=[processed_source],
             limitations=[
-                "当前仅验证上市主体身份字段，尚未构建业务、股权、行业或财务事实。",
+                "当前输出仅包含种子目录中经过精确原文匹配的事实，未匹配内容不得视为已核实。",
                 "verified 表示与指定 PDF 页面的提取原文精确匹配，不代表替代人工尽调或审计确认。",
             ],
         )

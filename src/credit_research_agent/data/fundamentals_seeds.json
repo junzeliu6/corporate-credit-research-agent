@@ -1,0 +1,371 @@
+{
+  "evidence": [
+    {
+      "evidence_id": "E004",
+      "entity_id": "CN-A-SZSE-002603",
+      "source_id": "S01",
+      "page_number": 128,
+      "page_or_section": "第十二节 财务报告 / 三、公司基本情况 / （一）公司概况",
+      "match_text": "石家庄以岭药业股份有限公司（以下简称“本公司”或“公司”），系于 2001 年由石家庄以岭药业有"
+    },
+    {
+      "evidence_id": "E005",
+      "entity_id": "CN-A-SZSE-002603",
+      "source_id": "S01",
+      "page_number": 128,
+      "page_or_section": "第十二节 财务报告 / 三、公司基本情况 / （一）公司概况",
+      "match_text": "限公司整体变更设立，公司股票于 2011 年 7 月 28 日在深圳证券交易所上市交易。公司类型：其他股份"
+    },
+    {
+      "evidence_id": "E006",
+      "entity_id": "CN-A-SZSE-002603",
+      "source_id": "S01",
+      "page_number": 6,
+      "page_or_section": "第二节 公司简介和主要财务指标 / 四、注册变更情况",
+      "match_text": "公司上市以来主营业务的变化情况（如有） 无变更"
+    },
+    {
+      "evidence_id": "E007",
+      "entity_id": "CN-A-SZSE-002603",
+      "source_id": "S01",
+      "page_number": 10,
+      "page_or_section": "第三节 管理层讨论与分析 / 一、报告期内公司从事的主要业务",
+      "match_text": "公司的主营业务是专利创新中药的研发、生产和销售。在专注创新中药研发的同时，公司积极布局"
+    },
+    {
+      "evidence_id": "E008",
+      "entity_id": "CN-A-SZSE-002603",
+      "source_id": "S01",
+      "page_number": 10,
+      "page_or_section": "第三节 管理层讨论与分析 / 一、报告期内公司从事的主要业务",
+      "match_text": "化生药和健康产业，构建了专利中药、化生药、健康产业协同发展、相互促进的医药健康产业格局。"
+    },
+    {
+      "evidence_id": "E009",
+      "entity_id": "CN-A-SZSE-002603",
+      "source_id": "S01",
+      "page_number": 27,
+      "page_or_section": "第三节 管理层讨论与分析 / 一、主要业务 / （三）经营模式 / 采购模式",
+      "match_text": "公司根据所采物料（商品）特性不同，采取不同采购模式，主要的采购模式有以下四种："
+    },
+    {
+      "evidence_id": "E010",
+      "entity_id": "CN-A-SZSE-002603",
+      "source_id": "S01",
+      "page_number": 27,
+      "page_or_section": "第三节 管理层讨论与分析 / 一、主要业务 / （三）经营模式 / 采购模式",
+      "match_text": "招标采购：大宗物料（如大型设备、内外包材等）采购，根据公司《招标管理办法》通过以岭电子"
+    },
+    {
+      "evidence_id": "E011",
+      "entity_id": "CN-A-SZSE-002603",
+      "source_id": "S01",
+      "page_number": 27,
+      "page_or_section": "第三节 管理层讨论与分析 / 一、主要业务 / （三）经营模式 / 采购模式",
+      "match_text": "集中采购：对用途相对单一，公司内部管理分散的品种（如劳保、办公用品及零星品种），由各部"
+    },
+    {
+      "evidence_id": "E012",
+      "entity_id": "CN-A-SZSE-002603",
+      "source_id": "S01",
+      "page_number": 27,
+      "page_or_section": "第三节 管理层讨论与分析 / 一、主要业务 / （三）经营模式 / 采购模式",
+      "match_text": "产地采购：对大宗中药材品种多采取药材产地采购模式，即通过前期的市场及产区调研，确定适合"
+    },
+    {
+      "evidence_id": "E013",
+      "entity_id": "CN-A-SZSE-002603",
+      "source_id": "S01",
+      "page_number": 27,
+      "page_or_section": "第三节 管理层讨论与分析 / 一、主要业务 / （三）经营模式 / 采购模式",
+      "match_text": "议价采购：对金额相对较小，又不符合招标采购条件的品种，一般选择三家以上供应商进行议价，"
+    },
+    {
+      "evidence_id": "E014",
+      "entity_id": "CN-A-SZSE-002603",
+      "source_id": "S01",
+      "page_number": 28,
+      "page_or_section": "第三节 管理层讨论与分析 / 一、主要业务 / （三）经营模式 / 生产模式",
+      "match_text": "公司严格按照药品生产质量管理规范组织生产，原则上以市场和客户需求为依据，根据营销中心制"
+    },
+    {
+      "evidence_id": "E015",
+      "entity_id": "CN-A-SZSE-002603",
+      "source_id": "S01",
+      "page_number": 28,
+      "page_or_section": "第三节 管理层讨论与分析 / 一、主要业务 / （三）经营模式 / 销售模式",
+      "match_text": "公司销售模式的核心竞争优势在于络病理论指导下的专业化推广模式。公司的专利产品均为络病理"
+    },
+    {
+      "evidence_id": "E016",
+      "entity_id": "CN-A-SZSE-002603",
+      "source_id": "S01",
+      "page_number": 28,
+      "page_or_section": "第三节 管理层讨论与分析 / 一、主要业务 / （三）经营模式 / 销售模式",
+      "match_text": "公司产品主要通过合作的医药流通企业进行对外配送销售，目前公司已建立了覆盖全国市场的专业"
+    },
+    {
+      "evidence_id": "E017",
+      "entity_id": "CN-A-SZSE-002603",
+      "source_id": "S01",
+      "page_number": 28,
+      "page_or_section": "第三节 管理层讨论与分析 / 一、主要业务 / （三）经营模式 / 研发模式",
+      "match_text": "公司的研发模式主要包括自主研发和合作研发两种模式。"
+    },
+    {
+      "evidence_id": "E018",
+      "entity_id": "CN-A-SZSE-002603",
+      "source_id": "S01",
+      "page_number": 128,
+      "page_or_section": "第十二节 财务报告 / 三、公司基本情况 / 2、企业的业务性质和主要经营活动",
+      "match_text": "本公司所处行业为医药制造业，主要产品包括通心络胶囊、参松养心胶囊、连花清瘟胶囊、芪苈强"
+    },
+    {
+      "evidence_id": "E019",
+      "entity_id": "CN-A-SZSE-002603",
+      "source_id": "S01",
+      "page_number": 128,
+      "page_or_section": "第十二节 财务报告 / 三、公司基本情况 / 2、企业的业务性质和主要经营活动",
+      "match_text": "心胶囊等。"
+    }
+  ],
+  "facts": [
+    {
+      "fact_id": "F005",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "business",
+      "research_module": "development_history",
+      "field_name": "corporate_conversion",
+      "value": "2001 年由石家庄以岭药业有限公司整体变更设立",
+      "claim": "公司披露其于2001年由石家庄以岭药业有限公司整体变更设立。",
+      "entity_scope": "listed_company",
+      "period": "FY2025",
+      "evidence_ids": ["E004", "E005"]
+    },
+    {
+      "fact_id": "F006",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "business",
+      "research_module": "development_history",
+      "field_name": "listing_date",
+      "value": "2011 年 7 月 28 日",
+      "claim": "公司股票于2011年7月28日在深圳证券交易所上市交易。",
+      "entity_scope": "listed_company",
+      "period": "FY2025",
+      "evidence_ids": ["E005"]
+    },
+    {
+      "fact_id": "F007",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "business",
+      "research_module": "development_history",
+      "field_name": "main_business_change_since_listing",
+      "value": "公司上市以来主营业务的变化情况（如有） 无变更",
+      "claim": "2025年年报披露，公司上市以来主营业务无变更。",
+      "entity_scope": "listed_company",
+      "period": "FY2025",
+      "evidence_ids": ["E006"]
+    },
+    {
+      "fact_id": "F008",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "business",
+      "research_module": "main_business",
+      "field_name": "core_business",
+      "value": "专利创新中药的研发、生产和销售",
+      "claim": "公司的主营业务是专利创新中药的研发、生产和销售。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": ["E007"]
+    },
+    {
+      "fact_id": "F009",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "business",
+      "research_module": "main_business",
+      "field_name": "business_segments",
+      "value": "专利中药、化生药、健康产业",
+      "claim": "公司披露已构建专利中药、化生药和健康产业协同发展的业务格局。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": ["E008"]
+    },
+    {
+      "fact_id": "F010",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "business",
+      "research_module": "operating_model",
+      "field_name": "procurement_mode",
+      "value": "招标采购",
+      "claim": "公司披露招标采购为采购模式之一。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": ["E009", "E010"]
+    },
+    {
+      "fact_id": "F011",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "business",
+      "research_module": "operating_model",
+      "field_name": "procurement_mode",
+      "value": "集中采购",
+      "claim": "公司披露集中采购为采购模式之一。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": ["E009", "E011"]
+    },
+    {
+      "fact_id": "F012",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "business",
+      "research_module": "operating_model",
+      "field_name": "procurement_mode",
+      "value": "产地采购",
+      "claim": "公司披露产地采购为采购模式之一。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": ["E009", "E012"]
+    },
+    {
+      "fact_id": "F013",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "business",
+      "research_module": "operating_model",
+      "field_name": "procurement_mode",
+      "value": "议价采购",
+      "claim": "公司披露议价采购为采购模式之一。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": ["E009", "E013"]
+    },
+    {
+      "fact_id": "F014",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "business",
+      "research_module": "operating_model",
+      "field_name": "production_mode",
+      "value": "按照药品生产质量管理规范组织生产",
+      "claim": "公司按照药品生产质量管理规范组织生产，并以市场和客户需求作为制定生产计划的依据之一。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": ["E014"]
+    },
+    {
+      "fact_id": "F015",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "business",
+      "research_module": "operating_model",
+      "field_name": "sales_promotion_mode",
+      "value": "络病理论指导下的专业化推广模式",
+      "claim": "公司披露其销售模式的核心竞争优势在于络病理论指导下的专业化推广模式。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": ["E015"]
+    },
+    {
+      "fact_id": "F016",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "business",
+      "research_module": "operating_model",
+      "field_name": "sales_distribution_mode",
+      "value": "合作的医药流通企业",
+      "claim": "公司产品主要通过合作的医药流通企业对外配送销售。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": ["E016"]
+    },
+    {
+      "fact_id": "F017",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "business",
+      "research_module": "operating_model",
+      "field_name": "research_and_development_mode",
+      "value": "自主研发和合作研发两种模式",
+      "claim": "公司的研发模式主要包括自主研发和合作研发两种模式。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": ["E017"]
+    },
+    {
+      "fact_id": "F018",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "business",
+      "research_module": "main_products",
+      "field_name": "major_product",
+      "value": "通心络胶囊",
+      "claim": "年报将通心络胶囊列为公司主要产品。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": ["E018"]
+    },
+    {
+      "fact_id": "F019",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "business",
+      "research_module": "main_products",
+      "field_name": "major_product",
+      "value": "参松养心胶囊",
+      "claim": "年报将参松养心胶囊列为公司主要产品。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": ["E018"]
+    },
+    {
+      "fact_id": "F020",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "business",
+      "research_module": "main_products",
+      "field_name": "major_product",
+      "value": "连花清瘟胶囊",
+      "claim": "年报将连花清瘟胶囊列为公司主要产品。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": ["E018"]
+    },
+    {
+      "fact_id": "F021",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "business",
+      "research_module": "main_products",
+      "field_name": "major_product",
+      "value": "芪苈强心胶囊",
+      "claim": "年报将芪苈强心胶囊列为公司主要产品。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": ["E018", "E019"]
+    }
+  ],
+  "inferences": [],
+  "missing_information": [
+    {
+      "missing_id": "M001",
+      "entity_id": "CN-A-SZSE-002603",
+      "research_module": "development_history",
+      "topic": "前身企业早期沿革",
+      "description": "本阶段证据可确认2001年整体变更设立和2011年上市，但未确认前身企业最初设立日期及2001年前的完整沿革。",
+      "reason": "当前经核验的年报原文锚点未提供完整早期时间线，不能根据公司名称或第三方材料补造。",
+      "related_fact_ids": ["F005", "F006"],
+      "evidence_ids": ["E004", "E005"]
+    },
+    {
+      "missing_id": "M002",
+      "entity_id": "CN-A-SZSE-002603",
+      "research_module": "operating_model",
+      "topic": "统一盈利模式",
+      "description": "本阶段已核实采购、生产、销售和研发模式，但尚未取得足以定义统一盈利模式的直接披露证据。",
+      "reason": "不能仅凭业务板块或销售方式推断利润形成机制、定价方式和利润来源。",
+      "related_fact_ids": ["F010", "F011", "F012", "F013", "F014", "F015", "F016", "F017"],
+      "evidence_ids": []
+    },
+    {
+      "missing_id": "M003",
+      "entity_id": "CN-A-SZSE-002603",
+      "research_module": "main_products",
+      "topic": "单品收入与占比",
+      "description": "本阶段已核实主要产品名称，但尚未从V1.1证据中确认各单品收入、收入占比和盈利贡献。",
+      "reason": "产品名称披露不能替代财务分部或单品收入数据；相关金额应在后续有来源的数据结构化后单独核验。",
+      "related_fact_ids": ["F018", "F019", "F020", "F021"],
+      "evidence_ids": []
+    }
+  ]
+}

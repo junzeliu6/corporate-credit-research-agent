@@ -1,4 +1,4 @@
-"""命令行入口：识别企业、处理年报并构建最小事实证据链。"""
+"""命令行入口：识别企业、处理年报并构建可追溯研究数据。"""
 
 from __future__ import annotations
 
@@ -13,6 +13,11 @@ from pydantic import BaseModel
 from credit_research_agent.company import CompanyResolutionError, CompanyResolver
 from credit_research_agent.downloader import DownloadError, OfficialPdfDownloader
 from credit_research_agent.evidence import EvidenceBuildError, build_evidence_artifacts
+from credit_research_agent.fundamentals import build_fundamental_artifacts
+from credit_research_agent.ownership import (
+    OwnershipBuildError,
+    build_ownership_artifacts,
+)
 from credit_research_agent.pdf_parser import PdfExtractionError, extract_to_artifacts
 from credit_research_agent.sources import SourceCatalog, SourceNotFoundError
 
@@ -28,7 +33,7 @@ def _as_dict(model: BaseModel) -> Dict[str, Any]:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="credit-research-agent",
-        description="企业授信研究Agent V0.4：识别主体、处理年报并构建事实证据链。",
+        description="企业授信研究Agent V1.2：识别主体、处理年报并生成可追溯股权结构。",
     )
     parser.add_argument("company", help="上市公司名称、证券代码或带交易所后缀的代码")
     parser.add_argument(
@@ -51,6 +56,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--build-evidence",
         metavar="SOURCE_ID",
         help="执行下载、解析，并生成事实证据 JSON 与来源引用",
+    )
+    action_group.add_argument(
+        "--build-fundamentals",
+        metavar="SOURCE_ID",
+        help="执行下载、解析，并生成V1.1企业基本面JSON与来源引用",
+    )
+    action_group.add_argument(
+        "--build-ownership",
+        metavar="SOURCE_ID",
+        help="执行下载、解析，并生成V1.2股权数据、展示图JSON、DOT和SVG",
     )
     parser.add_argument(
         "--cache-dir",
@@ -84,6 +99,48 @@ def build_parser() -> argparse.ArgumentParser:
         "--citations-output",
         help="可选的 [Sxx] Markdown 来源引用输出路径",
     )
+    parser.add_argument(
+        "--fundamentals-dir",
+        default="data/fundamentals",
+        help="企业基本面运行产物目录，默认 data/fundamentals",
+    )
+    parser.add_argument(
+        "--fundamentals-output",
+        help="可选的企业基本面 JSON 输出路径",
+    )
+    parser.add_argument(
+        "--ownership-dir",
+        default="data/ownership",
+        help="股权结构运行产物目录，默认 data/ownership",
+    )
+    parser.add_argument(
+        "--ownership-dataset-output",
+        help="可选的原始股权数据 JSON 输出路径",
+    )
+    parser.add_argument(
+        "--ownership-graph-output",
+        help="可选的股权展示图 JSON 输出路径",
+    )
+    parser.add_argument(
+        "--ownership-svg-output",
+        help="可选的股权结构 SVG 输出路径（同目录同名生成 PNG 和 DOT）",
+    )
+    parser.add_argument(
+        "--ownership-summary-output",
+        help="可选的股权结构文字说明 Markdown 输出路径",
+    )
+    parser.add_argument(
+        "--ownership-validation-output",
+        help="可选的逐分支比例校验 JSON 输出路径",
+    )
+    parser.add_argument(
+        "--ownership-sources-output",
+        help="可选的股权结构来源目录 JSON 输出路径",
+    )
+    parser.add_argument(
+        "--ownership-questions-output",
+        help="可选的股权结构待核查事项 Markdown 输出路径",
+    )
     return parser
 
 
@@ -104,7 +161,11 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     output: Dict[str, Any] = {"company": _as_dict(company)}
     requested_source_id = (
-        args.download_source or args.parse_source or args.build_evidence
+        args.download_source
+        or args.parse_source
+        or args.build_evidence
+        or args.build_fundamentals
+        or args.build_ownership
     )
     if args.sources or requested_source_id:
         catalog = SourceCatalog.from_default_catalog()
@@ -137,7 +198,12 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(json.dumps(output, ensure_ascii=False, indent=2))
             return 3
 
-        if args.parse_source or args.build_evidence:
+        if (
+            args.parse_source
+            or args.build_evidence
+            or args.build_fundamentals
+            or args.build_ownership
+        ):
             try:
                 artifacts = extract_to_artifacts(
                     result,
@@ -181,6 +247,94 @@ def main(argv: Optional[List[str]] = None) -> int:
                 }
                 print(json.dumps(output, ensure_ascii=False, indent=2))
                 return 5
+
+        if args.build_fundamentals:
+            try:
+                fundamental_artifacts = build_fundamental_artifacts(
+                    identity=company,
+                    source=source,
+                    download=result,
+                    summary_path=artifacts.summary_path,
+                    pages_path=artifacts.pages_path,
+                    output_dir=Path(args.fundamentals_dir),
+                    fundamentals_output=(
+                        Path(args.fundamentals_output)
+                        if args.fundamentals_output
+                        else None
+                    ),
+                    citations_output=(
+                        Path(args.citations_output)
+                        if args.citations_output
+                        else None
+                    ),
+                )
+                output["fundamentals"] = _as_dict(fundamental_artifacts)
+            except EvidenceBuildError as exc:
+                output["fundamentals_error"] = {
+                    "code": exc.code,
+                    "message": str(exc),
+                }
+                print(json.dumps(output, ensure_ascii=False, indent=2))
+                return 6
+
+        if args.build_ownership:
+            try:
+                ownership_artifacts = build_ownership_artifacts(
+                    identity=company,
+                    source=source,
+                    download=result,
+                    summary_path=artifacts.summary_path,
+                    pages_path=artifacts.pages_path,
+                    output_dir=Path(args.ownership_dir),
+                    dataset_output=(
+                        Path(args.ownership_dataset_output)
+                        if args.ownership_dataset_output
+                        else None
+                    ),
+                    graph_output=(
+                        Path(args.ownership_graph_output)
+                        if args.ownership_graph_output
+                        else None
+                    ),
+                    svg_output=(
+                        Path(args.ownership_svg_output)
+                        if args.ownership_svg_output
+                        else None
+                    ),
+                    citations_output=(
+                        Path(args.citations_output)
+                        if args.citations_output
+                        else None
+                    ),
+                    summary_output=(
+                        Path(args.ownership_summary_output)
+                        if args.ownership_summary_output
+                        else None
+                    ),
+                    validation_output=(
+                        Path(args.ownership_validation_output)
+                        if args.ownership_validation_output
+                        else None
+                    ),
+                    sources_output=(
+                        Path(args.ownership_sources_output)
+                        if args.ownership_sources_output
+                        else None
+                    ),
+                    questions_output=(
+                        Path(args.ownership_questions_output)
+                        if args.ownership_questions_output
+                        else None
+                    ),
+                )
+                output["ownership"] = _as_dict(ownership_artifacts)
+            except (EvidenceBuildError, OwnershipBuildError) as exc:
+                output["ownership_error"] = {
+                    "code": exc.code,
+                    "message": str(exc),
+                }
+                print(json.dumps(output, ensure_ascii=False, indent=2))
+                return 7
 
     print(json.dumps(output, ensure_ascii=False, indent=2))
     return 0

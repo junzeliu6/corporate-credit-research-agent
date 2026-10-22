@@ -2,7 +2,7 @@
 
 企业授信研究Agent（Corporate Credit Research Agent）是一个面向银行对公场景的学习型项目：从上市公司公开披露出发，逐步构建可追溯的企业研究辅助 Agent。
 
-当前代码版本是 **V0.4：事实、证据与来源引用基础**；需求基线已升级为 **v5**，并纳入 `ownership-structure` 与 `financial-analysis` 两份完整 Skill 规范。两份规范目前是后续开发契约，**不代表 Skill Tools、Agent 运行时加载或业务结果已经实现**。本项目不是授信审批系统，不给出授信额度、贷款定价或具有审批效力的结论。
+当前代码版本是 **V1.2：`ownership-structure` 确定性内核与股权图优化**；需求基线为 **v5**。V1.1 基本面与 V1.2 股权结构均已使用以岭药业2025年官方年报验证；两个 Skill 的运行时选择/加载尚未实现，`financial-analysis` Tools 尚未开发。本项目不是授信审批系统，不给出授信额度、贷款定价或具有审批效力的结论。
 
 ## V0.1—V0.4 已实现
 
@@ -29,7 +29,33 @@
 - 自动渲染 `[S01]` Markdown 来源引用，包含标题、发布者、披露日期、访问日期、URL 和页码。
 - 提供 CLI 和 41 项离线单元测试。
 
-本阶段没有实现财务字段结构化、表格数值核验、LLM、Agent Loop、RAG、MCP 或 Streamlit。这些能力按 `ROADMAP.md` 分阶段引入。
+## V1.1 已实现
+
+- 新增 `ResearchModule`，将披露事实分为公司身份、发展历史、主营业务、经营模式和主要产品。
+- 新增 `FundamentalResearchBundle`、`ModelInference` 与 `MissingInformation`，从数据结构上隔离“年报披露事实 / 模型推断 / 缺失信息”。
+- 新增人工审阅的 `fundamentals_seeds.json`，通过精确原文锚点提取基本面事实，不允许证据缺失时继续生成。
+- 复用 V0 的公司识别、S01 来源、PDF缓存、逐页文本、双哈希校验、`FactRecord`、`EvidenceRecord` 和 `[S01]` 引用。
+- 新增 `FundamentalsBuilder`、JSON/引用产物以及 `--build-fundamentals` CLI 入口。
+- 对真实 S01 年报生成 21 条披露事实和 19 条证据，其中包含4条身份事实、3条发展历史、2条主营业务、8条经营模式和4条主要产品事实。
+- `inferences` 当前为空，因为 V1.1 没有调用 LLM；另记录3条当前证据无法确认的信息。
+- 增加离线单元测试、CLI测试和本机真实年报集成测试；全量回归49项通过。
+
+## V1.2 已实现
+
+- 新增 `OwnershipDataset`，分别建模股权节点、持股/表决权边、控制关系、国资控制判断、基准日、核验状态及来源证据。
+- 原始股权事实与展示图分离：聚合和最多5层裁剪不会改写原始披露数据。
+- 实现 `validate_ownership_facts`、`validate_ownership_percentages`、`aggregate_ownership_holders`、`build_ownership_graph` 和 `render_ownership_graph`。
+- 展示规则覆盖自然人严格大于25%单列、机构严格小于5%可聚合；控股股东、实际控制人、最终控制人和一致行动人无条件单列。
+- 对每个被展开主体按同一时点、同一股本口径执行100%完整性校验，默认容差±0.01个百分点；超过100%报错，不足100%且无证据声明时禁止正式出图。
+- 仅在同口径公开证据支持时生成“其他未单列股东”差额计算节点；该节点只进入展示层，原始股东事实不被改写。
+- 校验来源/证据悬空、重复节点/关系、日期冲突、冲突比例、环路和第6层截断。
+- 国资参股与国资控制分开记录；程序不会由持股比例或国资平台股东自动推断实际控制人。
+- 对真实 S01 年报保留5个原始节点、4条持股边、1条表决权边、4条控制关系、16条证据和2条缺失信息；正式展示图另含1个45.32%的差额计算节点。
+- 图中节点只展示名称和名称下方的比例；股权箭头从下方股东指向上方被持股企业。控制关系、来源和核验状态只保留在图外 JSON/说明中。
+- 输出 `ownership.json`、展示图 JSON、DOT、高清 SVG/PNG、比例校验 JSON、文字说明、来源和待核查清单；本机无 Graphviz 时明确使用分支感知的内部树状 SVG/PNG 降级引擎。
+- V1.2 未调用 LLM，不产生模型 API 费用。
+
+当前仍未实现完整报告渲染、财务字段结构化、财务分析、RAG、MCP 或 Streamlit。这些能力按 `ROADMAP.md` 分阶段引入。
 
 ## v5 文档与 Skill 规范
 
@@ -38,7 +64,7 @@
 - `.agents/skills/financial-analysis/SKILL.md`：重点财务科目、20%变化触发、原因合理性和尽调问题规则。
 - `V0_AUDIT.md`：本地 V0 代码、真实运行产物、接口复用和缺口核查。
 
-应用将继续复用 V0 的主体、来源、下载、PDF 和证据能力。Codex 能读取 `.agents/skills/` 不等于未来的 OpenAI Agents SDK 应用会自动加载它们；运行时注册、选择、加载、Tool 调用和追踪需在后续里程碑单独实现和测试。
+V1.2 继续复用 V0/V1.1 的主体、来源、下载、PDF和证据接口，没有复制第二套数据管线；`.agents/skills/` 中的业务规范尚待 V1.3 运行时显式注册、选择和加载。
 
 ## 项目结构
 
@@ -51,6 +77,8 @@ corporate-credit-research-agent/
 │  ├─ data/
 │  │  ├─ companies.json      # 受控企业名称/代码登记表
 │  │  ├─ evidence_seeds.json # 经审阅的最小事实与原文锚点
+│  │  ├─ fundamentals_seeds.json # V1.1 企业基本面原文锚点/缺失项
+│  │  ├─ ownership_seeds.json # V1.2 真实股权节点/关系与原文锚点
 │  │  └─ sources.json        # 官方来源与年报种子目录
 │  ├─ company.py             # 企业精确识别与显式错误处理
 │  ├─ models.py              # CompanyIdentity / SourceRecord
@@ -58,17 +86,35 @@ corporate-credit-research-agent/
 │  ├─ documents.py           # 下载结果与 V0.3 解析接口契约
 │  ├─ downloader.py          # 受控下载、缓存、哈希与失败记录
 │  ├─ evidence.py            # 事实/证据构建、交叉校验和引用渲染
+│  ├─ fundamentals.py        # V1.1 基本面构建与产物接口
+│  ├─ ownership.py           # V1.2 股权/比例校验、聚合、建图和SVG/PNG渲染
 │  ├─ pdf_parser.py          # 逐页提取、质量摘要和章节定位
-│  └─ cli.py                 # 企业识别、来源下载和解析入口
+│  └─ cli.py                 # 企业识别、来源处理和研究构建入口
 ├─ examples/
 │  ├─ S01_extraction_sample.json  # 可复现的轻量页码定位样例
 │  ├─ S01_evidence_sample.json    # V0.4 事实证据 JSON
-│  └─ S01_citations.md            # [Sxx] 来源引用样例
+│  ├─ S01_citations.md            # V0.4 [Sxx] 来源引用样例
+│  ├─ S01_fundamentals_sample.json
+│  ├─ S01_fundamentals_citations.md
+│  ├─ ownership.json             # 未经聚合/裁剪的真实股权数据
+│  ├─ ownership_graph.json       # 含展示聚合/计算节点的图数据
+│  ├─ ownership_structure.dot
+│  ├─ ownership_structure.svg
+│  ├─ ownership_structure.png
+│  ├─ ownership_validation.json
+│  ├─ ownership_summary.md
+│  ├─ ownership_sources.json
+│  ├─ ownership_questions.md
+│  └─ ownership_citations.md
 ├─ tests/
+│  ├─ integration/test_yiling_fundamentals.py
+│  ├─ integration/test_yiling_ownership.py
 │  ├─ test_company.py
 │  ├─ test_sources.py
 │  ├─ test_downloader.py
 │  ├─ test_pdf_parser.py
+│  ├─ test_fundamentals.py
+│  ├─ test_ownership.py
 │  └─ test_cli.py
 ├─ pyproject.toml
 ├─ SKILLS_SPEC.md
@@ -147,6 +193,32 @@ python -m credit_research_agent "002603.SZ" --build-evidence S01 `
 
 `--build-evidence` 会按顺序执行或复用下载、逐页解析、双重哈希校验、精确原文匹配、Pydantic 模式校验和引用渲染。任何一步失败都会输出机器可读错误，不生成已验证事实。
 
+构建 V1.1 企业基本面样例：
+
+```powershell
+python -m credit_research_agent "002603.SZ" --build-fundamentals S01 `
+  --fundamentals-output "examples/S01_fundamentals_sample.json" `
+  --citations-output "examples/S01_fundamentals_citations.md"
+```
+
+`facts` 只包含通过精确原文匹配的披露事实；`inferences` 专门存放未来模型推断；`missing_information` 记录当前证据无法确认的事项。三类信息不能互相替代。
+
+构建 V1.2 股权结构样例：
+
+```powershell
+python -m credit_research_agent "002603.SZ" --build-ownership S01 `
+  --ownership-dataset-output "examples/ownership.json" `
+  --ownership-graph-output "examples/ownership_graph.json" `
+  --ownership-svg-output "examples/ownership_structure.svg" `
+  --ownership-summary-output "examples/ownership_summary.md" `
+  --ownership-validation-output "examples/ownership_validation.json" `
+  --ownership-sources-output "examples/ownership_sources.json" `
+  --ownership-questions-output "examples/ownership_questions.md" `
+  --citations-output "examples/ownership_citations.md"
+```
+
+`ownership.json` 保存未经聚合和裁剪的披露事实；`ownership_graph.json` 保存按展示规则生成的节点/边。SVG 同目录会生成同名 PNG 和 DOT。若系统安装了 Graphviz 且 `dot` 在 `PATH` 中，`render_engine` 为 `graphviz-dot`；否则输出 `internal-tree-fallback`，不会把降级渲染误报为 Graphviz。
+
 输出中的 `company` 是规范化上市主体；`sources` 是静态来源种子；`download` 是本机实际获取结果。`S01.status = registered` 只表示来源目录登记状态，不能替代实际下载清单。
 
 ## 设计取舍
@@ -186,6 +258,18 @@ V0.3 的目标是逐页文本和可靠页码，不是马上做复杂表格还原
 - `[S01]` 是报告读者可见的来源编号，指向年报标题和原始 URL。
 
 一个证据可以支持多个事实，例如同一行原文同时支持证券简称和证券代码。`verified` 仅表示指定原文在哈希一致的 PDF 提取结果中完成精确匹配，不等于审计确认或企业尽调确认。
+
+### V1.1 为什么暂不调用 LLM
+
+首个标的已有可审阅的官方年报。V1.1 先用人工审阅的候选事实和确定性原文匹配建立可靠数据契约，避免在证据模型尚未稳定时让模型直接生成公司结论。未来可以让 LLM 提出候选事实或摘要，但候选内容仍必须关联原始页码并通过结构化校验；LLM 输出不能直接成为 `FactRecord`。
+
+### 为什么原始股权事实与展示图分开
+
+25%/5%阈值、聚合和5层限制都是展示规则，不应修改披露事实。V1.2 先校验 `OwnershipDataset`，再生成独立 `OwnershipGraph`；聚合节点保留成员及原边编号，第6层只在图上截断。这样后续修改展示策略时无需重新解释年报，也能检查图和原始证据是否一致。
+
+100%完整性同样按原始数据逐个被持股主体计算。只有同一基准日、同一股本口径且存在人工核验声明时，展示层才允许用差额生成“其他未单列股东”；否则分支保持 `incomplete`，正式绘图器拒绝输出。LLM 不参与比例加总。
+
+控制权不是持股比例的同义词。持股边、表决权边、控股股东、实际控制人、一致行动和最终控制方分别建模；只有正式披露支持的控制关系才会进入图数据。
 
 ## 已登记的首测来源
 
@@ -233,6 +317,29 @@ V0.3 的目标是逐页文本和可靠页码，不是马上做复杂表格还原
 - 所有事实引用、主体证据引用和来源引用均通过 Pydantic 交叉校验
 - 当前仅覆盖法定名称、证券简称、证券代码和交易所，不包含财务或经营结论
 
+### 2026-10-21 V1.1 企业基本面验证
+
+- Schema：`1.1.0`
+- 披露事实：21条；原文证据：19条；来源：1条（S01）
+- 模块：公司身份4条、发展历史3条、主营业务2条、经营模式8条、主要产品4条
+- 引用页码：PDF第6、10、27、28、128页
+- 模型推断：0条；缺失信息：3条
+- 真实年报构建使用哈希一致的S01缓存和逐页文本；任一预期原文缺失即失败
+
+### 2026-10-21 V1.2 股权结构验证
+
+- Schema：`1.2.0`；基准日：`2025-12-31`
+- 原始数据：5个节点、4条持股边、1条表决权边、4条控制关系；所有关系均引用 `S01`
+- 正式展示图：6个节点、5条实线持股边；表决权和控制关系不重复画线
+- 已核实持股：以岭医药科技有限公司31.53%、吴相君20.81%、吴瑞2.34%、吴以岭持有以岭医药科技有限公司100.00%；以岭医药科技有限公司表决权比例31.53%另行记录
+- 年报披露的实际控制人/一致行动人为吴以岭、吴相君、吴瑞；财务报表附注披露最终控制方为吴以岭
+- 证据：16条，定位到PDF第6、97、98、99、100、217页
+- 缺失信息：完整股东名册；第100页产权及控制关系方框图的图像文字未被PDF文本层提取
+- 目标公司已知主要股东合计54.68%，基于同一2025年末普通股股本口径生成45.32%的“其他未单列股东”计算节点；不推断其具体身份或各自比例
+- 以岭医药科技有限公司分支合计100.00%；两个展开节点均通过默认±0.01个百分点校验
+- 本机已安装 Graphviz 16.1.0；当前示例 SVG/PNG 由 `graphviz-dot` 生成，内部 `internal-tree-fallback` 继续作为无外部依赖的降级路径
+- 未调用LLM；比例加总、差额和正式出图资格全部由确定性Python完成
+
 ## 数据与合规边界
 
 - 仅处理获得授权的公开信息，不接入银行内部数据、征信、私人流水或客户保密材料。
@@ -243,18 +350,16 @@ V0.3 的目标是逐页文本和可靠页码，不是马上做复杂表格还原
 ## 测试覆盖
 
 ```text
-企业识别：9 项
-来源目录：4 项
-下载与缓存：8 项
-PDF解析：6 项
-事实与证据：6 项
-CLI：8 项
-合计：41 项离线测试
+V0回归：41项
+V1.1基本面模型/构建/CLI与真实S01：8项
+V1.2股权规则/构建：22项
+V1.2真实S01股权集成：1项（本机运行产物不存在时明确跳过）
+本次本机合计：72 passed（Graphviz启用路径与内部降级路径均已验证）
 ```
 
 网络请求使用离线假响应测试，因此日常 `pytest` 不依赖巨潮资讯是否可访问。
 
 ## 下一阶段
 
-V0 阶段已经完成并在 v5 整合时重新回归验证。下一步进入 V1.1：从已验证的公开披露中分模块提取公司发展历史、主营业务、经营模式和主要产品，并为每条事实保留证据。随后依次开发 `ownership-structure` 的确定性内核、Skill 运行时加载，再在可比财务事实层和计算内核完成后开发 `financial-analysis`。详见 `ROADMAP.md`。
+下一阶段为 V1.3：在现有主体、来源、证据和 V1.2 股权 Tools 之上实现显式 Skill 注册、选择、只读加载、Tool 调用与执行追踪；不提前开发 `financial-analysis` Tools。详见 `ROADMAP.md`。
 

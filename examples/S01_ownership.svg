@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="970" height="590" viewBox="0 0 970 590">
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#6C757D"/></marker></defs>
+<rect width="100%" height="100%" fill="white"/>
+<line x1="235.5" y1="210" x2="478.0" y2="126" stroke="#6C757D" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="356.75" y="161.0" text-anchor="middle" font-size="12" fill="#343A40">持股 31.53% · 已核实 · [S01]</text>
+<line x1="727.5" y1="210" x2="485.0" y2="126" stroke="#6C757D" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="606.25" y="161.0" text-anchor="middle" font-size="12" fill="#343A40">持股 20.81% · 已核实 · [S01]</text>
+<line x1="485.0" y1="210" x2="485.0" y2="126" stroke="#6C757D" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="485.0" y="161.0" text-anchor="middle" font-size="12" fill="#343A40">持股 2.34% · 已核实 · [S01]</text>
+<line x1="485.0" y1="370" x2="242.5" y2="286" stroke="#6C757D" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="363.75" y="321.0" text-anchor="middle" font-size="12" fill="#343A40">持股 100.00% · 已核实 · [S01]</text>
+<line x1="249.5" y1="210" x2="492.0" y2="126" stroke="#6C757D" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="370.75" y="175.0" text-anchor="middle" font-size="12" fill="#343A40">表决权 31.53% · 已核实 · [S01]</text>
+<line x1="249.5" y1="210" x2="492.0" y2="126" stroke="#C44536" stroke-width="1.4" stroke-dasharray="6 4"/>
+<text x="374.75" y="182.0" text-anchor="middle" font-size="10" fill="#A23B2A">控股股东 · 已核实 · [S01]</text>
+<line x1="494.0" y1="210" x2="494.0" y2="126" stroke="#C44536" stroke-width="1.4" stroke-dasharray="6 4"/>
+<text x="498.0" y="182.0" text-anchor="middle" font-size="10" fill="#A23B2A">一致行动/实际控制人 · 已核实 · [S01]</text>
+<line x1="738.5" y1="210" x2="496.0" y2="126" stroke="#C44536" stroke-width="1.4" stroke-dasharray="6 4"/>
+<text x="621.25" y="182.0" text-anchor="middle" font-size="10" fill="#A23B2A">一致行动/实际控制人 · 已核实 · [S01]</text>
+<line x1="498.0" y1="370" x2="498.0" y2="126" stroke="#C44536" stroke-width="1.4" stroke-dasharray="6 4"/>
+<text x="502.0" y="262.0" text-anchor="middle" font-size="10" fill="#A23B2A">一致行动/实际控制人/最终控制方 · 已核实 · [S01]</text>
+<rect x="355.0" y="50" width="260" height="76" rx="9" fill="#DCEEFF" stroke="#355070"/>
+<text x="485.0" y="79" text-anchor="middle" font-size="14" font-family="Microsoft YaHei, sans-serif" fill="#1F2933">石家庄以岭药业股份有限公司</text>
+<text x="485.0" y="104" text-anchor="middle" font-size="11" font-family="Microsoft YaHei, sans-serif" fill="#52606D">已核实 [S01]</text>
+<rect x="112.5" y="210" width="260" height="76" rx="9" fill="#FFF3CD" stroke="#355070"/>
+<text x="242.5" y="239" text-anchor="middle" font-size="14" font-family="Microsoft YaHei, sans-serif" fill="#1F2933">以岭医药科技有限公司</text>
+<text x="242.5" y="264" text-anchor="middle" font-size="11" font-family="Microsoft YaHei, sans-serif" fill="#52606D">已核实 [S01]</text>
+<rect x="355.0" y="210" width="260" height="76" rx="9" fill="#FFF3CD" stroke="#355070"/>
+<text x="485.0" y="239" text-anchor="middle" font-size="14" font-family="Microsoft YaHei, sans-serif" fill="#1F2933">吴瑞</text>
+<text x="485.0" y="264" text-anchor="middle" font-size="11" font-family="Microsoft YaHei, sans-serif" fill="#52606D">已核实 [S01]</text>
+<rect x="597.5" y="210" width="260" height="76" rx="9" fill="#FFF3CD" stroke="#355070"/>
+<text x="727.5" y="239" text-anchor="middle" font-size="14" font-family="Microsoft YaHei, sans-serif" fill="#1F2933">吴相君</text>
+<text x="727.5" y="264" text-anchor="middle" font-size="11" font-family="Microsoft YaHei, sans-serif" fill="#52606D">已核实 [S01]</text>
+<rect x="355.0" y="370" width="260" height="76" rx="9" fill="#FFF3CD" stroke="#355070"/>
+<text x="485.0" y="399" text-anchor="middle" font-size="14" font-family="Microsoft YaHei, sans-serif" fill="#1F2933">吴以岭</text>
+<text x="485.0" y="424" text-anchor="middle" font-size="11" font-family="Microsoft YaHei, sans-serif" fill="#52606D">已核实 [S01]</text>
+</svg>
