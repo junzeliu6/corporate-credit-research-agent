@@ -159,7 +159,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--max-output-tokens",
         type=int,
         default=800,
-        help="单次模型响应最大输出Token，默认800",
+        help="单次模型响应最大输出Token，默认800、上限5000；不是Agent总Token预算",
     )
     parser.add_argument(
         "--cache-dir",

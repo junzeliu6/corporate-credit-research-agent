@@ -3,6 +3,14 @@
 from credit_research_agent.company import CompanyResolver
 from credit_research_agent.evidence import EvidenceBuilder
 from credit_research_agent.fundamentals import FundamentalsBuilder
+from credit_research_agent.grounding import (
+    CitableFact,
+    FactGroundingCatalog,
+    GroundedAnalysisClaim,
+    GroundedMissingInformation,
+    build_evidence_bundle_grounding_catalog,
+    build_ownership_grounding_catalog,
+)
 from credit_research_agent.models import (
     CompanyIdentity,
     EvidenceBundle,
@@ -32,12 +40,16 @@ from credit_research_agent.skills import SkillLoader, SkillRegistry, SkillSelect
 __all__ = [
     "CompanyIdentity",
     "CompanyResolver",
+    "CitableFact",
     "EvidenceBuilder",
     "EvidenceBundle",
     "EvidenceRecord",
     "FactRecord",
+    "FactGroundingCatalog",
     "FundamentalResearchBundle",
     "FundamentalsBuilder",
+    "GroundedAnalysisClaim",
+    "GroundedMissingInformation",
     "MissingInformation",
     "ModelInference",
     "OwnershipBuilder",
@@ -53,8 +65,10 @@ __all__ = [
     "SourceRecord",
     "StatementType",
     "build_ownership_graph",
+    "build_evidence_bundle_grounding_catalog",
+    "build_ownership_grounding_catalog",
     "validate_ownership_facts",
 ]
 
-__version__ = "1.3.1"
+__version__ = "1.3.5"
 

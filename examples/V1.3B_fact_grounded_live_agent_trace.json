@@ -1,0 +1,108 @@
+{
+  "schema_version": "1.3.4",
+  "trace_id": "AR-979D93C2C852",
+  "task": "请分析以岭药业（002603.SZ）的股权结构，生成股权穿透图，并简要说明其主要股东及实际控制关系。",
+  "status": "failed",
+  "config": {
+    "mode": "live",
+    "provider": "deepseek",
+    "base_url": "https://api.deepseek.com",
+    "model": "deepseek-flash",
+    "api_key_env": "DEEPSEEK_API_KEY",
+    "api_key_configured": true,
+    "thinking": "disabled",
+    "max_turns": 4,
+    "max_tool_calls": 1,
+    "max_output_tokens": 5000,
+    "request_timeout_seconds": 30.0,
+    "max_retries": 1
+  },
+  "entity_id": "CN-A-SZSE-002603",
+  "source_id": "S01",
+  "llm_call_count": 1,
+  "tool_call_count": 0,
+  "selected_tool": "run_ownership_research",
+  "selected_skill": null,
+  "loaded_skill_path": null,
+  "skill_trace_path": null,
+  "percentage_validation_passed": null,
+  "artifact_paths": [],
+  "tool_call_arguments": [],
+  "returned_fact_ids": [],
+  "selected_fact_ids": [],
+  "returned_missing_information_ids": [],
+  "selected_missing_information_ids": [],
+  "selected_analysis_claim_ids": [],
+  "deterministic_artifacts_preserved": false,
+  "finish_reasons": [
+    "tool_calls"
+  ],
+  "model_candidate_output": null,
+  "model_candidate_output_sha256": null,
+  "model_candidate_output_truncated": false,
+  "rejected_sentence": null,
+  "validator_rule_id": null,
+  "usage": {
+    "requests": 1,
+    "input_tokens": 752,
+    "output_tokens": 61,
+    "total_tokens": 813,
+    "estimated_cost": null,
+    "cost_note": "SDK未返回可作为账单依据的金额；实际费用以DeepSeek控制台账单为准。"
+  },
+  "events": [
+    {
+      "sequence": 1,
+      "occurred_at": "2026-10-22T14:14:30.797267Z",
+      "stage": "run_started",
+      "message": "主Agent运行开始",
+      "details": {
+        "mode": "live",
+        "provider": "deepseek"
+      }
+    },
+    {
+      "sequence": 2,
+      "occurred_at": "2026-10-22T14:14:32.496220Z",
+      "stage": "llm_call_started",
+      "message": "开始一次模型调用",
+      "details": {
+        "llm_call_number": 1,
+        "input_item_count": 1
+      }
+    },
+    {
+      "sequence": 3,
+      "occurred_at": "2026-10-22T14:14:33.818350Z",
+      "stage": "llm_call_completed",
+      "message": "模型调用完成",
+      "details": {
+        "requests": 1,
+        "input_tokens": 752,
+        "output_tokens": 61,
+        "total_tokens": 813
+      }
+    },
+    {
+      "sequence": 4,
+      "occurred_at": "2026-10-22T14:14:33.818350Z",
+      "stage": "llm_tool_selected",
+      "message": "LLM决定调用白名单Function Tool",
+      "details": {
+        "tool_name": "run_ownership_research"
+      }
+    },
+    {
+      "sequence": 5,
+      "occurred_at": "2026-10-22T14:14:33.825277Z",
+      "stage": "run_failed",
+      "message": "主Agent运行失败",
+      "details": {
+        "error_code": "agent_run_failed",
+        "error_message": "Error running tool run_ownership_research: 1 validation error for OwnershipToolRequest\nsource_id\n  String should match pattern '^S\\d{2,}$' [type=string_pattern_mismatch, input_value='official', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.14/v/string_pattern_mismatch"
+      }
+    }
+  ],
+  "error_code": "agent_run_failed",
+  "error_message": "Error running tool run_ownership_research: 1 validation error for OwnershipToolRequest\nsource_id\n  String should match pattern '^S\\d{2,}$' [type=string_pattern_mismatch, input_value='official', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.14/v/string_pattern_mismatch"
+}

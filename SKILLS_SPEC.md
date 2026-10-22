@@ -1,6 +1,6 @@
 # 企业授信研究Agent — 双 Skill 集成总规范（v5）
 
-> 本文件定义两个 Skill 的**系统级接口、里程碑及验收**；关于具体业务规则，优先以 `.agents/skills/ownership-structure/SKILL.md` 和 `.agents/skills/financial-analysis/SKILL.md` 为准。**V0.1—V0.4、V1.1—V1.2 与 V1.3A 已经本地代码与测试核验；V1.3B DeepSeek Agent Runtime 已完成离线 Mock 验证、真实API尚未验证；`financial-analysis` 已登记为 `spec_only`，其 Tools 尚未实现。**
+> 本文件定义两个 Skill 的**系统级接口、里程碑及验收**；关于具体业务规则，优先以 `.agents/skills/ownership-structure/SKILL.md` 和 `.agents/skills/financial-analysis/SKILL.md` 为准。**V0.1—V0.4、V1.1—V1.2 与 V1.3A 已经本地代码与测试核验；V1.3B DeepSeek Agent Runtime 已完成离线验证并真实验证连接、Function Calling、Skill加载和Python Tool。ownership已具备统一事实目录、Fact/Missing ID、有证据分析Claim、Python确定性渲染和Runtime来源绑定；最新Live通过来源与Tool链路，但最终分析Claim因缺少对应控制关系Fact ID被拒绝。`financial-analysis` 已登记为 `spec_only`，其 Tools 尚未实现。**
 
 ## 1. 架构边界
 
@@ -62,9 +62,10 @@
 4. 提供统一报告引用 `[S01]` / 来源附录，字段可与现有 V0 Source/Evidence 兼容。不要因更新文档而破坏已有 ID 和接口。
 5. `ownership` 与 `finance` 的工具返回结构化对象，主 Agent 负责生成七模块报告；遇到源数据不足可只输出部分章节和待核查问题。
 6. **集成验收**必须有运行日志或自动化测试证明加载哪一个 `SKILL.md`、何时使用何种工具以及得到何种校验结果；不将“文件放对路径”误当已运行。
-7. V1.3B 主 Agent 只注册 `run_ownership_research`；Tool 输入仅允许已解析ticker和已登记source_id。文件路径由应用上下文提供，LLM无权执行Python、Shell或读写任意路径。
+7. V1.3B 主 Agent 只注册 `run_ownership_research`；LLM可填写的Tool输入仅有已解析ticker。`source_id`及文件路径由Python Runtime从已验证应用上下文绑定；Runtime复核来源登记、主体和下载产物一致性，并拒绝模型提供来源覆盖字段。LLM无权执行Python、Shell或读写任意路径。
 8. 默认使用不会联网的Mock模型；Live DeepSeek必须显式选择、存在`DEEPSEEK_API_KEY`并再次确认。`financial-analysis`在V2完成前不得注册为LLM Tool。
-9. Tool返回模型的内容应压缩为核实关系、控制关系、比例校验、来源、缺失信息和产物，不重复发送完整PDF文本。模型最终比例和`[Sxx]`引用必须再次与Tool结果校验。
+9. Tool返回模型的内容应压缩为核实关系、控制关系、比例校验、来源、缺失信息和产物，不重复发送完整PDF文本。Python通过统一事实适配层复用现有`FactRecord`、`EvidenceRecord`、`SourceRecord`及股权边/控制关系ID，构造`response_contract`；企业披露事实、Python计算值、资料缺口、完整性校验规则和Skill展示阈值必须分型，阈值不得冒充企业持股事实。
+10. 模型最终响应选择Tool返回的Fact ID与Missing ID，并可提交逐条绑定支持ID的分析判断；不得直接填写企业比例、年份、来源编号、链接或新的主体事实。Python验证ID、核验事实的主体/期间/来源/状态，再确定性渲染具体事实与引用。支持性判断和风险信号必须引用可交付事实，尽调问题必须关联资料缺口；未核实网页候选不能作为确定性事实。原始模型候选响应、摘要、Tool参数、返回/选择的Fact ID与Missing ID、分析Claim ID、用量、可获得的`finish_reason`、拒绝句和规则编号写入脱敏本地轨迹。
 
 ## 5. 状态与开发安排
 
@@ -73,8 +74,8 @@
 - **V1.1：已核验完成**。企业历史、主营业务、经营模式和主要产品已输出为可追溯事实，并建立披露事实、模型推断和缺失信息相互隔离的数据接口。
 - **V1.2：已核验完成并完成绘图/比例校验优化**。已复用 V1.1 的主体、来源、证据和缺失信息接口，新增股权节点/边/控制关系模型，以及结构校验、逐分支100%校验、聚合、图构建、DOT/Graphviz优先SVG+PNG渲染 Tools；本机无 `dot` 时显式使用内部树状SVG/PNG降级。
 - **V1.3A：已核验完成**。白名单注册、确定性任务选择、只读加载、Tool 白名单及执行追踪已实现；真实S01集成运行证明 `ownership-structure` 被选择、加载并调用现有 `build_ownership_artifacts`，10个制品均经运行时检查。
-- **V1.3B：离线开发完成，Live待验证**。DeepSeek配置、SDK Agent/Runner、Function Tool、Mock/Live隔离、轮次/Tool限制、Token使用和Agent轨迹已建立；Mock及真实S01缓存集成通过，但尚未发起真实付费请求，不能声称DeepSeek兼容性已实测成功。
-- **下一个动作：受控Live兼容性测试**。用户创建密钥后，以非思考模式执行一次小规模测试；通过后再启动V1.4报告初稿。`financial-analysis`继续保持`spec_only`。
+- **V1.3B：Fact-Grounded与来源绑定离线修复完成，Live部分验证**。DeepSeek配置、SDK Agent/Runner、Function Tool、Mock/Live隔离、轮次/Tool限制、Token使用、Agent轨迹及统一事实契约已建立；ownership场景已支持 Fact ID / Missing ID / 有证据分析 Claim。最新真实调用已验证模型只提交ticker、Runtime绑定来源和完整Tool链路，但分析Claim的控制关系引用仍被严格校验拒绝，不能声称完整端到端成功。
+- **下一个动作：受控Live最终复测**。再次取得用户明确授权后，以非思考模式执行一次测试；通过事实契约校验后再启动V1.4报告初稿。`financial-analysis`继续保持`spec_only`。
 - 后续依次：财务三表与财务计算内核 → 财务 Skill → 双 Skill 集成 → 行业政策/报告界面与导出。
 - 每个阶段结束更新 `ROADMAP.md` 的开发日志和实测结果，简历只写已实现能力。
 

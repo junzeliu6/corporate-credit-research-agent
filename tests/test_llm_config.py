@@ -2,15 +2,19 @@
 
 import asyncio
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
+from agents import OpenAIChatCompletionsModel
 
 from credit_research_agent.llm_config import (
     AgentMode,
+    AuditedOpenAIChatCompletionsModel,
     LLMConfigError,
     build_live_deepseek_model,
     build_model_settings,
     load_deepseek_config,
+    validate_http_transport_compatibility,
 )
 
 
@@ -77,6 +81,20 @@ def test_model_settings_disable_thinking_and_apply_limits(tmp_path: Path) -> Non
     assert settings.retry.max_retries == 1
 
 
+def test_output_token_limit_accepts_user_requested_5000(tmp_path: Path) -> None:
+    config = load_deepseek_config(tmp_path, max_output_tokens=5000)
+
+    assert config.max_output_tokens == 5000
+    assert build_model_settings(config).max_tokens == 5000
+
+
+def test_output_token_limit_rejects_values_above_5000(tmp_path: Path) -> None:
+    with pytest.raises(LLMConfigError) as error:
+        load_deepseek_config(tmp_path, max_output_tokens=5001)
+
+    assert error.value.code == "invalid_llm_config"
+
+
 def test_live_model_uses_deepseek_chat_completions_without_request(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -86,6 +104,58 @@ def test_live_model_uses_deepseek_chat_completions_without_request(
     model, client = build_live_deepseek_model(config)
     try:
         assert model.model == "deepseek-flash"
+        assert isinstance(model, AuditedOpenAIChatCompletionsModel)
+        assert model.finish_reasons == []
         assert str(client.base_url).rstrip("/") == "https://api.deepseek.com"
     finally:
         asyncio.run(client.close())
+
+
+def test_audited_model_captures_finish_reason_without_recording_body(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-finish-reason-only")
+    config = load_deepseek_config(tmp_path, mode="live")
+
+    async def fake_fetch(_self, *args, **kwargs):
+        return SimpleNamespace(
+            choices=[SimpleNamespace(finish_reason="tool_calls")],
+            secret_body="must-not-be-recorded",
+        )
+
+    monkeypatch.setattr(OpenAIChatCompletionsModel, "_fetch_response", fake_fetch)
+    model, client = build_live_deepseek_model(config)
+    try:
+        asyncio.run(model._fetch_response())
+        assert model.finish_reasons == ["tool_calls"]
+        assert not hasattr(model, "secret_body")
+    finally:
+        asyncio.run(client.close())
+
+
+def test_http_transport_brotli_preflight_passes_without_network() -> None:
+    validate_http_transport_compatibility()
+
+
+def test_http_transport_preflight_rejects_old_brotli_api(monkeypatch) -> None:
+    from httpx2 import _decoders
+
+    class OldDecompressor:
+        def decompress(self, data: bytes) -> bytes:
+            return data
+
+    class OldBrotli:
+        error = RuntimeError
+        Decompressor = OldDecompressor
+
+        @staticmethod
+        def compress(data: bytes) -> bytes:
+            return data
+
+    monkeypatch.setattr(_decoders, "brotli", OldBrotli)
+
+    with pytest.raises(LLMConfigError) as error:
+        validate_http_transport_compatibility()
+
+    assert error.value.code == "incompatible_brotli_decoder"
+    assert "Brotli>=1.2" in str(error.value)

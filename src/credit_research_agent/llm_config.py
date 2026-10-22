@@ -29,6 +29,32 @@ DEEPSEEK_DEFAULT_MODEL = "deepseek-flash"
 DEEPSEEK_API_KEY_ENV = "DEEPSEEK_API_KEY"
 
 
+class AuditedOpenAIChatCompletionsModel(OpenAIChatCompletionsModel):
+    """在SDK归一化响应前保存非敏感的 ``finish_reason``。
+
+    Agents SDK 的 ``ModelResponse`` 当前不稳定暴露供应商原始
+    ``finish_reason``。本子类仅截获 Chat Completions 元数据，不记录请求、
+    API Key 或模型正文；网络和响应解析仍完全复用 SDK 的实现。
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.finish_reasons: list[Optional[str]] = []
+
+    async def _fetch_response(self, *args: Any, **kwargs: Any) -> Any:
+        response = await super()._fetch_response(*args, **kwargs)
+        finish_reason: Optional[str] = None
+        # 当前 Agent 使用非流式 Runner.run，返回对象是 ChatCompletion。
+        # 对未来的流式元组保持安全降级，不猜测尚未结束的 finish_reason。
+        raw_response = response[0] if isinstance(response, tuple) else response
+        choices = getattr(raw_response, "choices", None)
+        if choices:
+            raw_reason = getattr(choices[0], "finish_reason", None)
+            finish_reason = str(raw_reason) if raw_reason is not None else None
+        self.finish_reasons.append(finish_reason)
+        return response
+
+
 class AgentMode(str, Enum):
     MOCK = "mock"
     LIVE = "live"
@@ -58,7 +84,8 @@ class DeepSeekLLMConfig(BaseModel):
     thinking: Literal["disabled"] = "disabled"
     max_turns: int = Field(default=4, ge=2, le=8)
     max_tool_calls: int = Field(default=1, ge=1, le=3)
-    max_output_tokens: int = Field(default=800, ge=128, le=4096)
+    # 该值限制每次模型响应的输出，不是整个Agent Loop的输入+输出总预算。
+    max_output_tokens: int = Field(default=800, ge=128, le=5000)
     request_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
     max_retries: int = Field(default=1, ge=0, le=2)
 
@@ -157,6 +184,49 @@ def build_model_settings(config: DeepSeekLLMConfig) -> ModelSettings:
     )
 
 
+def validate_http_transport_compatibility() -> None:
+    """在发送 Live 请求前验证 HTTP 客户端的 Brotli 解压接口。
+
+    ``httpx2`` 会在可导入 Brotli 时声明支持 ``br`` 响应。项目虚拟环境若
+    继承了旧版系统包，响应可能已到达本机，却在读取正文时才因接口不兼容而
+    失败。这里用本地字节做一次压缩/解压往返，不访问网络，也不接触 API Key。
+    """
+
+    try:
+        from httpx2 import _decoders
+    except (ImportError, ModuleNotFoundError) as exc:
+        raise LLMConfigError(
+            "http_transport_unavailable",
+            "OpenAI客户端依赖的httpx2解码模块不可用，请重新安装项目依赖",
+        ) from exc
+
+    if _decoders.brotli is None:
+        # 未安装可选Brotli时，httpx2不会声明br编码；无需额外校验。
+        return
+
+    payload = b"corporate-credit-research-agent-brotli-preflight"
+    try:
+        encoded = _decoders.brotli.compress(payload)
+        decoder = _decoders.BrotliDecoder()
+        decoded = b"".join(decoder.decode(encoded)) + b"".join(decoder.flush())
+    except TypeError as exc:
+        raise LLMConfigError(
+            "incompatible_brotli_decoder",
+            "当前Brotli解压接口与httpx2不兼容；CPython需要Brotli>=1.2",
+        ) from exc
+    except Exception as exc:
+        raise LLMConfigError(
+            "http_transport_preflight_failed",
+            f"HTTP响应解压预检失败：{type(exc).__name__}",
+        ) from exc
+
+    if decoded != payload:
+        raise LLMConfigError(
+            "http_transport_preflight_failed",
+            "HTTP响应解压预检结果不一致",
+        )
+
+
 def build_live_deepseek_model(
     config: DeepSeekLLMConfig,
 ) -> Tuple[OpenAIChatCompletionsModel, AsyncOpenAI]:
@@ -168,6 +238,7 @@ def build_live_deepseek_model(
         )
     if config.api_key is None:  # 双重保护，避免未来构造方式绕过校验。
         raise LLMConfigError("missing_api_key", "Live 模式缺少 DeepSeek API Key")
+    validate_http_transport_compatibility()
     client = AsyncOpenAI(
         api_key=config.api_key.get_secret_value(),
         base_url=config.base_url,
@@ -175,7 +246,7 @@ def build_live_deepseek_model(
         # 重试由 Agents SDK 的有限策略统一控制，避免叠加重试。
         max_retries=0,
     )
-    model = OpenAIChatCompletionsModel(
+    model = AuditedOpenAIChatCompletionsModel(
         model=config.model,
         openai_client=client,
         # 当前关闭 thinking，不启用 reasoning_content 多轮回放。

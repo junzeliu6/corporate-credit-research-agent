@@ -1,6 +1,6 @@
 # 企业授信研究Agent — 公共信息研究 Agent 开发路线（v5：双 Skill 集成）
 
-> V0.1—V0.4、V1.1—V1.2、V1.3A 与 V1.3B 离线实现已由本地代码、真实年报产物和测试核验；`ownership-structure` 已接入白名单确定性 Skill Runtime 与 SDK Agent Loop。V1.3B 的真实 DeepSeek API 兼容性等待用户创建密钥后受控验证，V1.4 暂不启动；首个标的`以岭药业 / 002603.SZ`，默认不上传资料。
+> V0.1—V0.4、V1.1—V1.2、V1.3A 与 V1.3B 离线实现已由本地代码、真实年报产物和测试核验；`ownership-structure` 已接入白名单确定性 Skill Runtime 与 SDK Agent Loop。V1.3B 已真实验证DeepSeek连接和完整Tool链路；ownership离线实现已升级为统一事实目录、Fact ID/Missing ID、有证据分析Claim、Python渲染事实及Runtime来源绑定。最新Live已解决模型猜测source_id的问题，但最终分析Claim因控制关系Fact ID绑定不足被拒绝，V1.4 暂不启动。首个标的为`以岭药业 / 002603.SZ`，默认不上传资料。
 
 ## [x] V0：上市公司数据入口与证据基础
 - [x] **V0.1** 建立项目骨架、最少依赖、README、实体识别/映射（`以岭药业`、`002603`、`002603.SZ`→`石家庄以岭药业股份有限公司 / 002603.SZ`）及官方来源种子目录；编写离线测试。首个种子为2025年年报（`https://static.cninfo.com.cn/finalpage/2026-04-28/1225205683.PDF`）；同时登记深交所、巨潮资讯和公司官网。V0.1不要求真实下载，也不需要立即写通用搜索引擎。
@@ -21,7 +21,7 @@
 - [x] **V1.1 企业基本面事实抽取**：复用 `CompanyResolver`、`SourceCatalog`、`PdfTextExtractor`、`EvidenceBuilder`，将发展历史、主营业务、经营模式和主要产品分模块抽取为带 `Fxxx/Exxx/Sxx` 引用的结构化结果；先不追求覆盖所有年份。
 - [x] **V1.2 `ownership-structure` 确定性内核**：定义股权节点、边、控制关系、基准日、核验状态及展示配置，并实现 `validate_ownership_facts`、`validate_ownership_percentages`、`aggregate_ownership_holders`、`build_ownership_graph`、`render_ownership_graph`。逐个被展开主体校验同一时点/股本口径的100%完整性；只有全部通过的 `formal_ready` 图才输出SVG/PNG。公开资料检索/下载/PDF读取继续复用 V0，不复制第二套管线。
 - [x] **V1.3A 确定性 Skill Runtime**：实现白名单 `SkillRegistry`（`name`、`description`、路径、版本/哈希）、按任务选择的 `SkillSelector`、只读 `SkillLoader` 及 `SkillExecutionTrace`。调用顺序固定为“解析主体 → 获取/校验来源 → 选择并加载 Skill → 调用确定性 Tools → 校验结构化结果 → 生成引用/文字”；真实S01集成测试已证明 `ownership-structure` 被选择、加载并实际调用 `build_ownership_artifacts`。本阶段没有LLM判断、Agent Loop 或付费 API 调用。
-- [x] **V1.3B DeepSeek LLM Agent Runtime（离线完成，Live待验证）**：使用 OpenAI Agents SDK 的 `Agent`、`Runner` 和受限 Function Tool 接入 DeepSeek OpenAI 兼容接口。默认 Mock 模式且禁止联网；Live 模式必须显式选择、存在 `DEEPSEEK_API_KEY` 并由用户确认。第一阶段只向模型开放 `ownership-structure` 高层 Tool，运行时真实经过 Registry、Loader 与现有确定性内核，并记录模型选择、Skill加载、Tool调用、比例校验、产物和Token使用轨迹。先使用 `thinking: {"type": "disabled"}`；代码和离线验收完成，但尚未发起真实付费请求，推理模式与真实API兼容性均未声称完成验证。
+- [ ] **V1.3B DeepSeek LLM Agent Runtime（Fact-Grounded离线修复完成，Live部分验证）**：使用 OpenAI Agents SDK 的 `Agent`、`Runner` 和受限 Function Tool 接入 DeepSeek OpenAI 兼容接口。默认 Mock 模式且禁止联网；Live 模式必须显式选择、存在 `DEEPSEEK_API_KEY` 并由用户确认。第一阶段只向模型开放 `ownership-structure` 高层 Tool，运行时真实经过 Registry、Loader 与现有确定性内核，并记录模型选择、Skill加载、Tool调用、比例校验、产物和Token使用轨迹。`thinking`固定为disabled。LLM仅填写ticker，Python绑定并验证source_id。最新Live已通过来源绑定、Skill与Tool链路，但最终分析Claim缺少对应控制关系Fact ID，完整验收仍未通过。
 - [ ] **V1.4 报告初稿**：Markdown 渲染正文`[S01]`引用、来源附录、股权图和待核查信息；数据不足时允许只输出局部结果和明确限制。
 
 **V1 验收测试**：
@@ -181,3 +181,52 @@
 - 真实S01 Mock链路：模型选择Tool后，Registry确认并由Loader只读加载`ownership-structure/SKILL.md`，复用`build_ownership_artifacts`完成比例校验与绘图，再输出带`[S01]`的说明；Agent和Skill轨迹分别落盘。
 - 依赖：`openai-agents 0.21.1`、`openai 3.36.0`、`pydantic 2.14.1`、`python-dotenv 1.2.4`；旧领域模型通过`pydantic.v1`兼容命名空间保留既有语义。
 - 实际测试：`.venv\Scripts\python.exe -m pytest -q`，结果`100 passed in 5.16s`；另以安装后的CLI完成真实S01缓存端到端Mock演示。下一步仅做一次用户确认的Live兼容性测试，不启动V1.4。
+
+### 2026-10-22 — V1.3B 首轮Live修复与部分验证
+
+- 首次授权调用已连接至响应读取阶段，但因继承自Anaconda的旧Brotli不支持`output_buffer_limit`而失败；没有发生Tool Calling。
+- 项目新增`Brotli>=1.2,<2`显式依赖及无网络传输预检；不兼容环境会在创建Live客户端时以明确错误码停止，不再等到读取付费响应时失败。
+- 修复后经用户再次授权执行Live：DeepSeek完成2次模型响应，LLM自主调用`run_ownership_research(ticker="002603.SZ", source_id="S01")`；Registry、Loader、`ownership-structure`、`build_ownership_artifacts`、100%比例校验和10个Graphviz/结构化产物均成功。
+- 两次响应Usage合计为3,192 Input Tokens、782 Output Tokens、3,974 Total Tokens。运行时现逐次累计Usage，即使最终证据校验失败也保留审计值。
+- 最终模型文字自行生成Tool未直接返回的派生比例`23.15%`，被`ungrounded_percentage`后置校验拒绝；Instructions已明确禁止LLM自行加总或推导新比例。
+- 新增2项Brotli预检测试和2项5000输出Token边界测试，最终全量离线回归为`104 passed in 9.49s`。V1.3B标记为Live部分验证；未经再次授权不继续付费复测，也不启动V1.4。
+- 按用户要求将单次模型响应的可配置输出上限提高到5000，默认仍保持800；该参数不冒充整个Agent Loop的总Token预算。
+
+### 2026-10-22 — V1.3B 事实契约收尾
+
+- Tool结果新增由Python确定性构造的`response_contract`：列明允许模型复述的来源编号、主体、持股比例、分支计算值和控制关系；披露值、计算合计、计算差额和100%校验目标分别标记来源类型。
+- 主Agent Instructions明确禁止输出白名单之外的合计比例；后置校验改为直接读取事实契约，并增加明确控制结论的主体与同句来源检查。
+- 新增5项边界测试，覆盖`23.15%`这类可算但未登记比例、允许的计算差额、错误控制主体及控制结论缺少匹配来源；全量离线回归为`109 passed in 9.52s`。
+- 本次没有发送DeepSeek请求。下一步只能在用户再次明确授权后执行一次Live最终复测，并同时审计Token停止原因和回答完整性；通过后才将V1.3B标记完成并启动V1.4。
+
+### 2026-10-22 — V1.3B 事实契约Live复测
+
+- 经用户明确授权执行一次Live任务；配置为`deepseek-flash`、thinking disabled、最多4轮、1次Tool调用、每次响应最多5000 Token，没有自动重复整项测试。
+- DeepSeek完成2次模型响应并自主调用`run_ownership_research(ticker="002603.SZ", source_id="S01")`；Registry、Loader、`ownership-structure`、`build_ownership_artifacts`及10个产物均成功，两个展开分支继续通过100%校验。
+- Usage为4,086 Input Tokens、851 Output Tokens、4,937 Total Tokens；第二轮仅输出772 Token，远低于5000上限，本次失败没有Token不足迹象。
+- 最终自由文本包含`response_contract`未登记的`5%`，被`ungrounded_percentage`拒绝。由于失败结果未进入正式输出，V1.3B仍为Live部分验证，V1.4继续暂停。
+- 下一步不再仅依赖Prompt约束自由文本；优先设计“模型选择事实ID/控制结论ID，Python确定性渲染比例和来源”的结构化最终输出，再经用户授权进行Live验收。
+
+### 2026-10-22 — V1.3B Fact ID离线修复
+
+- 根因审计确认：`5%`既是Skill的小机构展示阈值，也曾出现在Tool返回的缺失信息原因“持股5%以上股东或前10名股东”中；完整`SKILL.md`正文并未发送给模型，最可能的直接诱因是该缺失信息原因被模型复述。因当次被拒绝的完整回复没有保存，原始语境无法证实，此结论保持为高概率判断而非已证实事实。
+- Tool压缩结果不再把含阈值的内部`reason`发送给模型；`response_contract`分别标记企业事实、Python计算、完整性校验和Skill规则，5%/25%不会被无条件加入企业持股白名单。
+- Agent最终响应收紧为只含Fact ID的JSON；Python验证未知/遗漏ID后确定性渲染股东、比例、控制关系、来源及资料限制，并继续执行二次事实校验。
+- 本地轨迹新增脱敏模型候选响应及SHA-256、Tool参数、返回/选择Fact ID、可获得的`finish_reason`、拒绝句和校验规则编号；真实调用仍需另行授权。
+- 全量离线回归：`116 passed in 23.02s`，包括阈值原因不进入模型事实载荷及真实S01产物上的Mock Agent集成；本轮未调用DeepSeek。下一步仅在用户明确授权后执行一次受控Live复测。
+
+### 2026-10-22 — V1.3B Fact-Grounded Generation增量实现
+
+- 新增只读统一事实适配层，复用`FactRecord`、`EvidenceRecord`、`SourceRecord`、股权边/控制关系ID与比例校验结果；未创建第二套来源或PDF管线。
+- `CitableFact`显式记录公司、主体、指标、值、单位、期间/基准日、来源、定位、计算依赖及核验状态；披露事实、Python计算、未核实候选和资料缺口分型处理。
+- 模型响应契约扩展为Fact ID、Missing ID与逐条分析Claim。风险判断必须绑定可交付事实，尽调问题必须绑定资料缺口；模型分析正文不得自行填写比例、年份、来源编号、链接或新的主体事实，具体事实继续由Python渲染。
+- 纵深校验新增主体、期间和来源同句匹配；`5%`作为业务阈值与未经核实企业持股分别拒绝，错误分析不会写入正式说明，已通过确定性校验的股权图和JSON仍保留。
+- 完整离线回归：`127 passed in 12.96s`；未调用DeepSeek或互联网。新契约具备受控Live复测条件，但V1.3B仍保持“Live部分验证”，等待用户另行授权。
+
+### 2026-10-22 — V1.3B Runtime来源绑定修复与Live复测
+
+- 上一轮Live中模型把`source_id`填写为`official`，在Pydantic边界被拒绝。修复后LLM-visible Tool Schema只包含`ticker`；Python从SourceCatalog及运行上下文绑定来源，复核来源登记、主体、目录元数据和下载产物，并以原始JSON守卫拒绝模型来源覆盖字段。
+- 轨迹schema升级至1.3.5，新增`bound_source_id`和`runtime_source_bound`事件；Tool轨迹分别记录`model_arguments`与`runtime_bound`，不把`S01`硬编码进Tool。
+- 新增7项离线测试，覆盖不填写source_id、自动绑定S01、绑定其他合法来源、未登记、元数据不匹配、来源主体不匹配、下载来源不匹配以及模型覆盖拒绝；完整回归为`134 passed in 10.42s`。
+- 经用户授权执行一次Live：2次模型响应、1次Tool调用；模型只提交`ticker="002603.SZ"`，Runtime绑定`S01`，Skill加载、10个产物和两个分支比例校验均成功。
+- Live Usage为7,740 Input、971 Output、8,711 Total Tokens，远低于5000单次输出限制。最终A002使用“控股股东”表述但未绑定`CR001`控制关系Fact ID，被`ANALYSIS-CONTROL-001`拒绝；确定性产物全部保留。V1.3B继续保持Live部分验证，不启动V1.4。

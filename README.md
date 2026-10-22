@@ -66,18 +66,18 @@
 - `financial-analysis` 本轮只注册为 `spec_only`；选中后先完成只读加载，再明确返回“确定性 Tools 尚未实现”，不会假装完成财务分析。
 - V1.3A 没有调用 LLM API，因此无模型费用；其受控入口已在 V1.3B 直接封装为 SDK Function Tool。
 
-## V1.3B 已实现（真实 API 待验证）
+## V1.3B 已实现（真实 API 部分验证）
 
 - 新增独立 DeepSeek Provider 配置，固定默认 Base URL `https://api.deepseek.com`、模型 `deepseek-flash`、密钥变量 `DEEPSEEK_API_KEY`；`.env` 被 Git 忽略，`.env.example` 不含真实密钥。
 - 通过 OpenAI Agents SDK 的 `Agent`、`Runner`、`AsyncOpenAI` 与 `OpenAIChatCompletionsModel` 建立单 Agent Loop；首版用 `extra_body={"thinking":{"type":"disabled"}}` 关闭思考模式。
-- 默认 `mock` 使用 SDK `ScriptedModel`，不会创建网络客户端：第一轮模拟模型选择股权 Tool，Tool 返回后第二轮生成有来源的说明。
+- 默认 `mock` 使用 SDK `ScriptedModel`，不会创建网络客户端：第一轮模拟模型选择股权 Tool，Tool 返回后第二轮选择Tool提供的Fact ID、Missing ID，并生成逐条绑定支持ID的分析Claim；具体事实与来源由Python渲染。
 - `live` 必须显式选择、检测到密钥，并再加 `--confirm-live`；发送前在 stderr 输出脱敏 Provider、模型、thinking、最大轮次、Tool 次数、Token 和重试限制，用户可不确认而取消。
-- 唯一 Function Tool `run_ownership_research` 只接收证券代码与来源编号，不接收路径、Python 或 Shell；内部复用 V1.3A `SkillRuntime` 和 V1.2 `build_ownership_artifacts`。
-- Tool 只向模型返回压缩后的已核实关系、控制关系、比例校验、来源、缺失信息与产物路径，不重复发送完整 PDF 或股权大 JSON。
-- `AgentExecutionTrace` 区分模型调用、模型选择 Tool、Registry/Loader/Skill Runtime、Python Tool、比例校验与产物；记录 Token 使用，费用金额以 DeepSeek 控制台账单为准。
-- 最终回答会再次校验 `[Sxx]` 与百分比是否存在于 Tool 结果；未知来源或未经证实比例会令运行失败，而不会直接交付。
+- 唯一 Function Tool `run_ownership_research` 的LLM可填参数只有证券代码；`source_id`由Python Runtime从已验证上下文和`SourceCatalog`绑定，并复核主体及下载产物一致性。原始参数守卫拒绝模型提供`source_id`或其他覆盖字段；内部继续复用 V1.3A `SkillRuntime` 和 V1.2 `build_ownership_artifacts`。
+- Tool 只向模型返回压缩后的已核实关系、控制关系、比例校验、来源、缺失信息与产物路径，并由Python构造`response_contract`；新增只读`FactGroundingCatalog`复用现有Fact/Evidence/Source与股权ID，企业披露事实、Python计算、未核实候选、资料缺口、完整性规则和5%/25%展示阈值分开标记，不重复发送完整 PDF 或股权大 JSON。
+- 模型最终返回Fact ID、Missing ID和有依据的分析Claim；Python拒绝未知、遗漏、未核实或主体/期间/来源不匹配的引用，再确定性渲染名称、比例、日期、来源和控制结论。风险判断必须绑定事实，尽调问题必须绑定资料缺口，内部阈值不能冒充企业实际持股事实。
+- `AgentExecutionTrace` 区分模型调用、模型选择 Tool、Registry/Loader/Skill Runtime、Python Tool、比例校验与产物；记录 Token、Tool参数、返回/选择Fact ID与Missing ID、分析Claim ID、确定性产物保留状态、脱敏候选响应、可获得的`finish_reason`、拒绝句及规则编号，费用金额以 DeepSeek 控制台账单为准。
 - 领域数据模型暂通过 Pydantic 2 提供的 `pydantic.v1` 兼容命名空间保持 V0—V1.3A 语义；V1.3B 配置与 Tool 输入使用 Pydantic 2。
-- 已完成离线 Mock、错误参数、轮次/Tool 限制、密钥安全、无网络、证据关联、CLI 与真实 S01 缓存集成测试。尚未发送任何真实 DeepSeek 请求，不能把 Mock 通过表述为 Live 兼容性成功。
+- 已完成离线 Mock、错误参数、Runtime来源绑定/覆盖拒绝、轮次/Tool 限制、密钥安全、无网络、Fact ID/证据关联、CLI 与真实 S01 缓存集成测试。最新Live已证明模型只提交`ticker`、Runtime绑定`S01`并完成完整Tool链路；最终A002分析Claim提到控股股东但未绑定控制关系Fact ID，被严格校验器拒绝，因此Live状态仍是“部分验证”。
 
 当前仍未实现完整报告渲染、财务字段结构化、财务分析、RAG、MCP 或 Streamlit。这些能力按 `ROADMAP.md` 分阶段引入。
 
@@ -116,6 +116,7 @@ corporate-credit-research-agent/
 │  ├─ skill_runtime.py       # V1.3A确定性Tool Calling与执行追踪
 │  ├─ llm_config.py          # V1.3B DeepSeek配置、密钥与SDK模型设置
 │  ├─ agent_runtime.py       # V1.3B主Agent、Function Tool、限制和执行追踪
+│  ├─ grounding.py           # 统一可引用事实视图与既有证据/股权结果适配
 │  ├─ pdf_parser.py          # 逐页提取、质量摘要和章节定位
 │  └─ cli.py                 # 企业识别、来源处理和Skill运行入口
 ├─ examples/
@@ -304,7 +305,9 @@ python -m credit_research_agent "002603.SZ" `
   --confirm-live
 ```
 
-程序预算与Token限制不是 DeepSeek 账单的绝对硬上限；实际费用和缓存计费以平台控制台为准。本仓库未执行过上述 Live 命令。
+程序预算与Token限制不是 DeepSeek 账单的绝对硬上限；实际费用和缓存计费以平台控制台为准。2026-10-22的Live均由用户逐次授权；最新一次已验证模型只提交ticker、Runtime绑定S01和完整Tool链路，最终分析Claim因控制关系Fact ID不足被拒绝。不得自动重复调用。
+
+`--max-output-tokens`限制的是**每次模型响应的输出Token**，不是整个Agent Loop的输入与输出总量。默认仍为800；当前允许显式提高到5000，例如`--max-output-tokens 5000`。提高该值会扩大潜在费用，且不会替代来源/比例后置校验。
 
 输出中的 `company` 是规范化上市主体；`sources` 是静态来源种子；`download` 是本机实际获取结果。`S01.status = registered` 只表示来源目录登记状态，不能替代实际下载清单。
 
@@ -450,9 +453,9 @@ Agent Loop、参数校验、Skill加载和 Tool 结果回传都可以离线验�
 
 - Provider配置：`deepseek` / `https://api.deepseek.com` / `deepseek-flash`；thinking固定为disabled
 - 默认模式：Mock，无密钥可运行，不创建DeepSeek/OpenAI网络客户端
-- Agent链路：模型选择 `run_ownership_research` → Registry/Loader加载 `ownership-structure` → V1.2 Tool构建与比例校验 → 压缩事实返回模型 → 最终来源/比例校验
+- Agent链路：模型选择 `run_ownership_research` → Registry/Loader加载 `ownership-structure` → V1.2 Tool构建与比例校验 → 统一事实目录与压缩契约返回模型 → 模型选择Fact/Missing ID并提交有依据Claim → Python渲染并做来源、主体、期间和比例语义校验
 - 真实S01缓存集成：成功生成SVG/PNG，最终说明包含31.53%及`[S01]`，Agent和Skill各自留下独立轨迹
-- Live：能力和保护条件已建立，但尚未创建/使用项目密钥，也未产生任何付费请求；兼容性状态为“未验证”
+- Live：已真实验证DeepSeek连接、两轮响应、Function Calling、Skill加载、Python Tool、比例校验和Graphviz产物；最近一次5000输出Token复测使用4,086 Input、851 Output、4,937 Total Tokens，最终回答因Tool白名单中不存在的`5%`被拒绝，兼容性状态仍为“部分验证”
 
 ## 数据与合规边界
 
@@ -470,14 +473,14 @@ V1.2股权规则/构建：22项
 V1.2真实S01股权集成：1项（本机运行产物不存在时明确跳过）
 V1.3A注册/选择/加载/运行时/CLI：10项
 V1.3A真实S01运行时集成：1项（本机运行产物不存在时明确跳过）
-V1.3B配置/密钥/Mock Agent/限制/证据/CLI：16项
+V1.3B配置/密钥/Mock Agent/限制/证据/CLI、Runtime来源绑定、Brotli传输预检、5000 Token边界、统一事实目录及Fact-Grounded契约：50项
 V1.3B真实S01 Mock Agent集成：1项（本机运行产物不存在时明确跳过）
-本次本机目标合计：100项（最终结果以 `V1_3B_STATUS.md` 的实测记录为准）
+本次本机目标合计：134项（最终结果以 `V1_3B_STATUS.md` 的实测记录为准）
 ```
 
 网络请求使用离线假响应测试，因此日常 `pytest` 不依赖巨潮资讯是否可访问。
 
 ## 下一阶段
 
-先创建 DeepSeek API Key，并按 README 的“预览→显式确认”流程执行一次小规模 Live 兼容性测试，核对 Tool Calling、关闭thinking、usage与错误处理。确认后才把 V1.3B 标记为真实模型已验证；随后再启动 V1.4 报告初稿。财务确定性数据与 `financial-analysis` 执行仍按 V2 开发。详见 `ROADMAP.md`。
+V1.3B已完成ownership场景的Fact-Grounded及Runtime来源绑定修复：模型只填写ticker，Python绑定来源；模型再选择Fact/Missing ID并提交逐条绑定依据的分析Claim，Python渲染具体事实与引用。全量离线测试134项通过。最新Live的来源绑定和完整Tool链路成功，但A002控制关系表述缺少控制关系Fact ID，被`ANALYSIS-CONTROL-001`正确拒绝；本次971个输出Token远低于5000上限，不是Token问题。V1.3B仍未完整验收，不能启动V1.4。详见 `ROADMAP.md`。
 

@@ -90,7 +90,7 @@ APPROVED_SKILLS: Tuple[_ApprovedSkill, ...] = (
     _ApprovedSkill(
         name="ownership-structure",
         relative_path=".agents/skills/ownership-structure/SKILL.md",
-        version="1.3.0",
+        version="1.3.2",
         runtime_status=SkillRuntimeStatus.READY,
         tool_names=("build_ownership_artifacts",),
         keywords=(
