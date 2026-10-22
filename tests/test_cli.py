@@ -2,6 +2,8 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from pydantic import BaseModel
+
 from credit_research_agent import cli
 from credit_research_agent.documents import DownloadResult, ExtractionArtifacts
 from credit_research_agent.downloader import DownloadError
@@ -424,3 +426,83 @@ def test_cli_build_ownership_runs_reused_document_pipeline(
     assert output["ownership"]["node_count"] == 5
     assert output["ownership"]["edge_count"] == 5
     assert output["ownership"]["render_engine"] == "internal-tree-fallback"
+
+
+def test_cli_run_skill_requires_explicit_source(capsys) -> None:
+    exit_code = cli.main(["以岭药业", "--run-skill", "生成股权结构图"])
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 8
+    assert output["skill_error"]["code"] == "missing_skill_source"
+
+
+def test_cli_run_skill_reuses_document_pipeline_and_runtime(
+    tmp_path, monkeypatch, capsys
+) -> None:
+    class FakeDownloader:
+        def download(self, source, destination_dir, *, force=False):
+            return DownloadResult(
+                source_id="S01",
+                source_title=source.title,
+                source_url=str(source.url),
+                file_path=tmp_path / "S01.pdf",
+                manifest_path=tmp_path / "S01.metadata.json",
+                accessed_at=datetime(2026, 10, 21, tzinfo=timezone.utc),
+                final_url=str(source.url),
+                http_status=200,
+                bytes_written=1,
+                sha256="a" * 64,
+                from_cache=True,
+            )
+
+    extraction = ExtractionArtifacts(
+        source_id="S01",
+        summary_path=tmp_path / "parsed" / "S01" / "summary.json",
+        pages_path=tmp_path / "parsed" / "S01" / "pages.jsonl",
+        sample_path=tmp_path / "parsed" / "S01" / "sample.json",
+        total_pages=229,
+        pages_with_text=229,
+        failed_pages=0,
+    )
+
+    class FakeSkillResult(BaseModel):
+        selected_skill: str
+        tool_name: str
+        trace_path: Path
+
+    class FakeRuntime:
+        def __init__(self, project_root):
+            assert (project_root / "pyproject.toml").is_file()
+
+        def execute(self, **kwargs):
+            assert kwargs["task"] == "生成股权结构图"
+            assert kwargs["identity"].ticker == "002603.SZ"
+            assert kwargs["source"].source_id == "S01"
+            assert kwargs["tool_arguments"]["pages_path"] == extraction.pages_path
+            assert kwargs["trace_output"] == tmp_path / "trace.json"
+            return FakeSkillResult(
+                selected_skill="ownership-structure",
+                tool_name="build_ownership_artifacts",
+                trace_path=kwargs["trace_output"],
+            )
+
+    monkeypatch.setattr(cli, "OfficialPdfDownloader", FakeDownloader)
+    monkeypatch.setattr(cli, "extract_to_artifacts", lambda *args, **kwargs: extraction)
+    monkeypatch.setattr(cli, "SkillRuntime", FakeRuntime)
+
+    exit_code = cli.main(
+        [
+            "002603.SZ",
+            "--run-skill",
+            "生成股权结构图",
+            "--skill-source",
+            "S01",
+            "--skill-trace-output",
+            str(tmp_path / "trace.json"),
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert output["skill_run"]["selected_skill"] == "ownership-structure"
+    assert output["skill_run"]["tool_name"] == "build_ownership_artifacts"

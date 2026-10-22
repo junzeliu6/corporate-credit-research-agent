@@ -2,7 +2,7 @@
 
 企业授信研究Agent（Corporate Credit Research Agent）是一个面向银行对公场景的学习型项目：从上市公司公开披露出发，逐步构建可追溯的企业研究辅助 Agent。
 
-当前代码版本是 **V1.2：`ownership-structure` 确定性内核与股权图优化**；需求基线为 **v5**。V1.1 基本面与 V1.2 股权结构均已使用以岭药业2025年官方年报验证；两个 Skill 的运行时选择/加载尚未实现，`financial-analysis` Tools 尚未开发。本项目不是授信审批系统，不给出授信额度、贷款定价或具有审批效力的结论。
+当前代码版本是 **V1.3：Skill 运行时与确定性 Tool Calling**；需求基线为 **v5**。`ownership-structure` 已通过白名单注册、任务选择、只读加载、真实 Tool 调用及执行追踪完成运行时接入；`financial-analysis` 可被识别和加载，但因确定性财务 Tools 尚未实现而保持 `spec_only`。本项目不是授信审批系统，不给出授信额度、贷款定价或具有审批效力的结论。
 
 ## V0.1—V0.4 已实现
 
@@ -55,6 +55,17 @@
 - 输出 `ownership.json`、展示图 JSON、DOT、高清 SVG/PNG、比例校验 JSON、文字说明、来源和待核查清单；本机无 Graphviz 时明确使用分支感知的内部树状 SVG/PNG 降级引擎。
 - V1.2 未调用 LLM，不产生模型 API 费用。
 
+## V1.3 已实现
+
+- 新增白名单 `SkillRegistry`，只登记项目内批准的 `ownership-structure` 与 `financial-analysis`，记录名称、描述、相对路径、版本、状态、Tool 名称和 SHA-256。
+- 新增确定性 `SkillSelector`；根据任务触发词选择一个 Skill，未知任务和多 Skill 歧义任务均显式失败，不让模型绕过白名单。
+- 新增只读 `SkillLoader`；加载前复核路径仍在 `.agents/skills/` 下，并验证注册时哈希，文件被替换时拒绝执行。
+- 新增 `SkillRuntime` 和 `SkillExecutionTrace`，按“主体 → 来源 → 选择 → 加载 → Tool → 结构校验 → 输出”的顺序记录事件。
+- 运行时实际调用 V1.2 唯一实现 `build_ownership_artifacts`，并检查10个声明制品确实落盘；没有复制下载、PDF解析、来源或绘图逻辑。
+- CLI 新增 `--run-skill TASK --skill-source S01`；任务和官方来源必须显式给出，失败也会保存机器可读追踪。
+- `financial-analysis` 本轮只注册为 `spec_only`；选中后先完成只读加载，再明确返回“确定性 Tools 尚未实现”，不会假装完成财务分析。
+- V1.3 未安装或调用 OpenAI Agents SDK，也未调用 LLM API，因此无模型费用。当前运行时边界可在后续直接封装为 SDK function tool。
+
 当前仍未实现完整报告渲染、财务字段结构化、财务分析、RAG、MCP 或 Streamlit。这些能力按 `ROADMAP.md` 分阶段引入。
 
 ## v5 文档与 Skill 规范
@@ -64,7 +75,7 @@
 - `.agents/skills/financial-analysis/SKILL.md`：重点财务科目、20%变化触发、原因合理性和尽调问题规则。
 - `V0_AUDIT.md`：本地 V0 代码、真实运行产物、接口复用和缺口核查。
 
-V1.2 继续复用 V0/V1.1 的主体、来源、下载、PDF和证据接口，没有复制第二套数据管线；`.agents/skills/` 中的业务规范尚待 V1.3 运行时显式注册、选择和加载。
+V1.3 继续复用 V0/V1.1/V1.2 的主体、来源、下载、PDF、证据与股权 Tools，没有复制第二套数据管线。Codex 能读取 `.agents/skills/` 与项目运行时是否加载 Skill 是两件事；现在由 `SkillRegistry`、`SkillSelector`、`SkillLoader` 和 `SkillExecutionTrace` 显式证明运行时行为。
 
 ## 项目结构
 
@@ -88,8 +99,10 @@ corporate-credit-research-agent/
 │  ├─ evidence.py            # 事实/证据构建、交叉校验和引用渲染
 │  ├─ fundamentals.py        # V1.1 基本面构建与产物接口
 │  ├─ ownership.py           # V1.2 股权/比例校验、聚合、建图和SVG/PNG渲染
+│  ├─ skills.py              # V1.3 Skill白名单、任务选择和只读加载
+│  ├─ skill_runtime.py       # V1.3确定性Tool Calling与执行追踪
 │  ├─ pdf_parser.py          # 逐页提取、质量摘要和章节定位
-│  └─ cli.py                 # 企业识别、来源处理和研究构建入口
+│  └─ cli.py                 # 企业识别、来源处理和Skill运行入口
 ├─ examples/
 │  ├─ S01_extraction_sample.json  # 可复现的轻量页码定位样例
 │  ├─ S01_evidence_sample.json    # V0.4 事实证据 JSON
@@ -105,16 +118,21 @@ corporate-credit-research-agent/
 │  ├─ ownership_summary.md
 │  ├─ ownership_sources.json
 │  ├─ ownership_questions.md
-│  └─ ownership_citations.md
+│  ├─ ownership_citations.md
+│  ├─ V1.3_skill_execution_trace.json # 真实S01 Skill执行追踪
+│  └─ v1_3_runtime/          # V1.3真实Tool调用的独立制品
 ├─ tests/
 │  ├─ integration/test_yiling_fundamentals.py
 │  ├─ integration/test_yiling_ownership.py
+│  ├─ integration/test_yiling_skill_runtime.py
 │  ├─ test_company.py
 │  ├─ test_sources.py
 │  ├─ test_downloader.py
 │  ├─ test_pdf_parser.py
 │  ├─ test_fundamentals.py
 │  ├─ test_ownership.py
+│  ├─ test_skills.py
+│  ├─ test_skill_runtime.py
 │  └─ test_cli.py
 ├─ pyproject.toml
 ├─ SKILLS_SPEC.md
@@ -219,6 +237,18 @@ python -m credit_research_agent "002603.SZ" --build-ownership S01 `
 
 `ownership.json` 保存未经聚合和裁剪的披露事实；`ownership_graph.json` 保存按展示规则生成的节点/边。SVG 同目录会生成同名 PNG 和 DOT。若系统安装了 Graphviz 且 `dot` 在 `PATH` 中，`render_engine` 为 `graphviz-dot`；否则输出 `internal-tree-fallback`，不会把降级渲染误报为 Graphviz。
 
+通过 V1.3 运行时执行同一项任务：
+
+```powershell
+python -m credit_research_agent "002603.SZ" `
+  --run-skill "生成股权结构图并核验直接股东持股比例" `
+  --skill-source S01 `
+  --ownership-dir "examples/v1_3_runtime" `
+  --skill-trace-output "examples/V1.3_skill_execution_trace.json"
+```
+
+这条命令会先复用来源下载与PDF解析，再选择并只读加载 `ownership-structure`，最后调用现有 `build_ownership_artifacts`。`SkillExecutionTrace` 保存 Skill 版本/哈希、匹配触发词、Tool 名称、事件顺序、成功/失败状态和制品路径；它不保存或执行来自外部资料的指令。
+
 输出中的 `company` 是规范化上市主体；`sources` 是静态来源种子；`download` 是本机实际获取结果。`S01.status = registered` 只表示来源目录登记状态，不能替代实际下载清单。
 
 ## 设计取舍
@@ -266,6 +296,10 @@ V0.3 的目标是逐页文本和可靠页码，不是马上做复杂表格还原
 ### 为什么原始股权事实与展示图分开
 
 25%/5%阈值、聚合和5层限制都是展示规则，不应修改披露事实。V1.2 先校验 `OwnershipDataset`，再生成独立 `OwnershipGraph`；聚合节点保留成员及原边编号，第6层只在图上截断。这样后续修改展示策略时无需重新解释年报，也能检查图和原始证据是否一致。
+
+### 为什么 V1.3 先使用确定性 Skill 路由
+
+Skill 白名单和 Tool 权限属于应用安全边界，应当可测试、可复现。V1.3 因此先用关键词完成单 Skill 路由，并在调用前验证文件路径与哈希；LLM 将来可以负责理解更自然的任务描述，但不能自行注册 Skill、改变 Tool 白名单或替代比例校验。OpenAI Agents SDK 适合在应用持有工具实现、状态和审批策略时承接运行循环，本项目会在确有模型编排需求时把当前运行时封装为 function tool，而不是让首个付费调用成为 V1.3 的验收前提。
 
 100%完整性同样按原始数据逐个被持股主体计算。只有同一基准日、同一股本口径且存在人工核验声明时，展示层才允许用差额生成“其他未单列股东”；否则分支保持 `incomplete`，正式绘图器拒绝输出。LLM 不参与比例加总。
 
@@ -340,6 +374,17 @@ V0.3 的目标是逐页文本和可靠页码，不是马上做复杂表格还原
 - 本机已安装 Graphviz 16.1.0；当前示例 SVG/PNG 由 `graphviz-dot` 生成，内部 `internal-tree-fallback` 继续作为无外部依赖的降级路径
 - 未调用LLM；比例加总、差额和正式出图资格全部由确定性Python完成
 
+### 2026-10-21 V1.3 Skill 运行时验证
+
+- 真实任务：`生成股权结构图并核验直接股东持股比例`
+- 主体/来源：`002603.SZ` / `S01`，下载命中已校验缓存；229页全部提取成功
+- 运行链：`entity_resolved → source_validated → skill_selected → skill_loaded → tool_called → structured_result_validated → outputs_generated → completed`
+- 选择结果：`ownership-structure`；加载文件：`.agents/skills/ownership-structure/SKILL.md`；实际 Tool：`build_ownership_artifacts`
+- Tool 结果：10个制品均通过存在性校验；6个展示节点、5条持股边、2项公开信息缺口
+- 执行追踪：`examples/V1.3_skill_execution_trace.json`；独立产物：`examples/v1_3_runtime/CN-A-SZSE-002603/`
+- 本次受限子进程无法执行用户目录中的 `dot`，因此真实 V1.3 样例如实记录 `internal-tree-fallback`；V1.2 的 Graphviz 16.1.0 样例及双路径测试结论不变
+- 未调用 LLM/API；没有模型费用
+
 ## 数据与合规边界
 
 - 仅处理获得授权的公开信息，不接入银行内部数据、征信、私人流水或客户保密材料。
@@ -354,12 +399,14 @@ V0回归：41项
 V1.1基本面模型/构建/CLI与真实S01：8项
 V1.2股权规则/构建：22项
 V1.2真实S01股权集成：1项（本机运行产物不存在时明确跳过）
-本次本机合计：72 passed（Graphviz启用路径与内部降级路径均已验证）
+V1.3注册/选择/加载/运行时/CLI：10项
+V1.3真实S01运行时集成：1项（本机运行产物不存在时明确跳过）
+本次本机合计：83 passed（V1.2 Graphviz启用路径此前亦通过）
 ```
 
 网络请求使用离线假响应测试，因此日常 `pytest` 不依赖巨潮资讯是否可访问。
 
 ## 下一阶段
 
-下一阶段为 V1.3：在现有主体、来源、证据和 V1.2 股权 Tools 之上实现显式 Skill 注册、选择、只读加载、Tool 调用与执行追踪；不提前开发 `financial-analysis` Tools。详见 `ROADMAP.md`。
+V1.3 已完成。下一步是 V1.4：用现有基本面与股权结构化结果生成带正文 `[S01]` 引用、来源附录、股权图和待核查清单的 Markdown 报告初稿。财务确定性数据与 `financial-analysis` 执行仍按 V2 开发，不在 V1.4 用推断补齐。详见 `ROADMAP.md`。
 

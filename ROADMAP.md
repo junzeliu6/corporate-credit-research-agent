@@ -1,6 +1,6 @@
 # 企业授信研究Agent — 公共信息研究 Agent 开发路线（v5：双 Skill 集成）
 
-> V0.1—V0.4、V1.1—V1.2 已由本地代码、真实年报产物和测试核验完成；`ownership-structure` 的确定性 Tools 已实现，Skill 运行时尚未开发。下一阶段为 V1.3；首个标的`以岭药业 / 002603.SZ`，默认不上传资料。
+> V0.1—V0.4、V1.1—V1.3 已由本地代码、真实年报产物和测试核验完成；`ownership-structure` 已接入白名单 Skill 运行时并实际调用确定性 Tool。下一阶段为 V1.4；首个标的`以岭药业 / 002603.SZ`，默认不上传资料。
 
 ## [x] V0：上市公司数据入口与证据基础
 - [x] **V0.1** 建立项目骨架、最少依赖、README、实体识别/映射（`以岭药业`、`002603`、`002603.SZ`→`石家庄以岭药业股份有限公司 / 002603.SZ`）及官方来源种子目录；编写离线测试。首个种子为2025年年报（`https://static.cninfo.com.cn/finalpage/2026-04-28/1225205683.PDF`）；同时登记深交所、巨潮资讯和公司官网。V0.1不要求真实下载，也不需要立即写通用搜索引擎。
@@ -20,7 +20,7 @@
 ## [ ] V1：企业研究初稿与单 Agent
 - [x] **V1.1 企业基本面事实抽取**：复用 `CompanyResolver`、`SourceCatalog`、`PdfTextExtractor`、`EvidenceBuilder`，将发展历史、主营业务、经营模式和主要产品分模块抽取为带 `Fxxx/Exxx/Sxx` 引用的结构化结果；先不追求覆盖所有年份。
 - [x] **V1.2 `ownership-structure` 确定性内核**：定义股权节点、边、控制关系、基准日、核验状态及展示配置，并实现 `validate_ownership_facts`、`validate_ownership_percentages`、`aggregate_ownership_holders`、`build_ownership_graph`、`render_ownership_graph`。逐个被展开主体校验同一时点/股本口径的100%完整性；只有全部通过的 `formal_ready` 图才输出SVG/PNG。公开资料检索/下载/PDF读取继续复用 V0，不复制第二套管线。
-- [ ] **V1.3 Skill 运行时机制与 Agent Tool Calling**：实现白名单 `SkillRegistry`（`name`、`description`、路径、版本/哈希）、按任务选择的 `SkillSelector`、只读 `SkillLoader` 及 `SkillExecutionTrace`。调用顺序固定为“解析主体 → 获取/校验来源 → 选择并加载 Skill → 调用确定性 Tools → 校验结构化结果 → 生成引用/文字”；Codex 能发现文件不视为 Agents SDK 已接入。此阶段再引入所需的 OpenAI Agents SDK/LLM API，不提前构建多 Agent。
+- [x] **V1.3 Skill 运行时机制与 Agent Tool Calling**：实现白名单 `SkillRegistry`（`name`、`description`、路径、版本/哈希）、按任务选择的 `SkillSelector`、只读 `SkillLoader` 及 `SkillExecutionTrace`。调用顺序固定为“解析主体 → 获取/校验来源 → 选择并加载 Skill → 调用确定性 Tools → 校验结构化结果 → 生成引用/文字”；真实S01集成测试已证明 `ownership-structure` 被选择、加载并实际调用 `build_ownership_artifacts`。本阶段无需LLM判断即可满足验收，未引入多 Agent 或付费 API 调用。
 - [ ] **V1.4 报告初稿**：Markdown 渲染正文`[S01]`引用、来源附录、股权图和待核查信息；数据不足时允许只输出局部结果和明确限制。
 
 **V1 验收测试**：
@@ -152,3 +152,14 @@
 - 已安装并验证官方Graphviz 16.1.0；当前示例使用`graphviz-dot`生成SVG/PNG并完成目视检查，内部`internal-tree-fallback`继续保留。两种路径均无节点重叠或交叉线。
 - 全量测试：降级路径为`72 passed in 1.93s`；Graphviz启用路径使用独立临时目录复核为`72 passed in 5.20s`。
 - 仍未实现 SkillRegistry/Agent Tool Calling；下一阶段仍为V1.3，不提前开发financial-analysis Skill。
+
+### 2026-10-21 — V1.3 Skill 运行时与确定性 Tool Calling 完成
+
+- 新增 `skills.py`：`SkillRegistry` 只登记两个批准的本地 Skill，保存名称、描述、相对路径、版本、运行状态、Tool 名称及SHA-256；`SkillSelector` 按任务触发词确定性选择，未知和歧义任务显式失败；`SkillLoader` 只读加载并复核目录与哈希。
+- 新增 `skill_runtime.py`：按“主体确认→来源校验→Skill选择→Skill加载→Tool调用→结构化结果校验→输出生成”记录 `SkillExecutionTrace`；成功和失败均写入JSON。
+- Tool权限：当前仅 `ownership-structure` 可调用白名单中的 `build_ownership_artifacts`；`financial-analysis` 可被选择和加载，但保持 `spec_only`，不会提前执行或伪造财务分析。
+- CLI：新增 `--run-skill TASK`、`--skill-source SOURCE_ID` 与 `--skill-trace-output`，继续复用V0下载/PDF解析及V1.2股权构建接口。
+- 真实S01验收：任务命中3个股权触发词，加载 `.agents/skills/ownership-structure/SKILL.md` 后实际调用股权Tool；10个制品通过存在性校验，结果为6个展示节点、5条持股边、2项缺失信息；追踪保存为 `examples/V1.3_skill_execution_trace.json`。
+- 测试：V1.3注册/选择/加载/运行时/CLI及真实S01集成共新增11项；最终全量回归为 `83 passed`。
+- LLM/费用：本阶段未安装或调用OpenAI Agents SDK，未调用LLM API，未产生模型费用。确定性运行时已形成可供后续SDK function tool复用的受控边界。
+- 下一阶段：V1.4报告初稿；复用已核实基本面、股权、引用和待核查结果，不提前开发`financial-analysis` Tools。

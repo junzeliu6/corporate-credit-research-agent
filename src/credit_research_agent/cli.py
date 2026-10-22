@@ -19,6 +19,7 @@ from credit_research_agent.ownership import (
     build_ownership_artifacts,
 )
 from credit_research_agent.pdf_parser import PdfExtractionError, extract_to_artifacts
+from credit_research_agent.skill_runtime import SkillRuntime, SkillRuntimeError
 from credit_research_agent.sources import SourceCatalog, SourceNotFoundError
 
 
@@ -33,7 +34,7 @@ def _as_dict(model: BaseModel) -> Dict[str, Any]:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="credit-research-agent",
-        description="企业授信研究Agent V1.2：识别主体、处理年报并生成可追溯股权结构。",
+        description="企业授信研究Agent V1.3：识别主体、处理年报并以可追踪 Skill 调用确定性 Tools。",
     )
     parser.add_argument("company", help="上市公司名称、证券代码或带交易所后缀的代码")
     parser.add_argument(
@@ -66,6 +67,20 @@ def build_parser() -> argparse.ArgumentParser:
         "--build-ownership",
         metavar="SOURCE_ID",
         help="执行下载、解析，并生成V1.2股权数据、展示图JSON、DOT和SVG",
+    )
+    action_group.add_argument(
+        "--run-skill",
+        metavar="TASK",
+        help="按任务选择并运行白名单 Skill；V1.3 当前可执行股权结构任务",
+    )
+    parser.add_argument(
+        "--skill-source",
+        metavar="SOURCE_ID",
+        help="--run-skill 使用的已登记官方来源，例如 S01",
+    )
+    parser.add_argument(
+        "--skill-trace-output",
+        help="可选的 SkillExecutionTrace JSON 输出路径",
     )
     parser.add_argument(
         "--cache-dir",
@@ -160,12 +175,30 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 2
 
     output: Dict[str, Any] = {"company": _as_dict(company)}
+    if args.skill_source and not args.run_skill:
+        output["skill_error"] = {
+            "code": "orphan_skill_source",
+            "message": "--skill-source 只能与 --run-skill 一起使用",
+        }
+        print(json.dumps(output, ensure_ascii=False, indent=2))
+        return 8
+    if args.run_skill and not args.skill_source:
+        output["skill_error"] = {
+            "code": "missing_skill_source",
+            "message": "--run-skill 必须通过 --skill-source 指定已登记官方来源",
+        }
+        print(json.dumps(output, ensure_ascii=False, indent=2))
+        return 8
     requested_source_id = (
-        args.download_source
-        or args.parse_source
-        or args.build_evidence
-        or args.build_fundamentals
-        or args.build_ownership
+        args.skill_source
+        if args.run_skill
+        else (
+            args.download_source
+            or args.parse_source
+            or args.build_evidence
+            or args.build_fundamentals
+            or args.build_ownership
+        )
     )
     if args.sources or requested_source_id:
         catalog = SourceCatalog.from_default_catalog()
@@ -203,6 +236,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             or args.build_evidence
             or args.build_fundamentals
             or args.build_ownership
+            or args.run_skill
         ):
             try:
                 artifacts = extract_to_artifacts(
@@ -335,6 +369,78 @@ def main(argv: Optional[List[str]] = None) -> int:
                 }
                 print(json.dumps(output, ensure_ascii=False, indent=2))
                 return 7
+
+        if args.run_skill:
+            trace_output = (
+                Path(args.skill_trace_output)
+                if args.skill_trace_output
+                else Path(args.ownership_dir)
+                / company.entity_id
+                / "skill_execution_trace.json"
+            )
+            try:
+                runtime = SkillRuntime(Path(__file__).resolve().parents[2])
+                skill_result = runtime.execute(
+                    task=args.run_skill,
+                    identity=company,
+                    source=source,
+                    tool_arguments={
+                        "download": result,
+                        "summary_path": artifacts.summary_path,
+                        "pages_path": artifacts.pages_path,
+                        "output_dir": Path(args.ownership_dir),
+                        "dataset_output": (
+                            Path(args.ownership_dataset_output)
+                            if args.ownership_dataset_output
+                            else None
+                        ),
+                        "graph_output": (
+                            Path(args.ownership_graph_output)
+                            if args.ownership_graph_output
+                            else None
+                        ),
+                        "svg_output": (
+                            Path(args.ownership_svg_output)
+                            if args.ownership_svg_output
+                            else None
+                        ),
+                        "citations_output": (
+                            Path(args.citations_output)
+                            if args.citations_output
+                            else None
+                        ),
+                        "summary_output": (
+                            Path(args.ownership_summary_output)
+                            if args.ownership_summary_output
+                            else None
+                        ),
+                        "validation_output": (
+                            Path(args.ownership_validation_output)
+                            if args.ownership_validation_output
+                            else None
+                        ),
+                        "sources_output": (
+                            Path(args.ownership_sources_output)
+                            if args.ownership_sources_output
+                            else None
+                        ),
+                        "questions_output": (
+                            Path(args.ownership_questions_output)
+                            if args.ownership_questions_output
+                            else None
+                        ),
+                    },
+                    trace_output=trace_output,
+                )
+                output["skill_run"] = _as_dict(skill_result)
+            except SkillRuntimeError as exc:
+                output["skill_error"] = {
+                    "code": exc.code,
+                    "message": str(exc),
+                    "trace_path": str(exc.trace_path) if exc.trace_path else None,
+                }
+                print(json.dumps(output, ensure_ascii=False, indent=2))
+                return 8
 
     print(json.dumps(output, ensure_ascii=False, indent=2))
     return 0

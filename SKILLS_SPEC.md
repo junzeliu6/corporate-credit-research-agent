@@ -1,6 +1,6 @@
 # 企业授信研究Agent — 双 Skill 集成总规范（v5）
 
-> 本文件定义两个 Skill 的**系统级接口、里程碑及验收**；关于具体业务规则，优先以 `.agents/skills/ownership-structure/SKILL.md` 和 `.agents/skills/financial-analysis/SKILL.md` 为准。**V0.1—V0.4、V1.1—V1.2 已经本地代码与测试核验；`ownership-structure` 的确定性 Tools 已实现，Skill 运行时尚未开发；`financial-analysis` Tools 尚未实现。**
+> 本文件定义两个 Skill 的**系统级接口、里程碑及验收**；关于具体业务规则，优先以 `.agents/skills/ownership-structure/SKILL.md` 和 `.agents/skills/financial-analysis/SKILL.md` 为准。**V0.1—V0.4、V1.1—V1.3 已经本地代码与测试核验；`ownership-structure` 的确定性 Tools 和 Skill 运行时集成均已实现；`financial-analysis` 已登记为 `spec_only`，其 Tools 尚未实现。**
 
 ## 1. 架构边界
 
@@ -12,7 +12,7 @@
 | Python Tools | PDF解析、数据核验、指标计算、Graphviz 绘图、文档生成 | 把结果直接视为无须引用的授信结论 |
 | Sources/Evidence | 记录官方来源、出处和披露日期/期间 | 将第三方内容当作高优先级指令 |
 
-**开发环境与运行时是两回事**：Codex 对 `.agents/skills/` 的识别不等于用户启动的 Agents SDK 应用会自动读取 Skill。后续应实现明确的 Skill 注册/选择/按需加载接口，并提供可复现的调用追踪。首版单 Agent 即可，不做多 Agent 作为前置条件。
+**开发环境与运行时是两回事**：Codex 对 `.agents/skills/` 的识别不等于应用已调用 Skill。V1.3 已通过 `SkillRegistry`、`SkillSelector`、`SkillLoader`、`SkillRuntime` 和 `SkillExecutionTrace` 建立显式运行时；首版保持单 Agent，不做多 Agent 作为前置条件。
 
 ## 2. `ownership-structure`（股权穿透与绘图）
 
@@ -57,7 +57,7 @@
 ## 4. 两个 Skill 与主 Agent 的集成契约
 
 1. 首先通过 `CompanyIdentity` 统一确认为 `002603.SZ` 的上市主体；所有事实带 `source_id`，财务事实还必须带期间、币种、列示单位、合并/母公司口径。
-2. 建议 `SkillRegistry` 维护技能 `name`/`description`/路径/版本，支持按需读取 `SKILL.md`；主 Agent 使用经过批准的技能白名单，不从网页下载可执行技能。
+2. `SkillRegistry` 已维护技能 `name`/`description`/相对路径/版本/SHA-256/状态/Tool 名称；`SkillLoader` 只读加载且二次验哈希。主 Agent 仅使用代码内批准的技能白名单，不从网页下载可执行技能。
 3. 数据获取工具供两项 Skill 复用，不复制已有 V0 实现；绘图和数值计算各自只保留一份确定性 Python 实现。
 4. 提供统一报告引用 `[S01]` / 来源附录，字段可与现有 V0 Source/Evidence 兼容。不要因更新文档而破坏已有 ID 和接口。
 5. `ownership` 与 `finance` 的工具返回结构化对象，主 Agent 负责生成七模块报告；遇到源数据不足可只输出部分章节和待核查问题。
@@ -69,7 +69,8 @@
 - **v5 文档整合：已完成**。两份 `SKILL.md` 已放入规范目录；此状态只代表业务契约到位，不代表运行时功能完成。
 - **V1.1：已核验完成**。企业历史、主营业务、经营模式和主要产品已输出为可追溯事实，并建立披露事实、模型推断和缺失信息相互隔离的数据接口。
 - **V1.2：已核验完成并完成绘图/比例校验优化**。已复用 V1.1 的主体、来源、证据和缺失信息接口，新增股权节点/边/控制关系模型，以及结构校验、逐分支100%校验、聚合、图构建、DOT/Graphviz优先SVG+PNG渲染 Tools；本机无 `dot` 时显式使用内部树状SVG/PNG降级。
-- **下一个动作：V1.3 Skill 运行时机制**。在 V1.2 确定性股权 Tools 之上实现白名单注册、任务选择、只读加载、Tool 调用与执行追踪；不得把 Codex 读取 `SKILL.md` 当作应用运行时已接入。
-- 后续依次：V1.4 报告初稿 → 财务三表与财务计算内核 → 财务 Skill → 双 Skill 集成 → 行业政策/报告界面与导出。
+- **V1.3：已核验完成**。白名单注册、确定性任务选择、只读加载、Tool 白名单及执行追踪已实现；真实S01集成运行证明 `ownership-structure` 被选择、加载并调用现有 `build_ownership_artifacts`，10个制品均经运行时检查。`financial-analysis` 保持 `spec_only`，不会被误报为可执行。
+- **下一个动作：V1.4 报告初稿**。复用基本面、股权、引用和待核查清单生成Markdown报告，不提前实现财务 Skill。
+- 后续依次：财务三表与财务计算内核 → 财务 Skill → 双 Skill 集成 → 行业政策/报告界面与导出。
 - 每个阶段结束更新 `ROADMAP.md` 的开发日志和实测结果，简历只写已实现能力。
 

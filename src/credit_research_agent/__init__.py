@@ -23,6 +23,11 @@ from credit_research_agent.ownership import (
     validate_ownership_facts,
 )
 from credit_research_agent.sources import SourceCatalog
+from credit_research_agent.skill_runtime import (
+    SkillExecutionTrace,
+    SkillRuntime,
+)
+from credit_research_agent.skills import SkillLoader, SkillRegistry, SkillSelector
 
 __all__ = [
     "CompanyIdentity",
@@ -39,6 +44,11 @@ __all__ = [
     "OwnershipDataset",
     "OwnershipGraph",
     "ResearchModule",
+    "SkillExecutionTrace",
+    "SkillLoader",
+    "SkillRegistry",
+    "SkillRuntime",
+    "SkillSelector",
     "SourceCatalog",
     "SourceRecord",
     "StatementType",
@@ -46,5 +56,5 @@ __all__ = [
     "validate_ownership_facts",
 ]
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 
