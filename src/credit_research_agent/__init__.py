@@ -18,7 +18,10 @@ from credit_research_agent.financial import (
     render_financial_data_appendix,
     validate_financial_facts,
 )
-from credit_research_agent.financial_agent_runtime import FinancialResearchAgentRuntime
+from credit_research_agent.financial_agent_runtime import (
+    FinancialResearchAgentRuntime,
+    restore_financial_report_from_saved_draft,
+)
 from credit_research_agent.grounding import (
     CitableFact,
     FactGroundingCatalog,
@@ -139,6 +142,7 @@ __all__ = [
     "generate_financial_section",
     "normalize_financial_items",
     "render_financial_data_appendix",
+    "restore_financial_report_from_saved_draft",
     "validate_financial_facts",
 ]
 

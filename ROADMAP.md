@@ -1,6 +1,6 @@
 # 企业授信研究Agent — 公共信息研究 Agent 开发路线（v5：双 Skill 集成）
 
-> V0.1—V0.4、V1.1—V1.2、V1.3A 与 V1.4 已由本地代码、真实年报产物和测试核验；`ownership-structure` 已接入白名单确定性 Skill Runtime 与 SDK Agent Loop。V1.3B 已真实验证DeepSeek连接和完整Tool链路，但最终分析Claim仍因控制关系Fact ID绑定不足被拒绝，因此保持“Live部分验证”。V1.5最终稳定性修复已通过离线验证。V2.1/V2.2已完成可比财务事实与确定性计算；V2.3的受控Live已验证DeepSeek能够完成9章自然语言财务分析，但现行引用校验契约拒绝了全部章节，最终验收仍未通过。V2.4暂不启动。
+> V0.1—V0.4、V1.1—V1.2、V1.3A 与 V1.4 已由本地代码、真实年报产物和测试核验；`ownership-structure` 已接入白名单确定性 Skill Runtime 与 SDK Agent Loop。V1.3B与V1.5既有Agent、检索和安全能力继续保留。V2.1/V2.2已完成可比财务事实与确定性计算；V2.3受控Live已取得DeepSeek生成的完整9章自然语言财务分析和9项尽调问题，当前按简化后的正式报告规则离线恢复：内部来源追溯保留，正式报告不展示技术ID，Python不再使用复杂自然语言校验阻断模型正文。V2.4暂不启动。
 
 ## [x] V0：上市公司数据入口与证据基础
 - [x] **V0.1** 建立项目骨架、最少依赖、README、实体识别/映射（`以岭药业`、`002603`、`002603.SZ`→`石家庄以岭药业股份有限公司 / 002603.SZ`）及官方来源种子目录；编写离线测试。首个种子为2025年年报（`https://static.cninfo.com.cn/finalpage/2026-04-28/1225205683.PDF`）；同时登记深交所、巨潮资讯和公司官网。V0.1不要求真实下载，也不需要立即写通用搜索引擎。
@@ -21,9 +21,9 @@
 - [x] **V1.1 企业基本面事实抽取**：复用 `CompanyResolver`、`SourceCatalog`、`PdfTextExtractor`、`EvidenceBuilder`，将发展历史、主营业务、经营模式和主要产品分模块抽取为带 `Fxxx/Exxx/Sxx` 引用的结构化结果；先不追求覆盖所有年份。
 - [x] **V1.2 `ownership-structure` 确定性内核**：定义股权节点、边、控制关系、基准日、核验状态及展示配置，并实现 `validate_ownership_facts`、`validate_ownership_percentages`、`aggregate_ownership_holders`、`build_ownership_graph`、`render_ownership_graph`。逐个被展开主体校验同一时点/股本口径的100%完整性；只有全部通过的 `formal_ready` 图才输出SVG/PNG。公开资料检索/下载/PDF读取继续复用 V0，不复制第二套管线。
 - [x] **V1.3A 确定性 Skill Runtime**：实现白名单 `SkillRegistry`（`name`、`description`、路径、版本/哈希）、按任务选择的 `SkillSelector`、只读 `SkillLoader` 及 `SkillExecutionTrace`。调用顺序固定为“解析主体 → 获取/校验来源 → 选择并加载 Skill → 调用确定性 Tools → 校验结构化结果 → 生成引用/文字”；真实S01集成测试已证明 `ownership-structure` 被选择、加载并实际调用 `build_ownership_artifacts`。本阶段没有LLM判断、Agent Loop 或付费 API 调用。
-- [ ] **V1.3B DeepSeek LLM Agent Runtime（Fact-Grounded离线修复完成，Live部分验证）**：使用 OpenAI Agents SDK 的 `Agent`、`Runner` 和受限 Function Tool 接入 DeepSeek OpenAI 兼容接口。默认 Mock 模式且禁止联网；Live 模式必须显式选择、存在 `DEEPSEEK_API_KEY` 并由用户确认。第一阶段只向模型开放 `ownership-structure` 高层 Tool，运行时真实经过 Registry、Loader 与现有确定性内核，并记录模型选择、Skill加载、Tool调用、比例校验、产物和Token使用轨迹。`thinking`固定为disabled。LLM仅填写ticker，Python绑定并验证source_id。最新Live已通过来源绑定、Skill与Tool链路，但最终分析Claim缺少对应控制关系Fact ID，完整验收仍未通过。
+- [ ] **V1.3B DeepSeek LLM Agent Runtime（既有能力保留）**：使用 OpenAI Agents SDK 的 `Agent`、`Runner` 和受限 Function Tool 接入 DeepSeek OpenAI 兼容接口。默认 Mock 模式且禁止联网；Live 模式必须显式选择、存在 `DEEPSEEK_API_KEY` 并由用户确认。第一阶段只向模型开放 `ownership-structure` 高层 Tool，运行时真实经过 Registry、Loader 与现有确定性内核，并记录模型选择、Skill加载、Tool调用、比例校验、产物和Token使用轨迹。`thinking`固定为disabled。LLM仅填写ticker，Python绑定并验证source_id。历史Fact-Grounded输出契约继续作为ownership内部兼容实现，但不再作为后续正式报告正文的统一规范。
 - [x] **V1.4 报告初稿**：已完成 Markdown 框架、`[S01]`引用、来源附录、股权图和待核查信息的确定性组装。该阶段的“无LLM也生成基础正文”是历史 MVP 方案；自 V2.3 架构调整起，正式研究分析正文必须由 DeepSeek 撰写，Python 只保留数据/图表/附录和未完成标记，不再用模板冒充正式分析。
-- [x] **V1.5 基础信息检索（最终稳定性修复离线完成，Live部分验证）**：实现通用`SearchProvider`与百度官方Web Search Provider，注册`search_web`、`fetch_source`、`extract_evidence`三个白名单Tool。Python确定性映射`verified / single_source / unverified / unsupported`，单页读取失败、无效页面和预算耗尽均可降级并尽可能生成Markdown报告；搜索摘要不升级为事实。默认Mock且搜索API请求数为0；Live需`BAIDU_SEARCH_API_KEY`、`--search-mode live`与`--confirm-search-live`。
+- [x] **V1.5 基础信息检索（既有能力保留）**：实现通用`SearchProvider`与百度官方Web Search Provider，注册`search_web`、`fetch_source`、`extract_evidence`三个白名单Tool。既有`verified / single_source / unverified / unsupported`可继续用于内部诊断，正式报告统一映射为“已核验/未核验”；单页读取失败、无效页面和预算耗尽均可降级，搜索摘要不升级为确定事实。默认Mock且搜索API请求数为0；Live需`BAIDU_SEARCH_API_KEY`、`--search-mode live`与`--confirm-search-live`。
 
 **V1 验收测试**：
 
@@ -32,13 +32,13 @@
 - 图中目标公司置顶；节点只显示名称和比例，箭头从股东指向被持股企业；SVG/PNG可渲染且无来源/控制说明文字或虚线。
 - 以岭药业端到端案例只使用经核验披露，不将虚构 fixture 或未知比例写入真实图。
 - 运行日志或集成测试证明 `ownership-structure` 被选择、加载并调用了实际 Tool；只存在 `SKILL.md` 不算验收通过。
-- V1.3B Mock 测试不得产生任何外部 LLM 请求；Live 模式缺少密钥、缺少显式确认或超出轮次/Tool次数时必须安全终止。模型分析中的比例和来源编号必须能在 Tool 返回的结构化事实与证据中找到。
+- V1.3B Mock 测试不得产生任何外部 LLM 请求；Live 模式缺少密钥、缺少显式确认或超出轮次/Tool次数时必须安全终止。内部事实与来源仍需可追溯，但正式报告默认不显示技术编号。
 - V1.5 Mock 测试必须证明 Agent 按顺序调用搜索、原文获取和证据提取，且不发送网络请求。搜索摘要不得直接成为事实；未核验第三方资料、冲突值、验证码页和疑似网页指令注入必须隔离。单任务默认最多10轮检索、10次搜索Tool/API请求、5条/次、20次抓取、20次提取、60次总Tool调用和70轮Agent，由Python分别计数并强制；第10轮允许、第11轮阻止。
 
 ## [ ] V2：财务与行业研究
 - [x] **V2.1 可比财务事实层**：真实发现并登记 2024/2023 年官方年报，不猜测 URL；从 2024、2025 合并财务报表及附注提取三表数据，必要时使用 2023 期初余额。每个数据点保留原始科目、期间、币种、单位、合并/母公司口径、`source_id` 和页码；表格结构化结果必须回看原文核验。
 - [x] **V2.2 财务确定性 Tools**：开发 `normalize_financial_items`、`validate_financial_facts`、`calculate_financial_metrics`、`rank_material_changes`。统一同比公式、精度和错误状态，禁止 LLM 徒手计算关键数值；Pandas 仅用于确定性数据处理。
-- [ ] **V2.3 `financial-analysis` 专业流程（离线实现完成，Live正文校验待修复）**：保留`extract_change_explanations`、`assess_reasonableness`和原因/合理性JSON作为分析上下文，不再由Python模板承担正式报告作者。主Agent通过只接受ticker的`run_financial_research`加载Skill和数据Tool，DeepSeek必须输出完整自然语言财务分析及引用ID；Python仅绑定来源/路径、计算数值、核验关键金额/期间/来源/不支持陈述，并把通过的模型段落原样组装到Markdown。不合格或缺失章节标记未完成，禁止模板回退。离线Mock及完整`227 passed`回归已经完成；120秒超时、0次自动重试的受控Live已完整返回9章正文，但全部被当前引用契约拒绝，需先修复误判与真正不支持陈述的区分，再进行最终验收。
+- [x] **V2.3 `financial-analysis` 专业流程**：保留确定性财务事实、指标、原因资料和必要内部来源作为分析上下文，不再由Python模板承担正式报告作者。主Agent通过只接受ticker的`run_financial_research`加载Skill和数据Tool，DeepSeek输出完整自然语言财务分析与尽调问题；Python仅绑定来源/路径、计算数值、解析最小输出结构、加入数据表并组装Markdown。模型无需返回Fact/Metric/Source ID，正文不因百分比白名单、正则或逐句来源匹配被拒绝。120秒超时、0次自动重试的受控Live完整返回9章正文和9项尽调问题；已使用保存草稿和SHA-256绑定的人工审阅展示副本离线恢复不含技术ID的正式Markdown，报告标题由Python绑定企业身份生成，全量回归`223 passed`，无模板回退。
 - [ ] **V2.4 行业与政策研究**：定向检索政府/监管一手来源，保留发布日期、实施状态、适用范围和企业影响的不确定性。
 - [ ] **V2.5 双 Skill 集成**：同一次研究任务按需加载两个 Skill，复用统一的主体、来源、证据和报告引用，生成股权图、财务分析、风险信号与确实缺失的尽调问题。
 
@@ -49,8 +49,8 @@
 - 必查货币资金、应收账款、预付款项、固定资产、短期借款、应付账款、主营业务收入、经营现金流，并覆盖存货；缺失字段转为明确的待核查项。
 - 至少识别“应收增速高于收入”“利润与经营现金流背离”“短债上升但可用现金未知”等基础信号，但不自动推导违约结论。
 - 第一版银行流水分析保持关闭；未公开的存款银行、贷款银行、交易对手和流水不得臆造。
-- 集成日志证明两个 Skill 的选择、加载、Tool 调用、校验结果和失败降级；最终报告引用沿用 `[Sxx]`，不得破坏 V0 编号。
-- 财务Mock需证明模型自然语言正文未经Python改写直接进入Markdown；错误数值、来源或不支持原因只使对应章节未完成，其他有效段落和确定性数据产物仍保留。模型整体失败时不得生成固定模板分析。
+- 集成日志证明两个 Skill 的选择、加载、Tool 调用、结构化数据结果和失败降级；V0来源编号继续在内部数据层保留，最终报告默认不显示技术ID。
+- 财务Mock需证明模型自然语言正文未经Python改写直接进入Markdown，并包含必要数据表和尽调问题；报告只以“已核验/未核验”区分资料和假设。模型整体调用或最小结构解析失败时不得生成固定模板分析。
 
 ## [ ] V3：演示产品与工程质量
 - [ ] V3.1 Streamlit名称输入、主体展示、执行状态、分模块结果、图表；首版无需上传控件。
@@ -306,3 +306,13 @@
 - V2.4行业与政策研究暂不启动；V2.3需在DeepSeek Live正文通过事实约束后再完成最终验收。
 - 后续两次受控正文Live分别暴露运行边界：5000 Output Tokens在第九章以`finish_reason=length`截断；将上限提高至50000并完成`227 passed`回归后，第二轮正文生成改为在默认30秒请求超时处失败。两次均成功完成Tool选择、Skill加载和确定性财务产物构建，但没有形成通过校验的正式正文；下一次动作应先由用户决定是否把单次请求超时提高至120秒并关闭底层自动重试。
 - 第三次受控正文Live使用120秒单请求超时、0次SDK自动重试和50000 Output Token上限。两次模型请求均正常结束，第二次约33.19秒且`finish_reason=stop`；总用量为17,722 Input、6,063 Output、23,785 Total Tokens。模型生成完整9章分析和9个尽调问题，Function Tool、Skill加载、S01/S10绑定及确定性产物均成功；但9个章节因内联ID完整性、计算指标`derived_from`引用、多值事实解析及部分推断支持等校验项全部被拒绝。超时与截断问题已排除，当前阻碍转为“模型引用格式与校验契约不匹配，并夹杂少量需实质审查的分析陈述”；Live后完整离线回归为`227 passed in 20.41s`。V2.3继续保持未完成，禁止自动重试。
+
+### 2026-10-23 — V2.3 正式报告事实管理简化（已完成）
+
+- 用户确认统一后续正式报告职责：Python负责资料获取、结构化数据、确定性计算、内部来源保存、图表、最小输出结构解析和Markdown组装；DeepSeek负责专业分析、跨指标判断、风险识别、尽调问题和报告正文。
+- 正式报告默认不展示`[Sxx]`、`Fxxx`、`FMxxx`等技术ID，也不要求模型返回这些ID。来源URL、年报文件、页码、原始数据和执行轨迹继续在内部独立保存，用户需要时再导出研究依据文件。
+- 取消百分比白名单、正则/关键词推断审查、逐句来源匹配、`derived_from`完整引用和单段失败拒绝整份报告等自然语言交付门禁；完全无依据的具体金额、股权比例或经营事件仍不得编造成企业事实。
+- 用户可见可信度只区分“已核验/未核验”：可靠披露和Python确定性计算为已核验；单一来源、尚未确认的外部信息和分析假设为未核验，并使用“可能”“需进一步核实”等措辞。既有细粒度状态可以继续用于内部诊断。
+- 本轮优先离线读取第三次Live已保存的`financial_llm_draft.json`，恢复9章正文和9项尽调问题，加入Python财务数据表及“AI生成研究初稿，需人工复核”声明；不得重新调用DeepSeek，不得启动V2.4。
+- 已完成离线恢复：最终`financial_analysis.md`包含9章DeepSeek正文、9项尽调问题、核心财务数据表和比率表，技术引用标记为0；原始draft及内部来源记录保持不变。
+- 财务定向测试`14 passed in 4.53s`，全量离线回归`223 passed in 13.65s`；本轮未调用任何真实API。详细结果见`V2_3_SIMPLIFICATION_STATUS.md`。

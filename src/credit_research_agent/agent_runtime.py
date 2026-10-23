@@ -108,6 +108,7 @@ class AgentExecutionStage(str, Enum):
     LLM_CALL_COMPLETED = "llm_call_completed"
     LLM_TOOL_SELECTED = "llm_tool_selected"
     SKILL_RUNTIME_COMPLETED = "skill_runtime_completed"
+    STRUCTURED_OUTPUT_PARSED = "structured_output_parsed"
     GROUNDED_OUTPUT_VALIDATED = "grounded_output_validated"
     RUN_COMPLETED = "run_completed"
     RUN_FAILED = "run_failed"

@@ -1,8 +1,10 @@
-"""V2.3 财务 Function Tool 与 Mock Agent 离线测试。"""
+"""V2.3 财务 Function Tool 与简化 LLM 报告链路的离线测试。"""
 
 from __future__ import annotations
 
 import json
+import re
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
@@ -17,11 +19,13 @@ from credit_research_agent.documents import DownloadResult
 from credit_research_agent.financial import FinancialSourceInput
 from credit_research_agent.financial_agent_runtime import (
     FINANCIAL_FUNCTION_TOOL,
-    FinancialNarrativeDraft,
     FinancialResearchAgentRuntime,
     _build_financial_analysis_context,
+    _build_delivery_manifest,
     create_financial_function_tool,
-    validate_financial_narrative,
+    parse_financial_narrative_draft,
+    render_llm_financial_report,
+    restore_financial_report_from_saved_draft,
 )
 from credit_research_agent.llm_config import load_deepseek_config
 from credit_research_agent.skill_runtime import (
@@ -36,6 +40,10 @@ from credit_research_agent.sources import SourceCatalog
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 FIXED_TIME = datetime(2026, 10, 23, 8, 0, tzinfo=timezone.utc)
 TASK = "请分析以岭药业2023至2025年财务报表、现金流和重大同比变动"
+TECHNICAL_MARKER = re.compile(
+    r"\[(?:FM\d+|FR\d+|RF\d+|FX(?:\d+|-[A-Z0-9-]+)|FH\d+|"
+    r"FQ\d+|FS\d+|F\d+|I\d+|S\d+|M\d+)\]"
+)
 
 
 def _download(tmp_path: Path, source_id: str) -> DownloadResult:
@@ -114,7 +122,7 @@ def _fake_metric(
         "current_value": current_value,
         "absolute_change": absolute_change,
         "yoy_percent": yoy_percent,
-        "change_kind": "normal",
+        "change_kind": "comparable",
         "requires_deep_analysis": requires_deep_analysis,
         "supporting_fact_ids": [fact_id],
         "source_ids": ["S01", "S10"],
@@ -123,73 +131,37 @@ def _fake_metric(
 
 FAKE_METRICS = [
     _fake_metric(
-        "FM024",
-        "operating_revenue",
-        "营业收入",
-        "F101",
-        "100000000",
-        "120000000",
-        "20000000",
-        "20.00",
+        "FM024", "operating_revenue", "营业收入", "F101",
+        "100000000", "120000000", "20000000", "20.00",
         requires_deep_analysis=True,
     ),
     _fake_metric(
-        "FM004",
-        "accounts_receivable",
-        "应收账款",
-        "F102",
-        "10000000",
-        "11000000",
-        "1000000",
-        "10.00",
+        "FM004", "accounts_receivable", "应收账款", "F102",
+        "10000000", "11000000", "1000000", "10.00",
     ),
     _fake_metric(
-        "FM014",
-        "inventory",
-        "存货",
-        "F103",
-        "20000000",
-        "18000000",
-        "-2000000",
-        "-10.00",
+        "FM014", "inventory", "存货", "F103",
+        "20000000", "18000000", "-2000000", "-10.00",
     ),
     _fake_metric(
-        "FM016",
-        "monetary_funds",
-        "货币资金",
-        "F104",
-        "5000000",
-        "6000000",
-        "1000000",
-        "20.00",
+        "FM016", "monetary_funds", "货币资金", "F104",
+        "5000000", "6000000", "1000000", "20.00",
         requires_deep_analysis=True,
     ),
     _fake_metric(
-        "FM002",
-        "accounts_payable",
-        "应付账款",
-        "F105",
-        "10000000",
-        "9000000",
-        "-1000000",
-        "-10.00",
+        "FM002", "accounts_payable", "应付账款", "F105",
+        "10000000", "9000000", "-1000000", "-10.00",
     ),
     _fake_metric(
-        "FM020",
-        "operating_cash_flow",
-        "经营活动产生的现金流量净额",
-        "F106",
-        "2000000",
-        "4000000",
-        "2000000",
-        "100.00",
+        "FM020", "operating_cash_flow", "经营活动产生的现金流量净额", "F106",
+        "2000000", "4000000", "2000000", "100.00",
         requires_deep_analysis=True,
     ),
 ]
 
 
 class _FakeFinancialSkillRuntime:
-    calls = []
+    calls: list[Dict[str, Any]] = []
 
     def __init__(self, project_root: Path) -> None:
         self.project_root = project_root
@@ -207,13 +179,6 @@ class _FakeFinancialSkillRuntime:
                 "quote": f"测试事实原文{index}",
             }
             for index in range(1, 7)
-        ] + [
-            {
-                "evidence_id": "E280",
-                "source_id": "S01",
-                "page_number": 280,
-                "quote": "经营活动现金流净额增加主要因销售回款增加。",
-            }
         ]
         raw_facts = [
             {
@@ -223,23 +188,13 @@ class _FakeFinancialSkillRuntime:
                 "period": "FY2025",
                 "value": metric["current_value"],
                 "unit": "CNY",
+                "claim": f"{metric['item_label']}为{metric['current_value']}元",
                 "evidence_ids": [f"E{index:03d}"],
                 "source_ids": ["S01"],
             }
             for index, metric in enumerate(FAKE_METRICS, start=1)
-        ] + [
-            {
-                "fact_id": "F280",
-                "subject": identity.legal_name,
-                "item": "operating_cash_flow_reason",
-                "period": "FY2025",
-                "value": None,
-                "unit": None,
-                "evidence_ids": ["E280"],
-                "source_ids": ["S01"],
-            }
         ]
-        payloads = {
+        payloads: Dict[str, Any] = {
             "facts_path": {
                 "identity": json.loads(identity.json()),
                 "raw_facts": raw_facts,
@@ -253,10 +208,7 @@ class _FakeFinancialSkillRuntime:
                     }
                 ],
             },
-            "metrics_path": {
-                "metrics": FAKE_METRICS,
-                "ratios": [],
-            },
+            "metrics_path": {"metrics": FAKE_METRICS, "ratios": []},
             "explanations_path": {
                 "explanations": [
                     {
@@ -264,6 +216,7 @@ class _FakeFinancialSkillRuntime:
                         "metric_id": "FM020",
                         "kind": "disclosed_reason",
                         "statement": "公司披露主要因销售回款增加。",
+                        "disclosed_fact_ids": ["F106"],
                         "source_ids": ["S01"],
                     }
                 ],
@@ -277,14 +230,10 @@ class _FakeFinancialSkillRuntime:
                     "status": "supported",
                     "conclusion": "销售收现与经营现金流方向一致。",
                     "credit_concern": "关注回款持续性。",
-                    "due_diligence_questions": ["请提供销售回款明细。"],
                 }
             ],
             "risk_flags_path": [
-                {
-                    "flag_id": "RF001",
-                    "observation": "经营现金流同比重大变动，需持续核查。",
-                }
+                {"flag_id": "RF001", "observation": "经营现金流重大变动。"}
             ],
             "sources_path": {
                 "sources": [
@@ -314,22 +263,12 @@ class _FakeFinancialSkillRuntime:
             "validation_path",
         ):
             path = output_dir / field_name.replace("_path", ".md")
-            path.write_text(
-                "# Python财务数据附录\n\n[S01] [S10]\n"
-                if field_name == "data_appendix_path"
-                else "# 尚未取得通过校验的 DeepSeek 分析正文\n",
-                encoding="utf-8",
-            )
+            path.write_text("# 等待 DeepSeek 分析\n", encoding="utf-8")
             artifacts[field_name] = str(path)
         artifacts.update(
-            fact_count=len(raw_facts),
-            metric_count=len(FAKE_METRICS),
-            ratio_count=0,
-            risk_flag_count=1,
-            material_change_count=3,
-            explanation_count=1,
-            hypothesis_count=0,
-            assessment_count=1,
+            fact_count=len(raw_facts), metric_count=len(FAKE_METRICS),
+            ratio_count=0, risk_flag_count=1, material_change_count=3,
+            explanation_count=1, hypothesis_count=0, assessment_count=1,
         )
         trace_path = Path(kwargs["trace_output"])
         trace_path.parent.mkdir(parents=True, exist_ok=True)
@@ -379,7 +318,7 @@ def _fake_skill_result(tmp_path: Path) -> SkillExecutionResult:
     )
 
 
-def _scripted_financial_model(draft: Dict[str, Any]) -> ScriptedModel:
+def _scripted_model(final_output: str) -> ScriptedModel:
     return ScriptedModel(
         [
             ModelStep(
@@ -390,455 +329,165 @@ def _scripted_financial_model(draft: Dict[str, Any]) -> ScriptedModel:
                         call_id="financial-call",
                     )
                 ],
-                usage=Usage(
-                    requests=1, input_tokens=10, output_tokens=10, total_tokens=20
-                ),
+                usage=Usage(requests=1, input_tokens=10, output_tokens=10, total_tokens=20),
             ),
             ModelStep(
-                output=[assistant_message(json.dumps(draft, ensure_ascii=False))],
-                usage=Usage(
-                    requests=1, input_tokens=20, output_tokens=40, total_tokens=60
-                ),
+                output=[assistant_message(final_output)],
+                usage=Usage(requests=1, input_tokens=20, output_tokens=40, total_tokens=60),
             ),
         ]
     )
 
 
-def _draft_section(
-    *,
-    section_id: str,
-    topic: str,
-    heading: str,
-    analysis_markdown: str,
-    metric_ids: list[str] | None = None,
-    ratio_ids: list[str] | None = None,
-    fact_ids: list[str] | None = None,
-    explanation_ids: list[str] | None = None,
-    inference_ids: list[str] | None = None,
-    source_ids: list[str] | None = None,
-    missing_information_ids: list[str] | None = None,
-) -> Dict[str, Any]:
+def _simple_draft(*, legacy_ids: bool = False) -> Dict[str, Any]:
+    section: Dict[str, Any] = {
+        "topic": "executive_summary",
+        "heading": "授信结论摘要",
+        "analysis_markdown": "【模型原文哨兵-7E9A】收入和现金流需要联动观察。",
+    }
+    question: Dict[str, Any] = {"question": "请提供期后回款和最新借款台账。"}
+    if legacy_ids:
+        section.update(
+            section_id="FS001",
+            metric_ids=["FM024"],
+            fact_ids=["F101"],
+            source_ids=["S01"],
+        )
+        section["analysis_markdown"] += "[FM024][F101][S01]"
+        question.update(question_id="FQ001", supporting_metric_ids=["FM024"])
     return {
-        "section_id": section_id,
-        "topic": topic,
-        "heading": heading,
-        "analysis_markdown": analysis_markdown,
-        "metric_ids": metric_ids or [],
-        "ratio_ids": ratio_ids or [],
-        "fact_ids": fact_ids or [],
-        "explanation_ids": explanation_ids or [],
-        "inference_ids": inference_ids or [],
-        "source_ids": source_ids or [],
-        "missing_information_ids": missing_information_ids or [],
+        "report_title": "测试企业财务分析",
+        "sections": [section],
+        "due_diligence_questions": [question],
     }
 
 
 def test_financial_function_tool_only_exposes_ticker() -> None:
     tool = create_financial_function_tool()
-
     assert tool.name == FINANCIAL_FUNCTION_TOOL
     assert set(tool.params_json_schema["properties"]) == {"ticker"}
     assert tool.params_json_schema["required"] == ["ticker"]
     assert tool.params_json_schema["additionalProperties"] is False
 
 
-def test_analysis_context_always_includes_focus_items_and_grounding_links(
+def test_analysis_context_contains_data_but_not_internal_ids(tmp_path: Path) -> None:
+    payload = _build_financial_analysis_context(_fake_skill_result(tmp_path))
+    serialized = json.dumps(payload, ensure_ascii=False)
+    assert "营业收入" in serialized
+    assert "FY2024" in serialized and "FY2025" in serialized
+    assert "20.00" in serialized
+    assert "公司披露主要因销售回款增加" in serialized
+    assert "公开主表未形成可比值" in serialized
+    assert "2025年年度报告" in serialized
+    assert "metric_id" not in serialized
+    assert "fact_id" not in serialized
+    assert "source_id" not in serialized
+    schema = payload["response_contract"]["final_response_schema"]
+    assert set(schema["sections"][0]) == {"topic", "heading", "analysis_markdown"}
+    assert set(schema["due_diligence_questions"][0]) == {"question"}
+
+
+def test_parser_accepts_simplified_and_legacy_drafts_without_id_contract() -> None:
+    simplified = parse_financial_narrative_draft(
+        json.dumps(_simple_draft(), ensure_ascii=False)
+    )
+    legacy = parse_financial_narrative_draft(
+        json.dumps(_simple_draft(legacy_ids=True), ensure_ascii=False)
+    )
+    assert simplified.sections[0].analysis_markdown.startswith("【模型原文哨兵")
+    assert legacy.sections[0].topic == "executive_summary"
+    assert not hasattr(legacy.sections[0], "fact_ids")
+    assert not hasattr(legacy.due_diligence_questions[0], "supporting_metric_ids")
+
+
+def test_renderer_preserves_llm_prose_and_hides_legacy_markers(tmp_path: Path) -> None:
+    payload = _build_financial_analysis_context(_fake_skill_result(tmp_path))
+    draft = parse_financial_narrative_draft(
+        json.dumps(_simple_draft(legacy_ids=True), ensure_ascii=False)
+    )
+    report = render_llm_financial_report(draft, payload, model_mode="live")
+    assert "【模型原文哨兵-7E9A】" in report
+    assert "## 核心财务数据" in report
+    assert "FY2024 1.00" in report
+    assert "FY2025 1.20" in report
+    assert "20.00%" in report
+    assert "请提供期后回款和最新借款台账" in report
+    assert not TECHNICAL_MARKER.search(report)
+    assert "数据来源附录" not in report
+
+
+def test_renderer_keeps_normal_bracketed_text_while_hiding_internal_ids(
     tmp_path: Path,
 ) -> None:
     payload = _build_financial_analysis_context(_fake_skill_result(tmp_path))
-
-    assert set(payload["focus_items"]) == {
-        "operating_revenue",
-        "accounts_receivable",
-        "inventory",
-        "monetary_funds",
-        "short_term_borrowings",
-        "accounts_payable",
-        "operating_cash_flow",
-    }
-    metrics = {item["item"]: item for item in payload["metrics"]}
-    assert {
-        "operating_revenue",
-        "accounts_receivable",
-        "inventory",
-        "monetary_funds",
-        "accounts_payable",
-        "operating_cash_flow",
-    }.issubset(metrics)
-    # 低于20%重大变动阈值的重点科目也必须进入模型上下文。
-    assert metrics["accounts_receivable"]["requires_deep_analysis"] is False
-    assert metrics["inventory"]["requires_deep_analysis"] is False
-    assert metrics["accounts_payable"]["requires_deep_analysis"] is False
-    assert metrics["operating_cash_flow"]["supporting_fact_ids"] == ["F106"]
-    assert any(item["fact_id"] == "F106" for item in payload["facts"])
-    assert any(item["evidence_id"] == "E006" for item in payload["evidence"])
-    assert payload["response_contract"]["topic_requirements"][
-        "short_term_borrowings_and_debt_structure"
-    ]["missing_information_ids"] == ["M201"]
-    assert payload["artifacts"]["data_appendix_path"].endswith(
-        "data_appendix.md"
+    raw = _simple_draft(legacy_ids=True)
+    raw["sections"][0]["analysis_markdown"] = (
+        "报告期为[FY2025]，关注等级为[IMPORTANT]。[F101][FM024][S01]"
     )
+    draft = parse_financial_narrative_draft(json.dumps(raw, ensure_ascii=False))
+    report = render_llm_financial_report(draft, payload, model_mode="live")
+    assert "[FY2025]" in report
+    assert "[IMPORTANT]" in report
+    assert "[F101]" not in report
+    assert "[FM024]" not in report
+    assert "[S01]" not in report
 
 
-@pytest.mark.parametrize(
-    ("analysis_markdown", "source_ids", "expected_rule", "reason_fragment"),
-    [
-        (
-            "营业收入同比999.00%。[FM024] [F101] [S01]",
-            ["S01"],
-            "FIN-NARRATIVE-012",
-            "比例 999.00% 未被本段引用指标",
-        ),
-        (
-            "营业收入同比20.00%。[FM024] [F101] [S10]",
-            ["S10"],
-            "FIN-NARRATIVE-010",
-            "Fact F101 与本段来源不匹配",
-        ),
-        (
-            "营业收入同比20.00%，主要因渠道扩张。[FM024] [F101] [S01]",
-            ["S01"],
-            "FIN-NARRATIVE-014",
-            "提出具体因果解释",
-        ),
-    ],
-)
-def test_financial_narrative_rejects_unsupported_numbers_sources_and_causes(
-    tmp_path: Path,
-    analysis_markdown: str,
-    source_ids: list[str],
-    expected_rule: str,
-    reason_fragment: str,
-) -> None:
+def test_report_title_uses_runtime_bound_company_identity(tmp_path: Path) -> None:
     payload = _build_financial_analysis_context(_fake_skill_result(tmp_path))
-    draft = FinancialNarrativeDraft.model_validate(
-        {
-            "report_title": "测试财务分析",
-            "sections": [
-                _draft_section(
-                    section_id="FS001",
-                    topic="operating_revenue",
-                    heading="营业收入",
-                    analysis_markdown=analysis_markdown,
-                    metric_ids=["FM024"],
-                    fact_ids=["F101"],
-                    source_ids=source_ids,
-                )
-            ],
-            "due_diligence_questions": [],
-        }
-    )
-
-    accepted, _, validation = validate_financial_narrative(draft, payload)
-
-    assert accepted == []
-    rejected = validation.rejected_sections[0]
-    assert expected_rule in rejected.rule_ids
-    assert any(reason_fragment in reason for reason in rejected.reasons)
+    raw = _simple_draft()
+    raw["report_title"] = "错误企业（999999.XX）财务分析"
+    draft = parse_financial_narrative_draft(json.dumps(raw, ensure_ascii=False))
+    report = render_llm_financial_report(draft, payload, model_mode="live")
+    assert report.startswith("# 石家庄以岭药业股份有限公司（002603.SZ）2025年度财务分析")
+    assert "错误企业（999999.XX）" not in report
 
 
-@pytest.mark.parametrize(
-    ("analysis_markdown", "expected_rule"),
-    [
-        (
-            "营业收入同比-20.00%。[FM024] [F101] [S01]",
-            "FIN-NARRATIVE-012",
-        ),
-        (
-            (
-                "营业收入为0.11亿元和应收账款为1.20亿元。"
-                "[FM024] [FM004] [F101] [F102] [S01]"
-            ),
-            "FIN-NARRATIVE-021",
-        ),
-    ],
-)
-def test_narrative_rejects_sign_reversal_and_cross_metric_value_swaps(
-    tmp_path: Path, analysis_markdown: str, expected_rule: str
-) -> None:
-    """同段数字属于白名单也不能反转符号或交换科目。"""
-
-    payload = _build_financial_analysis_context(_fake_skill_result(tmp_path))
-    draft = FinancialNarrativeDraft.model_validate(
-        {
-            "report_title": "测试财务分析",
-            "sections": [
-                _draft_section(
-                    section_id="FS020",
-                    topic="cross_metric_analysis",
-                    heading="跨指标分析",
-                    analysis_markdown=analysis_markdown,
-                    metric_ids=["FM024", "FM004"],
-                    fact_ids=["F101", "F102"],
-                    source_ids=["S01"],
-                )
-            ],
-            "due_diligence_questions": [],
-        }
-    )
-
-    accepted, _, validation = validate_financial_narrative(draft, payload)
-
-    assert accepted == []
-    assert expected_rule in validation.rejected_sections[0].rule_ids
-
-
-def test_narrative_accepts_explicit_decrease_wording_without_negative_sign(
-    tmp_path: Path,
-) -> None:
-    """“下降10%/减少0.02亿元”是负变化的合法自然语言表达。"""
-
-    payload = _build_financial_analysis_context(_fake_skill_result(tmp_path))
-    draft = FinancialNarrativeDraft.model_validate(
-        {
-            "report_title": "测试财务分析",
-            "sections": [
-                _draft_section(
-                    section_id="FS021",
-                    topic="inventory",
-                    heading="存货",
-                    analysis_markdown=(
-                        "存货由0.20亿元变为0.18亿元，同比下降10.00%，"
-                        "减少0.02亿元。[FM014] [F103] [S01]"
-                    ),
-                    metric_ids=["FM014"],
-                    fact_ids=["F103"],
-                    source_ids=["S01"],
-                )
-            ],
-            "due_diligence_questions": [],
-        }
-    )
-
-    accepted, _, validation = validate_financial_narrative(draft, payload)
-
-    assert [item.section_id for item in accepted] == ["FS021"]
-    assert validation.rejected_sections == []
-
-
-def test_partial_validation_keeps_llm_prose_and_marks_rejected_section_incomplete(
-    tmp_path: Path,
-) -> None:
-    sentinel = "【保留原文哨兵-7E9A】模型写出的跨科目判断应当原样保留。"
-    draft = {
-        "report_title": "以岭药业财务分析",
-        "sections": [
-            _draft_section(
-                section_id="FS001",
-                topic="executive_summary",
-                heading="摘要",
-                analysis_markdown=sentinel,
-            ),
-            _draft_section(
-                section_id="FS002",
-                topic="operating_revenue",
-                heading="营业收入",
-                analysis_markdown="营业收入同比999.00%。[FM024] [F101] [S01]",
-                metric_ids=["FM024"],
-                fact_ids=["F101"],
-                source_ids=["S01"],
-            ),
-        ],
-        "due_diligence_questions": [],
-    }
-    result = _runtime(
-        tmp_path, model_override=_scripted_financial_model(draft)
-    ).run_sync(**_prepared_inputs(tmp_path))
-
-    assert sentinel in result.final_output
-    assert "营业收入同比999.00%" not in result.final_output
-    assert "## 未完成章节" in result.final_output
-    assert "主要变动与银行授信观察" not in result.final_output
-    analysis = Path(result.artifacts["analysis_path"]).read_text(encoding="utf-8")
-    assert analysis == result.final_output
-    validation = json.loads(
-        Path(result.artifacts["llm_validation_path"]).read_text(encoding="utf-8")
-    )
-    assert validation["status"] == "partial"
-    assert validation["accepted_section_ids"] == ["FS001"]
-    assert validation["rejected_sections"][0]["section_id"] == "FS002"
-    assert "FIN-NARRATIVE-012" in validation["rejected_sections"][0]["rule_ids"]
-
-
-def test_unknown_ids_reject_only_the_bad_section_without_crashing(
+def test_missing_questions_is_partial_but_report_remains_deliverable(
     tmp_path: Path,
 ) -> None:
     payload = _build_financial_analysis_context(_fake_skill_result(tmp_path))
-    sentinel = "【有效段落】该段不包含未经支持的企业事实。"
-    draft = FinancialNarrativeDraft.model_validate(
-        {
-            "report_title": "测试财务分析",
-            "sections": [
-                _draft_section(
-                    section_id="FS001",
-                    topic="executive_summary",
-                    heading="摘要",
-                    analysis_markdown=sentinel,
-                ),
-                _draft_section(
-                    section_id="FS002",
-                    topic="operating_revenue",
-                    heading="错误引用",
-                    analysis_markdown="营业收入同比99.99%。[FM999] [F999] [S99]",
-                    metric_ids=["FM999"],
-                    fact_ids=["F999"],
-                    source_ids=["S99"],
-                ),
-            ],
-            "due_diligence_questions": [],
-        }
+    raw = _simple_draft()
+    raw["due_diligence_questions"] = []
+    draft = parse_financial_narrative_draft(json.dumps(raw, ensure_ascii=False))
+    manifest = _build_delivery_manifest(
+        draft,
+        payload,
+        provider="deepseek",
+        model="deepseek-flash",
+        mode="live",
     )
-
-    accepted, _, validation = validate_financial_narrative(draft, payload)
-
-    assert [item.section_id for item in accepted] == ["FS001"]
-    assert validation.status == "partial"
-    bad = next(item for item in validation.rejected_sections if item.section_id == "FS002")
-    assert "FIN-NARRATIVE-003" in bad.rule_ids
-
-
-@pytest.mark.parametrize(
-    ("section", "expected_rule"),
-    [
-        (
-            _draft_section(
-                section_id="FS010",
-                topic="short_term_borrowings_and_debt_structure",
-                heading="债务结构",
-                analysis_markdown="公司无短期借款。[M201]",
-                missing_information_ids=["M201"],
-            ),
-            "FIN-NARRATIVE-019",
-        ),
-        (
-            _draft_section(
-                section_id="FS011",
-                topic="operating_revenue",
-                heading="营业收入",
-                analysis_markdown=(
-                    "公司披露营业收入增长主要因销售回款增加。"
-                    "[FM024] [F101] [FX001] [S01]"
-                ),
-                metric_ids=["FM024"],
-                fact_ids=["F101"],
-                explanation_ids=["FX001"],
-                source_ids=["S01"],
-            ),
-            "FIN-NARRATIVE-022",
-        ),
-        (
-            _draft_section(
-                section_id="FS012",
-                topic="operating_revenue",
-                heading="营业收入",
-                analysis_markdown=(
-                    "FY2024营业收入为1.20亿元，FY2025营业收入为1.00亿元。"
-                    "[FM024] [F101] [S01]"
-                ),
-                metric_ids=["FM024"],
-                fact_ids=["F101"],
-                source_ids=["S01"],
-            ),
-            "FIN-NARRATIVE-012",
-        ),
-    ],
-)
-def test_narrative_rejects_missing_data_reversal_reason_mismatch_and_wrong_period(
-    tmp_path: Path,
-    section: dict[str, Any],
-    expected_rule: str,
-) -> None:
-    payload = _build_financial_analysis_context(_fake_skill_result(tmp_path))
-    draft = FinancialNarrativeDraft.model_validate(
-        {
-            "report_title": "测试财务分析",
-            "sections": [section],
-            "due_diligence_questions": [],
-        }
-    )
-
-    accepted, _, validation = validate_financial_narrative(draft, payload)
-
-    assert accepted == []
-    assert expected_rule in validation.rejected_sections[0].rule_ids
+    report = render_llm_financial_report(draft, payload, model_mode="live")
+    assert manifest["status"] == "partial"
+    assert "due_diligence_questions" in manifest["missing_components"]
+    assert "报告完整性：部分完成" in report
+    assert "尚未生成尽调问题" in report
+    assert "【模型原文哨兵-7E9A】" in report
 
 
-def test_all_rejected_sections_leave_incomplete_report_without_python_fallback(
-    tmp_path: Path,
-) -> None:
-    draft = {
-        "report_title": "以岭药业财务分析",
-        "sections": [
-            _draft_section(
-                section_id="FS001",
-                topic="operating_revenue",
-                heading="营业收入",
-                analysis_markdown="营业收入同比999.00%。[FM024] [F101] [S01]",
-                metric_ids=["FM024"],
-                fact_ids=["F101"],
-                source_ids=["S01"],
-            )
-        ],
-        "due_diligence_questions": [],
-    }
-
-    with pytest.raises(AgentRuntimeError) as error:
-        _runtime(
-            tmp_path, model_override=_scripted_financial_model(draft)
-        ).run_sync(**_prepared_inputs(tmp_path))
-
-    assert error.value.code == "financial_narrative_validation_failed"
-    analysis_path = tmp_path / "financial" / "fake" / "analysis.md"
-    report = analysis_path.read_text(encoding="utf-8")
-    assert "离线 Mock 财务分析状态：FAILED" in report
-    assert "## 未完成章节" in report
-    assert "主要变动与银行授信观察" not in report
-    assert "已披露原因与分析判断" not in report
-    validation = json.loads(
-        (analysis_path.parent / "financial_llm_validation.json").read_text(
-            encoding="utf-8"
-        )
-    )
-    assert validation["status"] == "failed"
-    # Python 计算产物和数据附录仍然保留，不会被失败正文覆盖。
-    assert (analysis_path.parent / "data_appendix.md").is_file()
-    assert (analysis_path.parent / "facts.json").is_file()
-
-
-def test_mock_agent_preserves_llm_prose_and_writes_validation_artifacts(
-    tmp_path: Path,
-) -> None:
+def test_mock_agent_directly_delivers_model_prose_and_manifest(tmp_path: Path) -> None:
     _FakeFinancialSkillRuntime.calls.clear()
-
     result = _runtime(tmp_path).run_sync(**_prepared_inputs(tmp_path))
-
+    sentinel = (
+        "【离线Mock哨兵】本段模拟 DeepSeek 的财务分析正文，仅用于验证"
+        "模型原文不会被 Python 模板替换。"
+    )
     assert result.selected_skill == "financial-analysis"
     assert result.tool_name == "build_financial_artifacts"
-    sentinel = (
-        "【离线Mock哨兵】本段模拟 DeepSeek 的财务分析正文，"
-        "仅用于验证模型原文不会被 Python 模板替换。"
-    )
     assert sentinel in result.final_output
     assert "ScriptedModel 的离线模拟响应" in result.final_output
-    assert "不是 DeepSeek 正式研究成果" in result.final_output
+    assert not TECHNICAL_MARKER.search(result.final_output)
     analysis_path = Path(result.artifacts["analysis_path"])
     assert analysis_path.read_text(encoding="utf-8") == result.final_output
-    assert "主要变动与银行授信观察" not in result.final_output
-    draft = json.loads(Path(result.artifacts["llm_draft_path"]).read_text("utf-8"))
-    validation = json.loads(
-        Path(result.artifacts["llm_validation_path"]).read_text("utf-8")
+    manifest = json.loads(
+        Path(result.artifacts["llm_delivery_path"]).read_text(encoding="utf-8")
     )
-    assert sentinel in draft["raw_model_output"]
-    assert validation["status"] == "complete"
-    assert validation["generation_mode"] == "mock"
-    assert validation["llm_authored_report"] is False
-    assert validation["python_rewrote_llm_text"] is False
-    questions = Path(result.artifacts["questions_path"]).read_text(encoding="utf-8")
-    assert "财务尽调问题清单（离线 ScriptedModel）" in questions
-    assert "财务尽调问题清单（DeepSeek）" not in questions
-    call = _FakeFinancialSkillRuntime.calls[0]
-    assert call["source"].source_id == "S01"
-    assert call["tool_arguments"]["comparison_inputs"][0].source.source_id == "S10"
+    assert manifest["status"] == "complete"
+    assert manifest["status_basis"] == "required_topics_and_minimum_json_structure"
+    assert manifest["mode"] == "mock"
+    assert manifest["llm_authored_report"] is False
+    assert manifest["content_validation_gate"] == "disabled"
+    assert manifest["python_rewrote_llm_text"] is False
     trace = json.loads(result.trace_path.read_text(encoding="utf-8"))
     assert trace["selected_tool"] == FINANCIAL_FUNCTION_TOOL
     assert trace["selected_skill"] == "financial-analysis"
@@ -846,7 +495,10 @@ def test_mock_agent_preserves_llm_prose_and_writes_validation_artifacts(
         "source_id": "S01",
         "comparison_source_ids": ["S10"],
     }
-    assert trace["events"][-2]["details"]["python_rewrote_llm_text"] is False
+    assert any(
+        event["stage"] == "structured_output_parsed"
+        for event in trace["events"]
+    )
 
 
 def test_model_cannot_override_financial_runtime_source(tmp_path: Path) -> None:
@@ -861,18 +513,149 @@ def test_model_cannot_override_financial_runtime_source(tmp_path: Path) -> None:
                         call_id="bad-financial-call",
                     )
                 ],
-                usage=Usage(
-                    requests=1, input_tokens=10, output_tokens=10, total_tokens=20
-                ),
+                usage=Usage(requests=1, input_tokens=10, output_tokens=10, total_tokens=20),
             )
         ]
     )
-
     with pytest.raises(AgentRuntimeError) as error:
         _runtime(tmp_path, model_override=scripted).run_sync(
             **_prepared_inputs(tmp_path)
         )
-
     assert error.value.code == "tool_runtime_override_forbidden"
     assert not _FakeFinancialSkillRuntime.calls
 
+
+def test_invalid_model_json_fails_without_python_narrative_fallback(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(AgentRuntimeError) as error:
+        _runtime(tmp_path, model_override=_scripted_model("not-json")).run_sync(
+            **_prepared_inputs(tmp_path)
+        )
+    assert error.value.code == "invalid_financial_narrative_json"
+    artifact_dir = tmp_path / "financial" / "fake"
+    assert (artifact_dir / "facts.json").is_file()
+    assert (artifact_dir / "metrics.json").is_file()
+    assert (artifact_dir / "financial_llm_draft.json").is_file()
+    delivery = json.loads(
+        (artifact_dir / "financial_llm_delivery.json").read_text(encoding="utf-8")
+    )
+    assert delivery["status"] == "failed"
+    assert (artifact_dir / "analysis.md").read_text(encoding="utf-8") == (
+        "# 等待 DeepSeek 分析\n"
+    )
+
+
+def test_saved_live_draft_restores_all_sections_and_questions_without_api(
+    tmp_path: Path,
+) -> None:
+    source_dir = (
+        PROJECT_ROOT
+        / "examples"
+        / "v2_3_financial_live_narrative_50000_timeout120"
+        / "CN-A-SZSE-002603"
+    )
+    required = [
+        "financial_llm_draft.json",
+        "financial_llm_reviewed.json",
+        "financial_llm_reviewed.metadata.json",
+        "financial_facts.json",
+        "financial_metrics.json",
+        "financial_explanations.json",
+        "financial_reasonableness.json",
+        "financial_risk_flags.json",
+        "financial_sources.json",
+    ]
+    for name in required:
+        assert (source_dir / name).is_file(), f"缺少已保存的Live产物：{name}"
+        shutil.copy2(source_dir / name, tmp_path / name)
+    checked_in_report = (source_dir / "financial_analysis.md").read_text(
+        encoding="utf-8"
+    )
+    raw_draft_before = (tmp_path / "financial_llm_draft.json").read_bytes()
+    restored = restore_financial_report_from_saved_draft(
+        tmp_path / "financial_llm_draft.json"
+    )
+    report = restored["analysis_path"].read_text(encoding="utf-8")
+    questions = restored["questions_path"].read_text(encoding="utf-8")
+    manifest = json.loads(
+        restored["delivery_manifest_path"].read_text(encoding="utf-8")
+    )
+    reviewed = json.loads(
+        (tmp_path / "financial_llm_reviewed.json").read_text(encoding="utf-8")
+    )
+    assert set(reviewed) == {
+        "report_title",
+        "sections",
+        "due_diligence_questions",
+    }
+    assert len(reviewed["sections"]) == 9
+    assert len(reviewed["due_diligence_questions"]) == 9
+    assert all(
+        set(section) == {"topic", "heading", "analysis_markdown"}
+        for section in reviewed["sections"]
+    )
+    assert all(
+        set(question) == {"question"}
+        for question in reviewed["due_diligence_questions"]
+    )
+    assert not TECHNICAL_MARKER.search(json.dumps(reviewed, ensure_ascii=False))
+    assert manifest["section_count"] == 9
+    assert manifest["question_count"] == 9
+    assert manifest["status"] == "complete"
+    assert manifest["llm_authored_report"] is True
+    assert manifest["human_reviewed_presentation_copy"] is True
+    assert manifest["reviewed_input_path"] == "financial_llm_reviewed.json"
+    assert manifest["reviewed_base_draft_sha256"] == (
+        "7404d6f82f7a5495edc26e5f53cd892f951bb958137425e0229e4d25302c3612"
+    )
+    assert manifest["editorial_review_scope"] == (
+        "人工审阅展示副本；Python未执行逐句内容差异或事实审计"
+    )
+    assert report == checked_in_report
+    assert (tmp_path / "financial_llm_draft.json").read_bytes() == raw_draft_before
+    for section in reviewed["sections"]:
+        assert section["heading"] in report
+        assert section["analysis_markdown"] in report
+        assert section["heading"] in checked_in_report
+        assert section["analysis_markdown"] in checked_in_report
+    for question in reviewed["due_diligence_questions"]:
+        assert question["question"] in report
+        assert question["question"] in questions
+        assert question["question"] in checked_in_report
+    assert "## 核心财务数据" in report
+    assert "FY2024 65.13" in report
+    assert "FY2025 78.31" in report
+    assert "20.24%" in report
+    assert "短期借款" in report
+    assert "无法确认" in report
+    assert not TECHNICAL_MARKER.search(report)
+    assert "数据来源附录" not in report
+    assert "LLM 财务分析状态：FAILED" not in report
+
+    # 审阅展示副本必须与原始模型草稿绑定，防止新草稿误配旧审阅稿。
+    (tmp_path / "financial_llm_draft.json").write_bytes(raw_draft_before + b" ")
+    with pytest.raises(AgentRuntimeError) as stale_error:
+        restore_financial_report_from_saved_draft(
+            tmp_path / "financial_llm_draft.json"
+        )
+    assert stale_error.value.code == "stale_financial_review_copy"
+    (tmp_path / "financial_llm_draft.json").write_bytes(raw_draft_before)
+
+    # 移除审阅副本后仍可明确回退到不可变的原始模型草稿。
+    (tmp_path / "financial_llm_reviewed.json").unlink()
+    raw_restore = restore_financial_report_from_saved_draft(
+        tmp_path / "financial_llm_draft.json",
+        output_path=tmp_path / "financial_analysis_raw.md",
+        questions_path=tmp_path / "financial_questions_raw.md",
+        delivery_manifest_path=tmp_path / "financial_llm_delivery_raw.json",
+    )
+    raw_report = raw_restore["analysis_path"].read_text(encoding="utf-8")
+    raw_manifest = json.loads(
+        raw_restore["delivery_manifest_path"].read_text(encoding="utf-8")
+    )
+    assert "呼吸系统类产品为主要方向性支撑" in raw_report
+    assert raw_manifest["human_reviewed_presentation_copy"] is False
+    assert raw_manifest["editorial_review_scope"] is None
+    assert raw_manifest["reviewed_input_path"] is None
+    assert raw_manifest["reviewed_base_draft_sha256"] is None

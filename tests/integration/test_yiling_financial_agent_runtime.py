@@ -30,7 +30,7 @@ def _input(source_id: str, catalog: SourceCatalog) -> FinancialSourceInput:
 
 
 @pytest.mark.integration
-def test_yiling_mock_agent_writes_scripted_report_and_validation_artifacts(
+def test_yiling_mock_agent_writes_scripted_report_and_delivery_artifacts(
     tmp_path: Path,
 ) -> None:
     required = [
@@ -78,17 +78,79 @@ def test_yiling_mock_agent_writes_scripted_report_and_validation_artifacts(
     analysis_path = Path(result.artifacts["analysis_path"])
     assert analysis_path.read_text(encoding="utf-8") == result.final_output
     draft_path = Path(result.artifacts["llm_draft_path"])
-    validation_path = Path(result.artifacts["llm_validation_path"])
+    delivery_path = Path(result.artifacts["llm_delivery_path"])
     assert draft_path.is_file()
-    assert validation_path.is_file()
+    assert delivery_path.is_file()
     draft_payload = json.loads(draft_path.read_text(encoding="utf-8"))
-    validation_payload = json.loads(validation_path.read_text(encoding="utf-8"))
+    delivery_payload = json.loads(delivery_path.read_text(encoding="utf-8"))
     assert sentinel in draft_payload["raw_model_output"]
-    assert validation_payload["status"] == "complete"
-    assert validation_payload["generation_mode"] == "mock"
-    assert validation_payload["llm_authored_report"] is False
-    assert validation_payload["python_rewrote_llm_text"] is False
+    assert delivery_payload["status"] == "complete"
+    assert delivery_payload["mode"] == "mock"
+    assert delivery_payload["llm_authored_report"] is False
+    assert delivery_payload["python_rewrote_llm_text"] is False
+    assert delivery_payload["content_validation_gate"] == "disabled"
+    assert delivery_payload["status_basis"] == (
+        "required_topics_and_minimum_json_structure"
+    )
+    assert "## 核心财务数据" in result.final_output
+    assert "[FM" not in result.final_output
+    assert "[S01]" not in result.final_output
     assert Path(result.artifacts["data_appendix_path"]).is_file()
     assert result.trace_path.is_file()
     assert result.skill_trace_path.is_file()
+
+
+@pytest.mark.integration
+def test_checked_in_live_report_is_reader_facing_and_complete() -> None:
+    artifact_dir = (
+        PROJECT_ROOT
+        / "examples"
+        / "v2_3_financial_live_narrative_50000_timeout120"
+        / "CN-A-SZSE-002603"
+    )
+    report = (artifact_dir / "financial_analysis.md").read_text(encoding="utf-8")
+    delivery = json.loads(
+        (artifact_dir / "financial_llm_delivery.json").read_text(encoding="utf-8")
+    )
+
+    expected_headings = (
+        "一、授信结论摘要",
+        "二、营业收入",
+        "三、应收账款",
+        "四、存货",
+        "五、货币资金",
+        "六、短期借款及债务结构",
+        "七、应付账款",
+        "八、经营活动现金流",
+        "九、跨指标综合分析与潜在风险判断",
+    )
+    assert all(f"## {heading}" in report for heading in expected_headings)
+    assert sum(
+        line.startswith(f"{index}. ")
+        for index in range(1, 10)
+        for line in report.splitlines()
+    ) == 9
+    assert "不适用（跨符号）" in report
+    assert "短期借款 | FY2024 未取得 | FY2025 未取得" in report
+    assert "专业分析正文由 DeepSeek 撰写" in report
+    assert not any(
+        marker in report
+        for marker in (
+            "[FM",
+            "[FR",
+            "[RF",
+            "[F2",
+            "[S01]",
+            "工具标记",
+            "工具未提供",
+            "本次工具未形成",
+            "自动化风险信号",
+        )
+    )
+    assert delivery["section_count"] == 9
+    assert delivery["question_count"] == 9
+    assert delivery["status_basis"] == (
+        "required_topics_and_minimum_json_structure"
+    )
+    assert delivery["human_reviewed_presentation_copy"] is True
 

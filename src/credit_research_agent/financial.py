@@ -1536,7 +1536,7 @@ def render_financial_analysis(bundle: FinancialResearchBundle) -> str:
 
 
 def generate_financial_section(bundle: FinancialResearchBundle) -> str:
-    """兼容旧调用：只生成“等待 LLM 分析”的明确占位页。
+    """只生成“等待 LLM 分析”的明确占位页。
 
     该函数故意不再根据 Python 规则拼装专业分析文字，避免在 LLM 失败时把固定
     模板误作正式研究结论。
@@ -1544,7 +1544,7 @@ def generate_financial_section(bundle: FinancialResearchBundle) -> str:
 
     return (
         f"# {bundle.identity.short_name}财务分析（未完成）\n\n"
-        "> 结构化财务数据、计算指标和来源附录已经生成，但尚未取得通过校验的 "
+        "> 结构化财务数据、计算指标和内部来源记录已经生成，但尚未取得 "
         "DeepSeek 分析正文。\n\n"
         "正式报告不得以 Python 固定模板替代模型撰写；请运行 V2.3 财务 Agent。\n"
     )
@@ -1554,7 +1554,7 @@ def render_financial_questions(bundle: FinancialResearchBundle) -> str:
     """生成尽调问题占位页；具体问题由 DeepSeek 撰写。"""
 
     lines = ["# 财务尽调问题清单（未完成）", ""]
-    lines.append("> 尚未取得通过校验的 DeepSeek 尽调问题。以下仅列示数据缺口。")
+    lines.append("> 尚未取得 DeepSeek 尽调问题。以下仅列示内部数据缺口。")
     lines.append("")
     for missing in bundle.missing_information:
         lines.append(f"- 待补充：{missing.topic}——{missing.description}")

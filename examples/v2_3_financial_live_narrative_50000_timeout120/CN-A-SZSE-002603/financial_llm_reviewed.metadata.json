@@ -1,0 +1,5 @@
+{
+  "schema_version": "1.0",
+  "base_draft_sha256": "7404d6f82f7a5495edc26e5f53cd892f951bb958137425e0229e4d25302c3612",
+  "review_note": "人工审阅展示副本；原始模型草稿保持不变，Python不执行逐句内容差异或事实审计"
+}

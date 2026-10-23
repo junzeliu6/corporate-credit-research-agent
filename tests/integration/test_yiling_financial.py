@@ -101,7 +101,7 @@ def test_yiling_financial_facts_are_page_grounded_and_artifacts_are_generated(
     assert direct["source_ids"] == ["S01"]
     analysis = artifacts.analysis_path.read_text(encoding="utf-8")
     assert "财务分析（未完成）" in analysis
-    assert "尚未取得通过校验的 DeepSeek 分析正文" in analysis
+    assert "尚未取得 DeepSeek 分析正文" in analysis
     assert "主要变动与银行授信观察" not in analysis
     assert "已披露原因" not in analysis
     data_appendix = artifacts.data_appendix_path.read_text(encoding="utf-8")

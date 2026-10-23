@@ -29,8 +29,8 @@ description: >
 - 运行时版本：`2.3.0`，状态 `ready`。
 - 白名单高层 Tool：`build_financial_artifacts`。该 Tool 复用官方年报下载、逐页 PDF 文本、`SourceRecord`、`FactRecord` 和 `EvidenceRecord`，不允许任意文件或 Shell 执行。
 - 当前已实现：合并报表可比事实、跨报告重复值核对、同比变动、资产负债率、流动比率、毛利率、销售收现比、20%（含）重大变动触发、零基期/负值/符号切换处理、风险观察、原因证据精确匹配、支持性推断及合理性评价的数据底座。
-- 主 Agent 已开放白名单 `run_financial_research` Function Tool。LLM 只填写证券代码；来源、可比年报和文件路径由 Python Runtime 绑定。Tool 向模型提供重点财务事实、计算指标、附注原因、缺失信息和来源 ID，DeepSeek 负责跨指标分析、风险判断、尽调问题和报告正文。
-- Python 不得把 DeepSeek 已生成的合格分析改写或替换为固定模板。Python 只核验正文中的关键金额、比例、期间、主体、Fact/Metric/Source ID 和未获支持的事实陈述，再机械组装 Markdown；未通过的段落标记为“本节未完成”，不得用 Python 模板补写。
+- 主 Agent 已开放白名单 `run_financial_research` Function Tool。LLM 只填写证券代码；来源、可比年报和文件路径由 Python Runtime 绑定。Tool 向模型提供重点财务事实、计算指标、附注原因、缺失信息和可读的来源概况，但不暴露内部技术 ID；DeepSeek 负责跨指标分析、风险判断、尽调问题和报告正文。
+- Python 不得把 DeepSeek 已生成的分析改写或替换为固定模板。Python只负责确定性数据与计算、内部来源保存、最小输出结构解析和Markdown机械组装；不要求模型在正文中返回Fact/Metric/Source ID，也不使用百分比白名单、正则、关键词或逐句来源匹配拒绝自然语言正文。模型整体调用或结构解析失败时标记报告未完成，不得用Python模板补写。
 - 当前未实现：附注原因的全面自动覆盖、完整审计意见分析、银行流水和财务预测。缺少这些资料时必须输出待核实假设或限制，不能由 LLM 补造。
 - 当前首测数据覆盖 S01（2025年报）与 S10（2024年报），形成 FY2023–FY2025 主表可比序列；S11（2023年报）已登记并解析，后续用于扩大独立复核范围。
 
@@ -49,7 +49,7 @@ description: >
 - `periods`：可比年度，默认 `[2024, 2025]`；可扩展至 2023–2025 年；
 - `statements`：资产负债表、利润表、现金流量表的原始数据及标准化字段；
 - `notes`：财务报表附注、管理层讨论与分析、审计意见及相关公告；
-- `sources`：每个数据点/业务事实的来源 ID、文档标题、原始 URL、公告日期、页码/章节；
+- `sources`：每个数据点/业务事实在Python内部保存来源 ID、文档标题、原始 URL、公告日期、页码/章节；这些字段不要求在正式报告正文中展示；
 - `optional_bank_statements`：**仅未来授权上传版本适用**，第一版固定为未提供。
 
 默认参数：
@@ -73,7 +73,7 @@ include_bank_statement_analysis: false  # 第一版禁用，后续仅凭授权�
 3. **原因**：查找年报/附注/公告已披露的原因；不存在直接证据时仅提出合理假设，不得断言。
 4. **合理性**：结合主营业务、收入、上下游结构、账期、周转率、利润、现金流和行业特点做交叉验证；分别说明“支持该解释的证据”“与该解释相矛盾的现象”“仍缺少的证据”。
 5. **授信关注点**：说明可能对流动性、债务偿付、回款和资金占用产生的影响，必要时给出待核查材料/问题。
-6. **证据**：每条重要金额与已披露原因需要来源定位；**推断与事实严格分开**。
+6. **证据**：每条重要金额与已披露原因在内部数据中需要来源定位；正式报告默认不展示技术ID。未证实的具体原因或分析假设使用“可能”“需进一步核实”等措辞，不冒充已披露事实。
 
 **示例（完全虚构，不得作为以岭药业事实）**：
 
@@ -168,15 +168,16 @@ include_bank_statement_analysis: false  # 第一版禁用，后续仅凭授权�
 3. 政府/监管部门公开数据和行业资料（只能辅助解释行业环境，不可直接替代企业特定数据）；
 4. 可追溯的其他公开来源，仅作为线索并标明可靠性限制。
 
-每个原始数据点至少保留 `source_id`、`title`、`url`、`published_at`、`fiscal_period`、`statement_scope`、`original_unit`、`page_or_section`、`extraction_status`。中文 PDF 与 PDF 物理页码差异应予记录或转换，不得生成未验证的页码。
+每个原始数据点至少在Python内部保留 `source_id`、`title`、`url`、`published_at`、`fiscal_period`、`statement_scope`、`original_unit`、`page_or_section`、`extraction_status`。这些字段用于数据关联、复核和按需生成研究依据文件，不是LLM正文输出契约。中文 PDF 与 PDF 物理页码差异应予记录或转换，不得生成未验证的页码。
 
-### 6.2 区分三种陈述
+### 6.2 报告只区分两种可信度
 
 | 等级 | 可用措辞 | 要求 |
 | --- | --- | --- |
-| `verified_fact` 已核实事实 | “2025年末应收账款为……”“年报披露……主要由于……” | 有明确可追溯的年报数据或公司披露及来源 |
-| `supported_inference` 有依据的分析判断 | “结合收入增长和结算条款，增加可能与……有关” | 至少能指出支持和反证/不确定性，不冒充公司原文 |
-| `unverified_hypothesis` 待核实假设 | “可能与赊销扩大有关，尚需核查销售合同、账龄和期后回款” | 必须显式标注待核实，不能用“主要由于”“表明”作无依据断言 |
+| `verified` 已核验 | “2025年末应收账款为……”“年报披露……主要由于……” | 直接来自可核对的可靠披露，或由Python根据已核验输入确定性计算 |
+| `unverified` 未核验 | “可能与……有关，需进一步核实” | 单一来源、尚未确认的外部信息或模型分析假设；不得写成企业已披露的确定事实 |
+
+既有`disclosed_reason`、`supported_inference`等字段可以继续作为内部资料来源类型，便于向模型提供上下文，但不再形成用户可见的多级可信度评级。完全没有依据的具体金额、比例或经营事件不得进入报告。
 
 ### 6.3 判断原因是否合理
 
@@ -202,13 +203,13 @@ include_bank_statement_analysis: false  # 第一版禁用，后续仅凭授权�
 6. **重点科目排序**：执行 `>=20%` 规则及重大金额/正负切换等覆盖规则，形成需深入查附注的科目列表。
 7. **原因检索**：从相应财务附注、经营讨论、产品/客户披露中查找具体原因，给证据分级。
 8. **合理性验证**：对高优先级变动进行业务和现金流交叉验证，区分有证据事实和待核实假设。
-9. **DeepSeek 撰写授信分析文字**：把必要的结构化事实、指标、附注证据、缺失信息和来源交给模型，由模型按“金额→变动金额及比例→原因及证据→合理性→授信风险及待核查问题”生成自然语言分析，并在段落中引用对应 ID。
+9. **DeepSeek 撰写授信分析文字**：把必要的结构化财务数据、指标、附注资料、缺失信息和来源概况交给模型，由模型按“金额→变动金额及比例→原因及证据→合理性→授信风险及待核查问题”生成自然语言分析。模型不需要在正文中回填Fact/Metric/Source ID。
 10. **生成待补充清单**：公开信息缺少的开户行及账户、账龄明细、客户合同账期、前五大销售/采购流水、贷款明细等，归类为后续尽调问题。
-11. **逐段复核与机械组装**：Python 验证报告关键数值、期间、来源和事实支持关系；通过的模型段落原样进入 Markdown，失败或缺失的章节明确标记未完成。验证失败不能触发固定模板替写，也不能把“未披露”误写为“没有”。
+11. **最小结构解析与机械组装**：Python确认模型响应可解析且包含报告章节/尽调问题，把模型原文、确定性财务数据表、图表和首页免责声明组装进Markdown。Python不逐句判断分析推断是否合理，不通过正则或技术ID拒绝章节；模型调用或结构解析整体失败时明确标记报告未完成，且不能触发固定模板替写。
 
 ## 8. 建议的数据模型与输出契约
 
-V2.3 已将本节落实为 `credit_research_agent.financial` 中的 Pydantic 模型和确定性函数。金额在事实层统一保存为人民币元和 `Decimal`，JSON 输出为精确十进制字符串；报告展示格式不得回写或污染原始事实。原因使用 `disclosed_reason / supported_inference / unverified_hypothesis` 三层契约，合理性评价不得把推断升级为披露事实。正式分析正文采用单一的 LLM 生成路径，不再提供 Python 模板分析与 LLM 分析两套正式模式。
+V2.3 已将确定性数据底座落实为 `credit_research_agent.financial` 中的 Pydantic 模型和函数。金额在事实层统一保存为人民币元和 `Decimal`，JSON 输出为精确十进制字符串；报告展示格式不得回写或污染原始事实。内部可保存披露原因和分析假设的来源类型，正式报告只显示“已核验/未核验”。正式分析正文采用单一的LLM生成路径，不再提供Python模板分析与LLM分析两套正式模式。
 
 输出文件：
 
@@ -216,16 +217,16 @@ V2.3 已将本节落实为 `credit_research_agent.financial` 中的 Pydantic 模
 | --- | --- |
 | `financial_facts.json` | 两期原始数值、标准化科目、单位、币种、口径、期间和来源引用 |
 | `financial_metrics.json` | 同比变化额与比例、计算公式、中间输入、无法计算原因 |
-| `financial_analysis.md` | DeepSeek 撰写并通过逐段校验的财务分析正文；失败章节明确标记未完成 |
-| `financial_data_appendix.md` | Python 确定性组装的财务数据表、计算指标与来源附录；不包含模板化分析结论 |
+| `financial_analysis.md` | DeepSeek撰写的财务分析正文、Python财务数据表、尽调问题和首页免责声明；默认不展示技术ID |
+| `financial_data_appendix.md` | Python确定性组装的内部财务数据与计算指标；可用于复核或按需生成研究依据，不包含模板化分析结论 |
 | `financial_risk_flags.json` | 变化触发、重大例外、原因评价、风险信号与优先级 |
 | `financial_sources.json` | 文档来源 URL、披露日期、页码/章节与引用编号 |
-| `financial_questions.md` | DeepSeek基于事实/缺口提出并通过校验的尽调问题；Tool阶段仅为未完成占位 |
+| `financial_questions.md` | DeepSeek基于数据与资料缺口提出的尽调问题；Tool阶段可保留未完成占位 |
 | `financial_explanations.json` | 已披露原因、支持性推断、待核实假设及其事实/证据引用 |
 | `financial_reasonableness.json` | 逐项方向一致性、相反现象、证据缺口、授信关注与尽调问题 |
 | `financial_validation.json` | 科目覆盖、口径冲突和缺失值校验结果 |
-| `financial_llm_draft.json` | 模型原始财务分析草稿及其引用 ID，供脱敏诊断和复核 |
-| `financial_llm_validation.json` | 逐段校验状态、拒绝原因、保留章节和未完成章节 |
+| `financial_llm_draft.json` | 模型原始财务分析草稿，供脱敏诊断和复核 |
+| `financial_llm_delivery.json` | LLM交付清单；只记录生成模式、调用与最小结构解析状态，不作为自然语言交付门禁。历史目录中的`financial_llm_validation.json`仅保留为旧版本诊断记录 |
 
 示例 JSON（**全部为虚构值，不得视为以岭药业数据**）：
 
@@ -270,12 +271,11 @@ extract_change_explanations(priority_items, disclosures) -> list[EvidenceBasedEx
 assess_reasonableness(explanations, facts) -> list[Assessment]
 render_financial_data_appendix(bundle) -> str
 parse_financial_narrative_draft(model_output) -> FinancialNarrativeDraft
-validate_financial_narrative(draft, analysis_context) -> FinancialNarrativeValidation
-render_llm_financial_report(draft, accepted_sections, validation, analysis_context) -> str
-render_llm_financial_questions(accepted_questions, validation, model_mode) -> str
+render_llm_financial_report(draft, financial_table, disclaimer) -> str
+render_llm_financial_questions(draft_questions, model_mode) -> str
 ```
 
-其中后三项描述职责边界而非要求复制第二套业务逻辑：上下文只发送分析所需的相关事实和证据；校验器不重写模型文字；组装器只负责标题、章节状态、数据表和来源附录。
+其中后三项描述职责边界而非要求复制第二套业务逻辑：上下文只发送分析所需的财务数据和必要资料；解析器只验证最小JSON/章节结构，不审判自然语言内容；组装器只负责标题、免责声明、模型原文、数据表和尽调问题。
 
 ## 9. DeepSeek 报告结构与写作要求
 
@@ -287,7 +287,7 @@ render_llm_financial_questions(accepted_questions, validation, model_mode) -> st
 
 ### 9.2 重点科目分析
 
-DeepSeek 应逐项形成完整自然语言段落，而不是只返回 `metric_id`、`fact_id` 或风险标签。每段至少包含上期/本期金额、变化额与比例、已披露原因或明确标记的推断、跨指标合理性判断、授信关注及尽调问题，并引用支持它的 Fact/Metric/Source ID。Python 可以校验这些引用，但不能把 ID 重新渲染成预设分析模板。
+DeepSeek 应逐项形成完整自然语言段落，而不是返回技术ID或风险标签。每段至少包含上期/本期金额、变化额与比例、已披露原因或明确标记为“未核验”的推断、跨指标合理性判断、授信关注及尽调问题。模型不需要输出Fact/Metric/Source ID；Python不得把模型文字重新渲染成预设分析模板。
 
 ### 9.3 专项结论
 
@@ -312,8 +312,8 @@ DeepSeek 应逐项形成完整自然语言段落，而不是只返回 `metric_id
 - `conflicting_disclosures`：年报及更正公告或不同期信息冲突时，优先权威更正，未解决则标记冲突；
 - `bank_details_not_public`：未披露存放银行、贷款银行、交易对手或流水，列入待核查，不虚构；
 - `unverified_causal_claim`：原因无直接资料支持时只做标明待核实的推断；
-- `invalid_llm_section`：模型段落含不匹配的金额、期间、来源或无支持的事实陈述时，仅拒绝该段并标记“本节未完成”；其他已通过段落和确定性数据产物继续保留；
-- `llm_generation_failed`：模型调用或整体输出失败时，保留事实、指标、图表、数据附录和来源，正式分析报告标记未完成，不得生成 Python 模板文字冒充模型研究成果；
+- `llm_output_parse_failed`：模型整体响应缺少最小章节结构或无法解析时，保留原始响应和确定性数据产物，正式分析报告标记未完成；不得通过逐句关键词、正则、百分比白名单或技术ID匹配拒绝已解析的自然语言正文；
+- `llm_generation_failed`：模型调用失败时，保留事实、指标、图表、数据附录和内部来源，正式分析报告标记未完成，不得生成Python模板文字冒充模型研究成果；
 - `private_data`：不得抓取或存储未获授权的客户敏感资料；若未来支持上传，应单独完善脱敏、权限、加密和留存规则。
 
 ## 11. 第一版验收标准与测试用例
@@ -325,9 +325,9 @@ DeepSeek 应逐项形成完整自然语言段落，而不是只返回 `metric_id
 5. 货币资金、应收账款、预付款项、固定资产、短期借款、应付账款、主营业务收入及经营现金流均进入检查清单；获取不到的字段要出具缺失提示。
 6. 能识别“应收增长快于收入”“现金流与利润背离”“短债上升但可用现金未知”等至少三种基础信号；这些信号不是自动的违约判断。
 7. **第一版银行流水模块处于关闭状态**，不得声称获取到某银行存款银行名单、前五大实际回款客户或采购流水；只在待补清单中提示。
-8. 重要数值、已证实原因和事实性结论都有来源 ID；报告中每个重点变化可以回溯到原始披露和确定性的 Python 计算结果。
+8. 重要数值、已证实原因和事实性结论在内部数据层都能回溯到原始披露或确定性的Python计算结果；正式报告默认不展示来源ID。
 9. 对真实资料执行的测试与对模拟数据执行的测试必须分开记录；测试失败时明确披露，不为通过验收而填补未知数据。
-10. Mock 测试必须证明合格的 DeepSeek/脚本模型段落未经 Python 改写直接进入报告；单段不合格时只标记该节未完成，不能回退到固定分析模板。
+10. Mock测试必须证明DeepSeek/脚本模型段落未经Python改写直接进入报告，报告不显示`[Sxx]`、`Fxxx`、`FMxxx`等技术ID；模型整体失败时不能回退到固定分析模板。
 11. 正式财务报告必须有实际 DeepSeek 生成正文；Mock 只验证流程与约束，不等同于正式报告或 Live 验收。
 
 ## 12. Codex 开发及集成建议
@@ -340,8 +340,8 @@ DeepSeek 应逐项形成完整自然语言段落，而不是只返回 `metric_id
 
 1. **计算内核**：建立科目与来源数据模型，完成同比/财务比率计算和单元测试。
 2. **Skill 规范与附注查找**：主 Agent 识别任务后按需加载本 Skill，触发重点科目附注检索。
-3. **财务分析文本**：由 DeepSeek 基于结构化上下文撰写，分别表达“事实、已披露原因、推断、待核实问题”并明确引用；Python只做逐段校验和机械组装。
-4. **端到端测试**：使用经过人工核查的以岭药业真实年报资料和独立的模拟边界案例，验证模型原文保留、部分章节失败和无模板回退。
+3. **财务分析文本**：由DeepSeek基于结构化上下文撰写，分别表达“已核验数据、已披露原因、未核验推断、待核实问题”；Python只做最小结构解析和机械组装。
+4. **端到端测试**：使用经过人工核查的以岭药业真实年报资料和独立的模拟边界案例，验证模型原文保留、技术ID不进入正式报告、尽调问题与数据表完整、模型失败时无模板回退。
 5. **未来扩展**：客户合法授权上传详细科目、往来款和银行流水之后，再开发前五大交易对手、银行账户匹配和流水交叉核查模块。
 
 **完成标准**不是“生成几千字报告”，而是“关键数据提取正确、计算准确、DeepSeek 实际完成有证据的分析写作、重要变动有可追溯解释、缺失资料有明确提示”，并且 Python 从未用固定模板替换模型正文。

@@ -1,6 +1,6 @@
 # 企业授信研究Agent — 双 Skill 集成总规范（v5）
 
-> 本文件定义两个 Skill 的**系统级接口、里程碑及验收**；关于具体业务规则，优先以 `.agents/skills/ownership-structure/SKILL.md` 和 `.agents/skills/financial-analysis/SKILL.md` 为准。**V0.1—V1.5既有能力保留；V2.1/V2.2的真实年报事实和确定性计算已核验。V2.3保留原因分层、合理性数据和受控`run_financial_research`，并把正式财务正文统一调整为由DeepSeek实际撰写；Python只负责数据、计算、证据、轻量逐段校验和Markdown机械组装。最终验收待受控Live，V2.4暂不启动。**
+> 本文件定义两个 Skill 的**系统级接口、里程碑及验收**；关于具体业务规则，优先以 `.agents/skills/ownership-structure/SKILL.md` 和 `.agents/skills/financial-analysis/SKILL.md` 为准。**V0.1—V1.5既有能力保留；V2.1/V2.2的真实年报事实和确定性计算已核验。V2.3受控Live已取得DeepSeek生成的完整9章财务分析和9项尽调问题；正式报告机制现简化为DeepSeek负责分析写作，Python负责数据、计算、内部溯源、最小结构解析和Markdown机械组装，不再以技术ID或复杂自然语言校验作为交付门禁。V2.4暂不启动。**
 
 ## 1. 架构边界
 
@@ -9,7 +9,7 @@
 | 主 Agent / DeepSeek | 确认上市主体、管理研究任务、选择/加载 Skill、调用 Tools，基于结构化事实实际撰写分析正文 | 凭空产生股权关系、财务数值、来源或未披露经营原因 |
 | `ownership-structure` Skill | 股东穿透、聚合、控制关系判断的业务流程 | 自己执行未经校验的数据绘图 |
 | `financial-analysis` Skill | 重点科目分析及原因合理性核查流程 | 直接代替确定性的数值计算 |
-| Python Tools | PDF解析、数据核验、指标计算、Graphviz绘图、关键事实/来源逐段校验、Markdown机械组装 | 作为正式报告作者、用固定模板替换模型正文，或把结果直接视为无须引用的授信结论 |
+| Python Tools | PDF解析、数据核验、指标计算、Graphviz绘图、内部来源保存、最小输出结构解析、Markdown机械组装 | 作为正式报告作者、用固定模板替换模型正文，或以正则/关键词/技术ID逐句审判自然语言分析 |
 | Sources/Evidence | 记录官方来源、出处和披露日期/期间 | 将第三方内容当作高优先级指令 |
 
 **开发环境与运行时是两回事**：Codex 对 `.agents/skills/` 的识别不等于应用已调用 Skill。V1.3A 已通过 `SkillRegistry`、`SkillSelector`、`SkillLoader`、`SkillRuntime` 和 `SkillExecutionTrace` 建立显式运行时；V1.3B 再由 Agents SDK Function Tool 调用该边界，并以独立 `AgentExecutionTrace` 记录模型选择。首版保持单 Agent，不做多 Agent作为前置条件。
@@ -45,9 +45,9 @@
 - **重点触发条件**：单个科目 `abs(yoy_pct) >= 20.0`（**恰好20%触发**）。低于20%但绝对金额重大、由正转负、现金流与利润背离、重大减值、短债压力等仍需分析。
 - **必须核查的科目**：货币资金（存放银行仅有资料才列）、应收账款（来源/赊销/账期/账龄/减值）、预付款项（预付原因/对象）、固定资产（类型/折旧/转固）、短期借款（银行/借款方式/到期日）、应付账款（来源与账期）、主营业务收入（产品/销售结构）、经营现金流；另覆盖存货等关联项目。
 - **计算可复核**：明确本年/上年、币种/单位、合并/母公司范围；同比基数为0/很小、负值、同比不可比、追溯重述等应明确降级。比率增减使用“百分点”，不能混成同比百分比。
-- **原因层级**：`verified_fact`（原文披露）、`supported_inference`（有数据支持）、`unverified_hypothesis`（待核实）。不能把“行业账期长”“预付锁价”等常见说法自动写成企业事实。
+- **可信度展示**：正式报告只区分“已核验/未核验”。原文披露和Python确定性计算为已核验；模型推断、单一来源和待确认外部信息为未核验，并使用“可能/需进一步核实”等措辞。既有原因来源字段可在内部保留，但不能把“行业账期长”“预付锁价”等常见说法自动写成企业事实。
 - **首版无银行流水**：前五大销售回款/采购付款、实际存款银行/借款银行、合同账期、未公开的客户明细，公开资料无证据时进入尽调清单；仅未来合法授权的上传模块才能尝试实测流水。
-- **结果**：原始事实JSON、计算JSON（含公式）、Python数据附录、DeepSeek财务分析MD、LLM草稿/逐段校验记录、风险信号、证据引用及尽调问题。模型失败时仍保留数据产物，但分析章节必须标记未完成。
+- **结果**：原始事实JSON、计算JSON（含公式）、Python数据表、DeepSeek财务分析MD、原始LLM草稿、风险信号、内部来源记录及尽调问题。模型调用或最小结构解析失败时仍保留数据产物，但分析报告必须标记未完成；不以段落级技术ID校验拒绝已生成正文。
 
 ### 3.3 实现与独立测试
 - 建议确定性 Tools：`normalize_financial_items`、`validate_financial_facts`、`calculate_financial_metrics`、`rank_material_changes`。
@@ -59,14 +59,14 @@
 1. 首先通过 `CompanyIdentity` 统一确认为 `002603.SZ` 的上市主体；所有事实带 `source_id`，财务事实还必须带期间、币种、列示单位、合并/母公司口径。
 2. `SkillRegistry` 已维护技能 `name`/`description`/相对路径/版本/SHA-256/状态/Tool 名称；`SkillLoader` 只读加载且二次验哈希。主 Agent 仅使用代码内批准的技能白名单，不从网页下载可执行技能。
 3. 数据获取工具供两项 Skill 复用，不复制已有 V0 实现；绘图和数值计算各自只保留一份确定性 Python 实现。
-4. 提供统一报告引用 `[S01]` / 来源附录，字段可与现有 V0 Source/Evidence 兼容。不要因更新文档而破坏已有 ID 和接口。
-5. `ownership` 与 `finance` 的工具返回结构化对象；DeepSeek负责专业分析与正式报告文字，Python负责图表、数据表、来源附录和Markdown机械组装。遇到源数据不足可只保留通过校验的模型章节，其余章节标记未完成并列出待核查问题。
+4. 内部继续使用现有 V0 Source/Evidence 记录来源、URL和定位信息，不因更新文档破坏已有 ID 和接口；正式报告默认不展示`[Sxx]`、`Fxxx`、`FMxxx`等技术编号，需要时另行导出研究依据文件。
+5. `ownership` 与 `finance` 的工具返回结构化对象；DeepSeek负责专业分析与正式报告文字，Python负责图表、数据表、最小结构解析和Markdown机械组装。遇到资料不足时由模型在正文中说明“未核验/需进一步核实”；模型整体失败时报告标记未完成，不以Python模板替写。
 6. **集成验收**必须有运行日志或自动化测试证明加载哪一个 `SKILL.md`、何时使用何种工具以及得到何种校验结果；不将“文件放对路径”误当已运行。
 7. V1.3B 主 Agent 只注册 `run_ownership_research`；LLM可填写的Tool输入仅有已解析ticker。`source_id`及文件路径由Python Runtime从已验证应用上下文绑定；Runtime复核来源登记、主体和下载产物一致性，并拒绝模型提供来源覆盖字段。LLM无权执行Python、Shell或读写任意路径。
 8. 默认使用不会联网的Mock模型；Live DeepSeek必须显式选择、存在`DEEPSEEK_API_KEY`并再次确认。`financial-analysis`的LLM Function Tool只接受ticker，来源、可比年报和路径由Runtime绑定；金额和同比由Python计算后作为分析上下文提供，模型不得徒手计算关键数值。
-9. Tool返回模型的内容应压缩为核实关系、控制关系、比例校验、来源、缺失信息和产物，不重复发送完整PDF文本。Python通过统一事实适配层复用现有`FactRecord`、`EvidenceRecord`、`SourceRecord`及股权边/控制关系ID，构造`response_contract`；企业披露事实、Python计算值、资料缺口、完整性校验规则和Skill展示阈值必须分型，阈值不得冒充企业持股事实。
-10. 财务模型最终响应必须同时包含完整自然语言章节和其引用的Fact/Metric/Explanation/Source/Missing ID，ID不能替代分析文字。Python逐段核验关键金额、比例、主体、期间、来源和无支持事实陈述；通过段落原样保留，不得被模板重写。无效或缺失段落标记“本节未完成”，其他有效段落与确定性产物继续交付；模型整体失败时只交付数据/图表/来源和未完成状态。原始模型草稿、Tool参数、引用ID、用量、可获得的`finish_reason`及逐段拒绝原因写入脱敏本地轨迹。
-11. 财务Tool阶段的`financial_analysis.md`和`financial_questions.md`只是“未完成”占位；同时保存`financial_data_appendix.md`。模型完成后，Python仅把通过校验的原始段落、标题/状态、未完成提示和数据/来源附录组装进最终Markdown，并保存`financial_llm_draft.json`与`financial_llm_validation.json`。禁止以Python模板分析作为失败降级。
+9. Tool返回模型的内容应压缩为核实关系、控制关系、财务数据、确定性计算、必要附注、资料缺口和来源概况，不重复发送完整PDF文本。Python继续复用现有`FactRecord`、`EvidenceRecord`和`SourceRecord`维护内部溯源，但不要求模型在正文中回填这些ID；Skill阈值不得冒充企业实际事实。
+10. 财务模型最终响应应包含完整自然语言章节和尽调问题，不再强制提交Fact/Metric/Explanation/Source/Missing ID。Python只解析最小结构、保存模型原始草稿及调用诊断，并把模型文字原样组装进Markdown；不得使用百分比白名单、关键词或逐句来源匹配拒绝正文，也不得用固定模板重写。模型应将未证实的具体原因写为“可能/需进一步核实”，完全无依据的金额、比例、经营事件不得编造成企业事实。
+11. 财务Tool阶段可以保留数据产物和“尚未调用模型”的占位；模型完成后，Python把原始章节、尽调问题、必要财务数据表和首页免责声明组装成最终Markdown。`financial_llm_draft.json`继续保存原始生成结果；若保留生成状态文件，只记录调用/解析是否完成，不再作为自然语言事实审判门禁。禁止以Python模板分析作为失败降级。
 12. V1.5检索能力是Skill共享基础设施，而不是新的领域Skill。模型可调用`search_web`、`fetch_source`、`extract_evidence`，但只能读取当次搜索返回的URL，不能填写`source_id`或任意路径。Python生成`source_handle`和`Sxx`，经原文获取、主体/来源层级/定位校验后才将事实放入统一引用目录。
 13. `ownership-structure`可以用V1.5发现上层股东资料，但新来源只先进入证据/候选层；未通过股权主体、关系、基准日和100%完整性校验时，不自动并入正式股权图。`financial-analysis`的V2.1/V2.2只接收已登记、已解析、可定位的官方年报事实，网络候选不得自动混入财务指标。
 
@@ -77,11 +77,11 @@
 - **V1.1：已核验完成**。企业历史、主营业务、经营模式和主要产品已输出为可追溯事实，并建立披露事实、模型推断和缺失信息相互隔离的数据接口。
 - **V1.2：已核验完成并完成绘图/比例校验优化**。已复用 V1.1 的主体、来源、证据和缺失信息接口，新增股权节点/边/控制关系模型，以及结构校验、逐分支100%校验、聚合、图构建、DOT/Graphviz优先SVG+PNG渲染 Tools；本机无 `dot` 时显式使用内部树状SVG/PNG降级。
 - **V1.3A：已核验完成**。白名单注册、确定性任务选择、只读加载、Tool 白名单及执行追踪已实现；真实S01集成运行证明 `ownership-structure` 被选择、加载并调用现有 `build_ownership_artifacts`，10个制品均经运行时检查。
-- **V1.3B：Fact-Grounded与来源绑定离线修复完成，Live部分验证**。DeepSeek配置、SDK Agent/Runner、Function Tool、Mock/Live隔离、轮次/Tool限制、Token使用、Agent轨迹及统一事实契约已建立；ownership场景已支持 Fact ID / Missing ID / 有证据分析 Claim。最新真实调用已验证模型只提交ticker、Runtime绑定来源和完整Tool链路，但分析Claim的控制关系引用仍被严格校验拒绝，不能声称完整端到端成功。
+- **V1.3B：既有Agent与来源绑定能力保留**。DeepSeek配置、SDK Agent/Runner、Function Tool、Mock/Live隔离、轮次/Tool限制、Token使用和Agent轨迹均已建立；ownership场景历史上使用Fact ID / Missing ID / Claim契约完成严格校验。该机制保留为既有内部兼容实现，但不再作为后续正式报告正文的统一输出规范。
 - **V1.4：历史MVP已完成**。确定性Markdown框架、引用、图表和来源附录继续复用；其“无LLM也生成基础分析正文”的旧降级方式已被V2.3正式报告策略取代。
-- **V1.5：离线实现完成，Live待验证**。已接入百度搜索Provider、通用检索Tools、来源/证据链、缓存和预算限制；尚未配置或调用真实百度搜索。首次Live只能在用户配置`BAIDU_SEARCH_API_KEY`并显式授权后进行；如同时使用DeepSeek，还需独立的`--confirm-live`。
+- **V1.5：基础检索能力保留**。已接入百度搜索Provider、通用检索Tools、来源/证据链、缓存和预算限制；既有细粒度状态可作为内部诊断，用户可见报告统一映射为“已核验/未核验”。真实百度与DeepSeek调用仍分别需要密钥和显式确认。
 - **V2.1/V2.2：已完成**。财务三表可比事实、跨报告一致性、确定性计算、基础风险信号和财务Skill Runtime已通过真实S01/S10集成验证。
-- **V2.3：LLM正文架构离线实现及回归完成，最终验收未完成**。年报直接原因、支持性推断和待核实假设继续分层保存；主Agent把这些材料交给DeepSeek生成完整财务正文，Python只做轻量逐段校验和机械组装，不再模板成文。Mock已验证模型原文保留、段落级拒绝、部分成功、全失败无模板回退、数值符号和跨科目绑定，完整离线回归为`227 passed`。先前ID-only Live只证明Tool链路，不满足正式报告验收。
-- **下一个动作**：在用户单独授权下进行一次受控财务Live正文测试；通过后再标记V2.3完成。V2.4暂不启动。
+- **V2.3：已按简化规则完成**。受控Live返回的完整9章财务分析和9项尽调问题已离线恢复；最终Markdown包含Python财务数据表且不显示技术ID。Python不再逐段拒绝模型自然语言，也不回退到固定模板；人工审阅展示副本与原始草稿通过SHA-256绑定，报告标题由Runtime主体确定；全量离线回归`223 passed`。
+- **下一个动作**：V2.4暂未启动；后续继续沿用“Python提供数据与工具、Skill提供研究方法、DeepSeek分析并撰写”的单一路径。
 - 每个阶段结束更新 `ROADMAP.md` 的开发日志和实测结果，简历只写已实现能力。
 

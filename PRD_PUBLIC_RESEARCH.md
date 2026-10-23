@@ -16,7 +16,7 @@
 - 07 财务分析：三表核心数据、同比趋势、指标、现金流及风险信号。
 - 08 综合研究结论：有依据的观察、潜在风险、信息局限，不给授信审批结论。
 - 09 待补充资料与尽调问题清单：按优先级与对应章节组织。
-- 10 来源附录：`[S01]`格式，原始URL、文件标题、发布时间、可定位的页码/章节。
+- 10 研究依据（可选独立文件）：内部保留原始URL、文件标题、发布时间及可定位的页码/章节；正式报告默认不展示`[Sxx]`、`Fxxx`、`FMxxx`等技术编号。
 
 ## 3. 专业 Skill 设计（v5 新增）
 
@@ -38,7 +38,7 @@
 | U06 | 年报财务提取 | 金额单位、货币、期间、合并/母公司口径正确 |
 | U07 | 数值计算 | 与独立测试期望相同；零分母和缺失项不猜 |
 | U08 | 行业政策 | 有发布日期/适用范围/政策状态，区分事实与可能影响 |
-| U09 | 研究报告 | 重要事实带`[Sxx]`编号，附录有URL及必要元数据 |
+| U09 | 研究报告 | 正式Markdown包含专业正文、必要数据表、图表和尽调问题，不显示技术ID；重要数据可在独立研究依据文件中追溯至URL及必要元数据 |
 | U10 | 资料缺口 | 自动列示至少与财务、上下游、还款相关的**确实缺少**的待核实项，不能每家公司无差别输出所有问题 |
 | U11 | 无法联网或下载失败 | 错误明确、允许继续使用已验证缓存/输出局部结果，不伪造 |
 | U12 | 结果评估 | 结构化 JSON 模式校验通过，案例测试可复现；报告说明未核实限制 |
@@ -53,14 +53,14 @@
 | U21 | 非公开银行资料缺失 | 不臆造具体存款银行、贷款银行、交易明细或客户银行流水 |
 | U22 | 通用搜索Tool | DeepSeek可按任务选择`search_web`；请求经预算约束且候选摘要不直接转为事实 |
 | U23 | 网页/PDF原文获取 | 只读取搜索返回的公网URL，阻断本机/内网/云元数据及危险重定向；HTML保留段落，PDF保留页码 |
-| U24 | 检索证据链 | Python绑定`source_id`并判定可信度；可信原始披露为`verified`，单一可读原文可标记`single_source`进入报告，未读摘要为`unverified`候选，冲突值并列展示，无来源`unsupported`内容不得输出 |
+| U24 | 检索证据链 | Python内部绑定`source_id`并保存来源；报告层只显示“已核验/未核验”，其中可靠披露和确定性计算为已核验，单一来源、未确认候选、冲突信息或分析假设为未核验；无依据内容不得作为企业事实输出 |
 | U26 | 部分成功 | 单个网页403/404、超时或正文不足不得终止整项研究；保留成功来源与失败候选，并以`PARTIAL_SUCCESS`生成带状态标识的局部报告 |
 | U25 | 联网安全与费用保护 | Mock永不联网；百度搜索与DeepSeek Live分别需密钥、模式开关和显式确认，运行时强制次数/条数/抓取预算 |
 
 ## 5. 最小数据模型（建议 Pydantic）
 - `CompanyIdentity`: legal_name, alias, ticker, exchange, country_of_incorporation, entity_scope, resolved_at, evidence_ids.
 - `Source`: source_id, title, source_type, publisher, url, published_at, accessed_at, file_path/cache_key, page_or_section?, trusted_tier.
-- `Evidence`: evidence_id, claim, source_ids, page_or_section?, period?, entity_scope, status(`verified`/`conflicting`/`unverified`).
+- `Evidence`: evidence_id, claim, source_ids, page_or_section?, period?, entity_scope, internal_status?；技术ID和细粒度状态用于内部关联，不作为LLM正文输出契约。报告仅映射为“已核验/未核验”。
 - `FinancialDatum`: metric, value, currency, unit, period_start/end, period_type(`FY`/`H1`/`Q`), scope, source_id, page?, raw_label.
 - `AnalysisFinding`: category(`fact`/`calculated`/`risk_signal`/`hypothesis`/`missing_info`), title, explanation, evidence_ids, confidence_note?.
 - `DueDiligenceQuestion`: priority, module, question, reason, requested_document?, related_evidence_ids.
@@ -77,10 +77,10 @@
 - 非公开授信信息（征信、实际贷款用途、客户集中度明细、合同账期、内部授信记录等）一律标记需尽调，不由模型臆造。
 - **首个已确认来源**：以岭药业《2025年年度报告》，2026-04-28披露，巨潮资讯PDF：`https://static.cninfo.com.cn/finalpage/2026-04-28/1225205683.PDF`。如网络访问失败保留事实说明，不声称解析成功。
 
-## 7. 报告来源样例（格式示意，不代表已提取出报告内容）
-> 已检索到以岭药业2025年年度报告的公开披露链接 [S01]。
+## 7. 内部研究依据样例（格式示意，不代表正式报告展示内容）
+> 已检索到以岭药业2025年年度报告的公开披露链接（内部来源编号S01）。
 >
-> [S01] 石家庄以岭药业股份有限公司《2025年年度报告》，巨潮资讯，披露日期2026-04-28，`https://static.cninfo.com.cn/finalpage/2026-04-28/1225205683.PDF`；正文事实引用需按实际解析的页码补充。
+> [S01] 石家庄以岭药业股份有限公司《2025年年度报告》，巨潮资讯，披露日期2026-04-28，`https://static.cninfo.com.cn/finalpage/2026-04-28/1225205683.PDF`；内部研究依据应按实际解析结果补充页码，正式报告默认不显示该编号。
 
 ## 8. 暂不开发
 - 用户上传资料、企业内部系统、工商付费数据、征信、客户经理内部尽调资料。
