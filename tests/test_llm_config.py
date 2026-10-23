@@ -81,16 +81,16 @@ def test_model_settings_disable_thinking_and_apply_limits(tmp_path: Path) -> Non
     assert settings.retry.max_retries == 1
 
 
-def test_output_token_limit_accepts_user_requested_5000(tmp_path: Path) -> None:
-    config = load_deepseek_config(tmp_path, max_output_tokens=5000)
+def test_output_token_limit_accepts_user_requested_50000(tmp_path: Path) -> None:
+    config = load_deepseek_config(tmp_path, max_output_tokens=50000)
 
-    assert config.max_output_tokens == 5000
-    assert build_model_settings(config).max_tokens == 5000
+    assert config.max_output_tokens == 50000
+    assert build_model_settings(config).max_tokens == 50000
 
 
-def test_output_token_limit_rejects_values_above_5000(tmp_path: Path) -> None:
+def test_output_token_limit_rejects_values_above_50000(tmp_path: Path) -> None:
     with pytest.raises(LLMConfigError) as error:
-        load_deepseek_config(tmp_path, max_output_tokens=5001)
+        load_deepseek_config(tmp_path, max_output_tokens=50001)
 
     assert error.value.code == "invalid_llm_config"
 

@@ -1,5 +1,5 @@
 {
-  "schema_version": "2.2.0",
+  "schema_version": "2.3.0",
   "identity": {
     "entity_id": "CN-A-SZSE-002603",
     "legal_name": "石家庄以岭药业股份有限公司",
@@ -926,6 +926,51 @@
       "period": "FY2023",
       "evidence_ids": [
         "E231"
+      ]
+    },
+    {
+      "fact_id": "F280",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "operating_cash_flow_change_reason",
+      "value": "主要是报告期内销售回款较同期增加所致。",
+      "claim": "公司披露2025年度经营活动产生的现金流量净额同比增长，主要因销售回款较同期增加。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E280"
+      ]
+    },
+    {
+      "fact_id": "F281",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "respiratory_product_revenue_change",
+      "value": "2,017,355,686.48 25.76% 795,134,832.89 12.21% 153.71%",
+      "claim": "年报营业收入构成表披露，2025年呼吸系统类产品收入为2,017,355,686.48元，占比25.76%，同比增长153.71%。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E281"
+      ]
+    },
+    {
+      "fact_id": "F282",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "respiratory_sales_volume_change_reason",
+      "value": "主要是呼吸系统类产品销量增加所致。",
+      "claim": "公司披露相关实物销售数据同比变动超过30%，主要因呼吸系统类产品销量增加。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E282"
       ]
     }
   ],
@@ -3261,6 +3306,39 @@
       "quote": "经营活动产生的现金流量净额 611,013,171.11 155,457,433.79",
       "status": "verified",
       "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E280",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 58,
+      "line_number": 32,
+      "page_or_section": "管理层讨论与分析/现金流重大变动说明",
+      "quote": "（1）经营活动产生的现金流量净额同比增长 190.75%，主要是报告期内销售回款较同期增加所致。",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E281",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 52,
+      "line_number": 29,
+      "page_or_section": "管理层讨论与分析/营业收入构成",
+      "quote": "呼吸系统类 2,017,355,686.48 25.76% 795,134,832.89 12.21% 153.71%",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E282",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 54,
+      "line_number": 2,
+      "page_or_section": "管理层讨论与分析/实物销售变动原因",
+      "quote": "主要是呼吸系统类产品销量增加所致。",
+      "status": "verified",
+      "verification_method": "exact_text_match"
     }
   ],
   "missing_information": [
@@ -3281,8 +3359,8 @@
       "research_module": "financial_analysis",
       "statement_type": "missing_info",
       "topic": "重大变动原因",
-      "description": "V2.2仅完成主表数值及确定性变动识别，尚未逐项抽取附注中的管理层解释。",
-      "reason": "原因分析需在后续报告质量优化中关联附注证据，不能由模型补造。",
+      "description": "V2.3已核对经营现金流等部分重大变动原因，但尚未覆盖每个重点科目的全部附注和管理层解释。",
+      "reason": "未取得直接原因证据的科目继续保留为待核实假设，不能由模型补造。",
       "related_fact_ids": [],
       "evidence_ids": []
     }
@@ -3290,6 +3368,8 @@
   "limitations": [
     "仅使用S01（2025年报）和S10（2024年报）的合并财务报表主表行；S11已登记并解析，留作后续扩大跨报告复核。",
     "金额统一保留年报原始人民币元精度，未把万元或亿元格式化结果写回事实层。",
+    "财务原因仅收录当前人工审阅并通过精确原文匹配的披露，不代表已覆盖年报全部附注。",
+    "产品收入与销量信息可支持方向性分析，但不得自动提升为营业收入整体变化的唯一因果解释。",
     "所有同比、比率和重大变动阈值均由确定性 Python 函数计算，未交由 LLM 判断。",
     "重大变动和风险信号仅用于确定进一步核查方向，不等同于授信风险定性结论。"
   ]

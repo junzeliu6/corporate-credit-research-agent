@@ -6,14 +6,28 @@ from decimal import Decimal
 
 from credit_research_agent.financial import (
     FinancialChangeKind,
+    FinancialExplanationKind,
+    FinancialExplanationLinkSeed,
     FinancialFact,
     FinancialItem,
+    FinancialMetric,
     FinancialStatement,
+    ReasonablenessStatus,
+    assess_reasonableness,
     calculate_change,
     calculate_financial_metrics,
+    extract_change_explanations,
     validate_financial_facts,
 )
-from credit_research_agent.models import EntityScope
+from credit_research_agent.models import (
+    EntityScope,
+    EvidenceRecord,
+    EvidenceStatus,
+    FactCategory,
+    FactRecord,
+    ResearchModule,
+    VerificationMethod,
+)
 
 
 def _fact(
@@ -129,4 +143,130 @@ def test_scope_or_unit_conflict_is_rejected_before_calculation() -> None:
 
     assert not validation.is_valid
     assert any(issue.code == "incomparable_scope_or_unit" for issue in validation.issues)
+
+
+def _metric(
+    metric_id: str,
+    item: FinancialItem,
+    prior: str,
+    current: str,
+    *,
+    yoy: str,
+) -> FinancialMetric:
+    return FinancialMetric(
+        metric_id=metric_id,
+        entity_id="CN-A-SZSE-002603",
+        item=item,
+        item_label=item.value,
+        prior_period="FY2024",
+        current_period="FY2025",
+        prior_value=Decimal(prior),
+        current_value=Decimal(current),
+        absolute_change=Decimal(current) - Decimal(prior),
+        yoy_percent=Decimal(yoy),
+        change_kind=FinancialChangeKind.COMPARABLE,
+        formula="fixture",
+        requires_deep_analysis=True,
+        trigger_reasons=["fixture"],
+        supporting_fact_ids=["F201", "F202"],
+        source_ids=["S01"],
+    )
+
+
+def test_disclosed_reason_is_separate_from_hypothesis_and_has_provenance() -> None:
+    metric = _metric(
+        "FM020", FinancialItem.OPERATING_CASH_FLOW, "100", "200", yoy="100.00"
+    )
+    fact = FactRecord(
+        fact_id="F280",
+        entity_id="CN-A-SZSE-002603",
+        category=FactCategory.FINANCIAL,
+        research_module=ResearchModule.FINANCIAL_ANALYSIS,
+        field_name="operating_cash_flow_change_reason",
+        value="销售回款增加",
+        claim="公司披露经营现金流增长主要因销售回款增加。",
+        entity_scope=EntityScope.CONSOLIDATED,
+        period="FY2025",
+        evidence_ids=["E280"],
+    )
+    evidence = EvidenceRecord(
+        evidence_id="E280",
+        source_id="S01",
+        source_sha256="a" * 64,
+        page_number=58,
+        line_number=20,
+        page_or_section="现金流",
+        quote="销售回款增加",
+        status=EvidenceStatus.VERIFIED,
+        verification_method=VerificationMethod.EXACT_TEXT_MATCH,
+    )
+    link = FinancialExplanationLinkSeed(
+        explanation_id="FX001",
+        kind=FinancialExplanationKind.DISCLOSED_REASON,
+        item=FinancialItem.OPERATING_CASH_FLOW,
+        prior_period="FY2024",
+        current_period="FY2025",
+        statement="公司披露经营现金流增长主要因销售回款增加。",
+        fact_ids=["F280"],
+    )
+
+    explanations, inferences, hypotheses = extract_change_explanations(
+        [metric], [fact], [evidence], links=[link]
+    )
+
+    assert explanations[0].kind is FinancialExplanationKind.DISCLOSED_REASON
+    assert explanations[0].disclosed_fact_ids == ["F280"]
+    assert explanations[0].source_ids == ["S01"]
+    assert not inferences
+    assert not hypotheses
+
+
+def test_missing_reason_stays_unverified_and_does_not_become_fact() -> None:
+    metric = _metric(
+        "FM026", FinancialItem.PREPAYMENTS, "100", "130", yoy="30.00"
+    )
+
+    explanations, inferences, hypotheses = extract_change_explanations(
+        [metric], [], []
+    )
+    assessments = assess_reasonableness(
+        explanations, [metric], hypotheses=hypotheses
+    )
+
+    assert not explanations
+    assert not inferences
+    assert hypotheses[0].verification_status == "unverified"
+    assert assessments[0].status is ReasonablenessStatus.INSUFFICIENT_EVIDENCE
+    assert "不能作为确定性结论" in assessments[0].conclusion
+
+
+def test_disclosed_cash_collection_reason_is_checked_against_cash_received() -> None:
+    operating_cash = _metric(
+        "FM020", FinancialItem.OPERATING_CASH_FLOW, "100", "200", yoy="100.00"
+    )
+    cash_received = _metric(
+        "FM006", FinancialItem.CASH_RECEIVED_FROM_SALES, "1000", "1100", yoy="10.00"
+    )
+    explanation = extract_change_explanations(
+        [operating_cash], [], []
+    )[0]
+    # 用明确的结构化对象验证合理性函数，不依赖自然语言关键词匹配。
+    from credit_research_agent.financial import FinancialChangeExplanation
+
+    direct = FinancialChangeExplanation(
+        explanation_id="FX001",
+        metric_id="FM020",
+        kind=FinancialExplanationKind.DISCLOSED_REASON,
+        statement="销售回款增加",
+        disclosed_fact_ids=["F280"],
+        evidence_ids=["E280"],
+        source_ids=["S01"],
+    )
+    assessments = assess_reasonableness(
+        [direct], [operating_cash], all_metrics=[operating_cash, cash_received]
+    )
+
+    assert explanation == []
+    assert assessments[0].status is ReasonablenessStatus.SUPPORTED
+    assert assessments[0].supporting_metric_ids == ["FM006", "FM020"]
 

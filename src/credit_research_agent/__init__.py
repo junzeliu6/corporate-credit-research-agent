@@ -6,12 +6,19 @@ from credit_research_agent.fundamentals import FundamentalsBuilder
 from credit_research_agent.financial import (
     FinancialBuilder,
     FinancialResearchBundle,
+    FinancialReasonablenessAssessment,
+    FinancialChangeExplanation,
     build_financial_artifacts,
+    assess_reasonableness,
     calculate_change,
     calculate_financial_metrics,
+    extract_change_explanations,
+    generate_financial_section,
     normalize_financial_items,
+    render_financial_data_appendix,
     validate_financial_facts,
 )
+from credit_research_agent.financial_agent_runtime import FinancialResearchAgentRuntime
 from credit_research_agent.grounding import (
     CitableFact,
     FactGroundingCatalog,
@@ -81,6 +88,9 @@ __all__ = [
     "FactRecord",
     "FactGroundingCatalog",
     "FinancialBuilder",
+    "FinancialChangeExplanation",
+    "FinancialReasonablenessAssessment",
+    "FinancialResearchAgentRuntime",
     "FinancialResearchBundle",
     "FundamentalResearchBundle",
     "FundamentalsBuilder",
@@ -118,15 +128,19 @@ __all__ = [
     "assemble_report_artifacts",
     "build_report_artifacts",
     "build_financial_artifacts",
+    "assess_reasonableness",
     "build_ownership_graph",
     "build_evidence_bundle_grounding_catalog",
     "build_ownership_grounding_catalog",
     "validate_ownership_facts",
     "calculate_change",
     "calculate_financial_metrics",
+    "extract_change_explanations",
+    "generate_financial_section",
     "normalize_financial_items",
+    "render_financial_data_appendix",
     "validate_financial_facts",
 ]
 
-__version__ = "2.2.0"
+__version__ = "2.3.0"
 

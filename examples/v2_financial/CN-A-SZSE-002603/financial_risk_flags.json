@@ -103,5 +103,24 @@
       "F239"
     ],
     "requires_follow_up": true
+  },
+  {
+    "flag_id": "RF008",
+    "severity": "attention",
+    "topic": "利润与经营现金流变动方向背离",
+    "observation": "FY2024净利润与经营活动现金流量净额的同比变动方向相反，需核查利润的现金保障程度及营运资金变化。",
+    "supporting_metric_ids": [
+      "FM017",
+      "FM019"
+    ],
+    "supporting_fact_ids": [
+      "F226",
+      "F230",
+      "F256",
+      "F257",
+      "F260",
+      "F261"
+    ],
+    "requires_follow_up": true
   }
 ]

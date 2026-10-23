@@ -1,0 +1,57 @@
+{
+  "is_valid": true,
+  "issues": [
+    {
+      "code": "required_fact_missing",
+      "severity": "warning",
+      "message": "短期借款 FY2024 尚未形成可比事实",
+      "item": "short_term_borrowings",
+      "period": "FY2024"
+    },
+    {
+      "code": "required_fact_missing",
+      "severity": "warning",
+      "message": "短期借款 FY2025 尚未形成可比事实",
+      "item": "short_term_borrowings",
+      "period": "FY2025"
+    }
+  ],
+  "required_coverage": {
+    "monetary_funds": {
+      "FY2024": true,
+      "FY2025": true
+    },
+    "accounts_receivable": {
+      "FY2024": true,
+      "FY2025": true
+    },
+    "prepayments": {
+      "FY2024": true,
+      "FY2025": true
+    },
+    "inventory": {
+      "FY2024": true,
+      "FY2025": true
+    },
+    "fixed_assets": {
+      "FY2024": true,
+      "FY2025": true
+    },
+    "short_term_borrowings": {
+      "FY2024": false,
+      "FY2025": false
+    },
+    "accounts_payable": {
+      "FY2024": true,
+      "FY2025": true
+    },
+    "operating_revenue": {
+      "FY2024": true,
+      "FY2025": true
+    },
+    "operating_cash_flow": {
+      "FY2024": true,
+      "FY2025": true
+    }
+  }
+}

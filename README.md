@@ -2,7 +2,7 @@
 
 企业授信研究Agent（Corporate Credit Research Agent）是一个面向银行对公场景的学习型项目：从上市公司公开披露出发，逐步构建可追溯的企业研究辅助 Agent。
 
-当前代码版本是 **V2.2：可比财务事实与确定性财务 Tools**；需求基线为 **v5**。V2.1使用以岭药业官方2025/2024年报建立FY2023—FY2025合并口径财务事实，V2.2由Python计算同比、比率、重大变动和基础风险观察。`financial-analysis`已可由确定性Skill Runtime选择、加载和执行，但V2.3之前尚未开放给LLM主Agent。V1.3B的A002控制关系Fact ID绑定和V1.5受控Live验收仍列为技术债。本项目不是授信审批系统，不给出授信额度、贷款定价或具有审批效力的结论。
+当前代码版本是 **V2.3：DeepSeek 财务分析正文架构调整**；需求基线为 **v5**。V2.1使用以岭药业官方2025/2024年报建立FY2023—FY2025合并口径财务事实，V2.2由Python计算同比、比率和重大变动；V2.3保留原因证据分层、合理性数据与受控Agent Tool，并把正式财务报告统一为“DeepSeek实际分析和撰写，Python负责数据、计算、证据、轻量逐段校验与Markdown机械组装”。最新受控Live已生成完整9章正文，但现行校验契约拒绝了全部章节，最终验收仍未通过，V2.4暂不启动。本项目不是授信审批系统，不给出授信额度、贷款定价或具有审批效力的结论。
 
 ## V0.1—V0.4 已实现
 
@@ -88,6 +88,8 @@
 - LLM 分析采用独立交付状态：只有已通过 Agent Runtime 校验且含合法 `[Sxx]` 的正文可加入报告；未运行或被拒绝时仍生成基础报告，并显示状态和原因。
 - CLI 新增 `--build-report S01`；以岭药业真实缓存端到端生成21条基本面事实、5项缺失信息和S01来源附录，全量离线回归为145项。
 
+以上是V1.4历史MVP能力。自V2.3报告作者职责调整起，Python确定性框架继续负责引用、图表、数据表、来源附录和文件组装，但不能再用模板分析替代DeepSeek正式正文；模型失败时正式分析章节必须标记未完成。
+
 ## V1.5 已实现（最终稳定性修复已离线验证，Live待复测）
 
 - 新增通用`SearchProvider`契约和百度官方Web Search Provider，把内部`query/max_results/domain_filter/recency`映射到百度官方请求字段，并将`references`转换为统一搜索结果。
@@ -97,21 +99,27 @@
 - `single_source`可进入报告但必须标注“单一来源，待交叉核实”；搜索摘要只能以“某来源称”的候选形式展示，冲突来源并列保留，`unsupported`不得进入正文。疑似Prompt Injection继续隔离。
 - 单个网页403/404、超时或正文不足会记录失败来源和未核验Candidate，并允许Agent继续读取其他来源。存在失败来源、单一来源、候选或冲突时，运行结果标记为`partial_success`而不是整体失败。
 - 中文段落召回使用研究主题及同义表达（如核心业务、产品群、营业收入、营销模式和学术推广）；验证码、登录墙、Access Denied与反爬占位页不会登记为有效正文。
-- 单任务默认最多10轮检索、10次`search_web`、10次真实搜索API请求、5条/次、20次抓取、20次证据提取、60次总Function Tool调用和70个Agent轮次。所有限制由Python计数；第10轮允许、第11轮拒绝。预算耗尽后停止新增工具，使用已有Fact/Candidate生成确定性局部报告。
+- 单任务默认最多10轮检索、10次`search_web`、10次真实搜索API请求、5条/次、20次抓取、20次证据提取、60次总Function Tool调用和70个Agent轮次。所有限制由Python计数；第10轮允许、第11轮拒绝。预算耗尽后停止新增工具并保留已有Fact/Candidate、检索记录和可信度状态；这些确定性资料不是正式分析正文，正式文字仍需由DeepSeek生成或明确标记未完成。
 - 完整网页保存在本地；Tool只返回受限摘要、相关段落、Fact/Candidate ID和来源信息，重复查询与网页复用缓存。
 - 默认LLM和搜索都是Mock；两者Live必须分别选择、配置密钥和显式确认。日常测试不会发送真实百度或DeepSeek请求；已获用户逐次授权的Live验收另行记录。
 
-## V2.1—V2.2 已实现
+## V2.1—V2.3 已实现
 
 - 新增S10（2024年报）和S11（2023年报）官方来源登记；真实下载和逐页解析均已验证。当前事实层以S01/S10形成FY2023—FY2025序列，S11用于后续扩大独立复核。
 - 新增`financial.py`和人工审阅的`financial_seeds.json`，从合并资产负债表、利润表和现金流量表按精确原文及物理页码形成61条单来源事实、46条归一可比事实。
 - 跨报告重复值、主体、期间、币种、单位和合并口径不一致会明确失败；短期借款空白没有被解释为零，而是保留为待核查事项。
 - Python统一计算30个逐年变动指标和12个基础比率；`|同比|>=20%`（含20%）触发重点分析，并单独处理零基期、负值、正负切换和跨报告冲突。
-- `financial-analysis`已注册高层白名单Tool并通过真实Skill Runtime调用；输出财务事实、指标、分析、风险观察、来源、问题清单和校验结果。
+- `financial-analysis`已注册高层白名单Tool并通过真实Skill Runtime调用；Python输出财务事实、指标、原因证据、风险观察、来源、问题清单和校验结果，Tool阶段的分析/问题Markdown只是未完成占位。
+- `financial_explanation_seeds.json`对S01第52、54、58页进行精确原文匹配；经营现金流变动形成直接披露原因，营业收入和净利润形成明确标注的支持性推断，其余重点科目保留待核实假设。
+- `extract_change_explanations`和`assess_reasonableness`形成可追溯的分析上下文，并额外输出`financial_explanations.json`与`financial_reasonableness.json`；旧的Python模板分析只作为历史实现记录，不再构成正式报告正文。
+- 主Agent可调用只接受`ticker`的`run_financial_research`；S01/S10、PDF路径和输出目录由Python Runtime绑定。DeepSeek获得重点财务事实、指标、附注原因、缺失信息及来源后，必须生成完整自然语言分析并引用对应ID，不能只返回ID。
+- Python逐段核验关键金额、比例、期间、主体、来源和不支持的事实陈述。通过段落原样写入`financial_analysis.md`；不合格或缺失段落标记“本节未完成”，不得被固定模板替换。Tool阶段同时生成`financial_data_appendix.md`，模型草稿和校验结果分别保存为`financial_llm_draft.json`与`financial_llm_validation.json`。
+- DeepSeek调用失败时保留事实、指标、图表、数据附录和来源，并明确正式分析尚未完成；Mock只验证流程，不是正式报告，也不等同于Live验收。
 - 运行命令：`.venv\Scripts\python.exe -m credit_research_agent.cli 002603.SZ --build-financial S01 --financial-comparison-source S10 --financial-dir data/financial`。
-- 示例产物：`examples/v2_financial/CN-A-SZSE-002603/`；完整离线回归为`206 passed`。
+- Mock Agent命令：`.venv\Scripts\python.exe -m credit_research_agent.cli 002603.SZ --run-agent "分析财务报表、现金流和重大同比变动" --agent-source S01 --financial-comparison-source S10 --llm-mode mock --financial-dir data/financial`。
+- 示例产物：`examples/v2_financial/CN-A-SZSE-002603/`。最新受控Live已验证模型调用Tool并完整撰写9章正文；120秒超时和0次自动重试配置有效，但正文因引用契约与少量未充分支持推断而全部被拒绝，故仍不能作为已验收的正式报告。
 
-当前仍未实现V2.3附注原因的全面抽取、原因合理性评价、LLM财务Function Tool、V2.4多来源行业政策研究、RAG、MCP或Streamlit。这些能力按`ROADMAP.md`分阶段引入。
+当前仍未实现全部附注原因的自动覆盖、完整审计意见分析、V2.4多来源行业政策研究、V2.5同一任务双Skill编排、RAG、MCP或Streamlit。当前只收尾V2.3正文生成与校验链路，不提前启动V2.4。
 
 ## v5 文档与 Skill 规范
 
@@ -148,7 +156,7 @@ corporate-credit-research-agent/
 │  ├─ skill_runtime.py       # V1.3A确定性Tool Calling与执行追踪
 │  ├─ llm_config.py          # V1.3B DeepSeek配置、密钥与SDK模型设置
 │  ├─ agent_runtime.py       # V1.3B主Agent、Function Tool、限制和执行追踪
-│  ├─ reporting.py           # V1.4确定性Markdown报告组装与LLM降级
+│  ├─ reporting.py           # V1.4 Markdown框架/引用/图表组装；旧模板正文仅作历史MVP
 │  ├─ grounding.py           # 统一可引用事实视图与既有证据/股权结果适配
 │  ├─ search.py              # V1.5百度SearchProvider、缓存、预算与错误映射
 │  ├─ web_sources.py         # V1.5安全HTML/PDF获取、运行时来源与证据登记
@@ -173,7 +181,7 @@ corporate-credit-research-agent/
 │  ├─ ownership_citations.md
 │  ├─ V1.3_skill_execution_trace.json # 真实S01 Skill执行追踪
 │  ├─ v1_3_runtime/          # V1.3真实Tool调用的独立制品
-│  ├─ v1_4_report/           # V1.4确定性Markdown报告样例
+│  ├─ v1_4_report/           # V1.4历史MVP Markdown样例（不代表V2.3正式LLM报告）
 │  └─ v1_5_mock/             # V1.5离线检索轨迹与证据链样例
 ├─ tests/
 │  ├─ integration/test_yiling_fundamentals.py
@@ -303,7 +311,7 @@ python -m credit_research_agent "002603.SZ" --build-ownership S01 `
 
 `ownership.json` 保存未经聚合和裁剪的披露事实；`ownership_graph.json` 保存按展示规则生成的节点/边。SVG 同目录会生成同名 PNG 和 DOT。若系统安装了 Graphviz 且 `dot` 在 `PATH` 中，`render_engine` 为 `graphviz-dot`；否则输出 `internal-tree-fallback`，不会把降级渲染误报为 Graphviz。
 
-生成 V1.4 初版 Markdown 授信研究报告（默认不调用 LLM）：
+生成 V1.4 历史MVP Markdown报告（默认不调用LLM，按当前政策不视为正式AI研究报告）：
 
 ```powershell
 python -m credit_research_agent "002603.SZ" `
@@ -314,7 +322,7 @@ python -m credit_research_agent "002603.SZ" `
   --report-output "examples/v1_4_report/CN-A-SZSE-002603/credit_research_report.md"
 ```
 
-该入口复用下载缓存和逐页解析，重新执行 V1.1/V1.2 的确定性构建器后再组装报告。股权图复制到报告目录的 `assets/`；若可选 LLM 分析未执行或未通过事实校验，基本报告仍正常生成，不会写入被拒绝的候选文字。
+该入口复用下载缓存和逐页解析，重新执行V1.1/V1.2的确定性构建器并组装框架、图表和来源。它用于复现V1.4历史成果；V2.3以后如果没有通过校验的DeepSeek正文，只能作为数据/图表/来源产物并标记分析未完成，不能把旧模板报告作为正式研究成果。
 
 运行 V1.5 完全离线 Mock 检索（不需要任何 API Key，不联网）：
 
@@ -402,7 +410,9 @@ python -m credit_research_agent "002603.SZ" `
 
 程序预算与Token限制不是 DeepSeek 账单的绝对硬上限；实际费用和缓存计费以平台控制台为准。2026-10-22的Live均由用户逐次授权；最新一次已验证模型只提交ticker、Runtime绑定S01和完整Tool链路，最终分析Claim因控制关系Fact ID不足被拒绝。不得自动重复调用。
 
-`--max-output-tokens`限制的是**每次模型响应的输出Token**，不是整个Agent Loop的输入与输出总量。默认仍为800；当前允许显式提高到5000，例如`--max-output-tokens 5000`。提高该值会扩大潜在费用，且不会替代来源/比例后置校验。
+`--max-output-tokens`限制的是**每次模型响应的输出Token**，不是整个Agent Loop的输入与输出总量。默认仍为800；当前允许显式提高到50000，例如`--max-output-tokens 50000`。提高该值会扩大潜在费用，且不会替代来源/比例后置校验。V2.3完整财务正文曾在5000 Token处以`finish_reason=length`截断，因此更高上限只用于用户明确授权的受控Live任务。
+
+长正文Live还可显式设置`--request-timeout-seconds 120`和`--max-model-retries 0`。前者是单次模型请求的最长等待时间，后者关闭Agents SDK模型调用层自动重试；底层`AsyncOpenAI`传输重试原本即固定为0。两者不改变Agent轮次和Function Tool预算。
 
 输出中的 `company` 是规范化上市主体；`sources` 是静态来源种子；`download` 是本机实际获取结果。`S01.status = registered` 只表示来源目录登记状态，不能替代实际下载清单。
 
@@ -577,13 +587,13 @@ V1.3B真实S01 Mock Agent集成：1项（本机运行产物不存在时明确跳
 V1.4报告组装/降级/来源与主体校验/CLI及可信度分层：11项
 V1.4真实S01报告集成：1项（仓库内已核验研究产物不存在时明确跳过）
 V1.5百度Provider/缓存/预算、HTML/PDF获取、来源证据、部分成功、Mock Agent/Tool/CLI与安全边界：50项
-V2.1/V2.2财务模型、边界计算、CLI、真实年报和Skill Runtime集成：10项
-本次本机合计：206项（V2.2完整回归实测）
+V2.1—V2.3财务模型、原因分层、合理性、CLI、真实年报、Skill Runtime、LLM正文直出、逐段校验与无模板回退：31项
+当前完整离线回归：227项通过（2026-10-23）；所有Mock测试禁止真实DeepSeek、百度或其他外部网络请求
 ```
 
 网络请求使用离线假响应测试，因此日常 `pytest` 不依赖巨潮资讯、百度搜索或 DeepSeek 是否可访问。
 
 ## 下一阶段
 
-V2.1/V2.2已通过206项完整离线回归；真实S01/S10生成46条归一财务事实、30个逐年变动指标、12个基础比率和7个FY2025量化关注信号。下一步进入V2.3：抽取有页码证据的重大变动原因、评价原因合理性，并把财务Skill以受控Function Tool开放给主Agent。V1.3B的A002/`CR001`问题和V1.5受控Live复测继续列为并行技术债。
+V2.1/V2.2的确定性数据内核继续稳定复用；真实S01/S10已生成46条归一财务事实、30个逐年变动指标、12个基础比率、3条有证据解释、4条待核实假设和7项合理性评价。V2.3 DeepSeek正文直出、逐段事实校验、部分成功和无模板回退已通过离线Mock与完整回归；受控Live已完成9章正文和9个尽调问题，但现行校验契约将9章全部拒绝。下一步先修复引用误判并保留对真正无依据推断的严格审查，再决定最终Live验收。V2.4暂不启动。
 

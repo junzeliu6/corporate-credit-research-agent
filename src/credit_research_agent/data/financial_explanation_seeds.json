@@ -1,0 +1,91 @@
+{
+  "entity_id": "CN-A-SZSE-002603",
+  "evidence": [
+    {
+      "evidence_id": "E280",
+      "entity_id": "CN-A-SZSE-002603",
+      "source_id": "S01",
+      "page_number": 58,
+      "page_or_section": "管理层讨论与分析/现金流重大变动说明",
+      "match_text": "（1）经营活动产生的现金流量净额同比增长 190.75%，主要是报告期内销售回款较同期增加所致。"
+    },
+    {
+      "evidence_id": "E281",
+      "entity_id": "CN-A-SZSE-002603",
+      "source_id": "S01",
+      "page_number": 52,
+      "page_or_section": "管理层讨论与分析/营业收入构成",
+      "match_text": "呼吸系统类 2,017,355,686.48 25.76% 795,134,832.89 12.21% 153.71%"
+    },
+    {
+      "evidence_id": "E282",
+      "entity_id": "CN-A-SZSE-002603",
+      "source_id": "S01",
+      "page_number": 54,
+      "page_or_section": "管理层讨论与分析/实物销售变动原因",
+      "match_text": "主要是呼吸系统类产品销量增加所致。"
+    }
+  ],
+  "facts": [
+    {
+      "fact_id": "F280",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "field_name": "operating_cash_flow_change_reason",
+      "value": "主要是报告期内销售回款较同期增加所致。",
+      "claim": "公司披露2025年度经营活动产生的现金流量净额同比增长，主要因销售回款较同期增加。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": ["E280"]
+    },
+    {
+      "fact_id": "F281",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "field_name": "respiratory_product_revenue_change",
+      "value": "2,017,355,686.48 25.76% 795,134,832.89 12.21% 153.71%",
+      "claim": "年报营业收入构成表披露，2025年呼吸系统类产品收入为2,017,355,686.48元，占比25.76%，同比增长153.71%。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": ["E281"]
+    },
+    {
+      "fact_id": "F282",
+      "entity_id": "CN-A-SZSE-002603",
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "field_name": "respiratory_sales_volume_change_reason",
+      "value": "主要是呼吸系统类产品销量增加所致。",
+      "claim": "公司披露相关实物销售数据同比变动超过30%，主要因呼吸系统类产品销量增加。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": ["E282"]
+    }
+  ],
+  "links": [
+    {
+      "explanation_id": "FX001",
+      "kind": "disclosed_reason",
+      "item": "operating_cash_flow",
+      "prior_period": "FY2024",
+      "current_period": "FY2025",
+      "statement": "公司披露经营活动产生的现金流量净额增长主要因报告期内销售回款较同期增加。",
+      "fact_ids": ["F280"]
+    },
+    {
+      "explanation_id": "FX002",
+      "kind": "supported_inference",
+      "item": "operating_revenue",
+      "prior_period": "FY2024",
+      "current_period": "FY2025",
+      "statement": "呼吸系统类产品收入和销量增长与营业收入增长方向一致，可能构成收入增长的重要贡献因素；年报未将其表述为营业收入整体增长的唯一直接原因。",
+      "fact_ids": ["F281", "F282"]
+    }
+  ],
+  "limitations": [
+    "财务原因仅收录当前人工审阅并通过精确原文匹配的披露，不代表已覆盖年报全部附注。",
+    "产品收入与销量信息可支持方向性分析，但不得自动提升为营业收入整体变化的唯一因果解释。"
+  ]
+}

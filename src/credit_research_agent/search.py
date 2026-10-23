@@ -382,7 +382,9 @@ class SearchCache:
             with tempfile.NamedTemporaryFile(
                 mode="w",
                 encoding="utf-8",
-                prefix=f".{path.name}-",
+                # Windows 的传统 MAX_PATH 下，64位缓存键再拼测试目录和随机后缀
+                # 容易超过路径上限；临时文件无需重复完整缓存键。
+                prefix=".search-",
                 suffix=".tmp",
                 dir=path.parent,
                 delete=False,

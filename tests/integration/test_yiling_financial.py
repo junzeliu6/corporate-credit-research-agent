@@ -1,4 +1,4 @@
-"""真实年报上的 V2.1/V2.2 财务事实与产物集成测试。"""
+"""真实年报上的 V2.1-V2.3 财务事实、原因与产物集成测试。"""
 
 from decimal import Decimal
 from pathlib import Path
@@ -64,14 +64,20 @@ def test_yiling_financial_facts_are_page_grounded_and_artifacts_are_generated(
     assert artifacts.fact_count == 46
     assert artifacts.metric_count == 30
     assert artifacts.material_change_count > 0
+    assert artifacts.explanation_count == 3
+    assert artifacts.hypothesis_count == 4
+    assert artifacts.assessment_count == 7
     for field_name in (
         "facts_path",
         "metrics_path",
         "analysis_path",
+        "data_appendix_path",
         "risk_flags_path",
         "sources_path",
         "questions_path",
         "validation_path",
+        "explanations_path",
+        "reasonableness_path",
     ):
         assert getattr(artifacts, field_name).is_file()
 
@@ -84,5 +90,25 @@ def test_yiling_financial_facts_are_page_grounded_and_artifacts_are_generated(
     }
     assert Decimal(facts[(FinancialItem.OPERATING_REVENUE.value, "FY2025")]["value"]) == Decimal("7830737438.74")
     assert facts[(FinancialItem.OPERATING_REVENUE.value, "FY2024")]["source_ids"] == ["S01", "S10"]
-    assert "S01" in artifacts.analysis_path.read_text(encoding="utf-8")
-    assert "短期借款" in artifacts.questions_path.read_text(encoding="utf-8")
+    explanations = json.loads(artifacts.explanations_path.read_text(encoding="utf-8"))
+    direct = next(
+        item
+        for item in explanations["explanations"]
+        if item["kind"] == "disclosed_reason"
+    )
+    assert direct["disclosed_fact_ids"] == ["F280"]
+    assert direct["evidence_ids"] == ["E280"]
+    assert direct["source_ids"] == ["S01"]
+    analysis = artifacts.analysis_path.read_text(encoding="utf-8")
+    assert "财务分析（未完成）" in analysis
+    assert "尚未取得通过校验的 DeepSeek 分析正文" in analysis
+    assert "主要变动与银行授信观察" not in analysis
+    assert "已披露原因" not in analysis
+    data_appendix = artifacts.data_appendix_path.read_text(encoding="utf-8")
+    assert "本附录仅呈现 Python 校验或计算的数据" in data_appendix
+    assert "7,830,737,438.74" in data_appendix
+    assert "[S01]" in data_appendix
+    assert "[S10]" in data_appendix
+    questions = artifacts.questions_path.read_text(encoding="utf-8")
+    assert "尽调问题清单（未完成）" in questions
+    assert "短期借款" in questions

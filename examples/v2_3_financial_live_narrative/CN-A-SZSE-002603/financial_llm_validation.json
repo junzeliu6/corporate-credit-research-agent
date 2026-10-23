@@ -1,0 +1,8 @@
+{
+  "status": "failed",
+  "generation_mode": "live",
+  "llm_authored_report": true,
+  "python_rewrote_llm_text": false,
+  "parse_error": "模型最终输出不是有效的财务分析草稿JSON",
+  "rule_id": "FIN-NARRATIVE-001"
+}

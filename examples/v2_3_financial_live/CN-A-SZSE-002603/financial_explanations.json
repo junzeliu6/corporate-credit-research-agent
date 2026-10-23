@@ -1,0 +1,170 @@
+{
+  "explanations": [
+    {
+      "explanation_id": "FX001",
+      "metric_id": "FM020",
+      "kind": "disclosed_reason",
+      "statement": "公司披露经营活动产生的现金流量净额增长主要因报告期内销售回款较同期增加。",
+      "disclosed_fact_ids": [
+        "F280"
+      ],
+      "supporting_fact_ids": [],
+      "inference_id": null,
+      "evidence_ids": [
+        "E280"
+      ],
+      "source_ids": [
+        "S01"
+      ],
+      "limitation": null
+    },
+    {
+      "explanation_id": "FX002",
+      "metric_id": "FM024",
+      "kind": "supported_inference",
+      "statement": "呼吸系统类产品收入和销量增长与营业收入增长方向一致，可能构成收入增长的重要贡献因素；年报未将其表述为营业收入整体增长的唯一直接原因。",
+      "disclosed_fact_ids": [],
+      "supporting_fact_ids": [
+        "F281",
+        "F282"
+      ],
+      "inference_id": "I280",
+      "evidence_ids": [
+        "E281",
+        "E282"
+      ],
+      "source_ids": [
+        "S01"
+      ],
+      "limitation": "方向性证据支持，但年报未将其表述为该总量变化的唯一直接原因。"
+    },
+    {
+      "explanation_id": "FX-NET-PROFIT-001",
+      "metric_id": "FM018",
+      "kind": "supported_inference",
+      "statement": "营业收入同比20.24%、营业成本同比-13.77%，毛利率由50.19%升至64.28%，与净利润由负转正方向一致；该组合仅构成支持性推断，并非公司披露的完整利润变动原因。",
+      "disclosed_fact_ids": [],
+      "supporting_fact_ids": [
+        "F221",
+        "F222",
+        "F223",
+        "F224",
+        "F225",
+        "F226",
+        "F252",
+        "F254",
+        "F256"
+      ],
+      "inference_id": "I281",
+      "evidence_ids": [
+        "E211",
+        "E212",
+        "E213",
+        "E227",
+        "E228",
+        "E229"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ],
+      "limitation": "不是年报直接归因，不能据此排除其他利润影响因素。"
+    }
+  ],
+  "inferences": [
+    {
+      "inference_id": "I280",
+      "entity_id": "CN-A-SZSE-002603",
+      "research_module": "financial_analysis",
+      "statement_type": "model_inference",
+      "statement": "呼吸系统类产品收入和销量增长与营业收入增长方向一致，可能构成收入增长的重要贡献因素；年报未将其表述为营业收入整体增长的唯一直接原因。",
+      "supporting_fact_ids": [
+        "F281",
+        "F282"
+      ],
+      "evidence_ids": [
+        "E281",
+        "E282"
+      ],
+      "confidence_note": "方向性证据支持，但年报未将其表述为该总量变化的唯一直接原因。"
+    },
+    {
+      "inference_id": "I281",
+      "entity_id": "CN-A-SZSE-002603",
+      "research_module": "financial_analysis",
+      "statement_type": "model_inference",
+      "statement": "营业收入同比20.24%、营业成本同比-13.77%，毛利率由50.19%升至64.28%，与净利润由负转正方向一致；该组合仅构成支持性推断，并非公司披露的完整利润变动原因。",
+      "supporting_fact_ids": [
+        "F221",
+        "F222",
+        "F223",
+        "F224",
+        "F225",
+        "F226",
+        "F252",
+        "F254",
+        "F256"
+      ],
+      "evidence_ids": [
+        "E211",
+        "E212",
+        "E213",
+        "E227",
+        "E228",
+        "E229"
+      ],
+      "confidence_note": "需补充利润变动桥接、费用、减值及非经常性损益明细。"
+    }
+  ],
+  "hypotheses": [
+    {
+      "hypothesis_id": "FH003",
+      "metric_id": "FM026",
+      "kind": "unverified_hypothesis",
+      "statement": "当前证据未形成预付款项变动的直接原因；任何经营成因均为待核实假设，不能作为确定性结论。",
+      "required_evidence": [
+        "主要预付对象",
+        "采购合同",
+        "履约进度",
+        "账龄"
+      ],
+      "verification_status": "unverified"
+    },
+    {
+      "hypothesis_id": "FH004",
+      "metric_id": "FM016",
+      "kind": "unverified_hypothesis",
+      "statement": "当前证据未形成货币资金变动的直接原因；任何经营成因均为待核实假设，不能作为确定性结论。",
+      "required_evidence": [
+        "受限资金明细",
+        "主要银行账户余额",
+        "资金变动构成"
+      ],
+      "verification_status": "unverified"
+    },
+    {
+      "hypothesis_id": "FH005",
+      "metric_id": "FM002",
+      "kind": "unverified_hypothesis",
+      "statement": "当前证据未形成应付账款变动的直接原因；任何经营成因均为待核实假设，不能作为确定性结论。",
+      "required_evidence": [
+        "主要供应商",
+        "采购背景",
+        "合同账期",
+        "逾期情况"
+      ],
+      "verification_status": "unverified"
+    },
+    {
+      "hypothesis_id": "FH007",
+      "metric_id": "FM008",
+      "kind": "unverified_hypothesis",
+      "statement": "当前证据未形成流动资产合计变动的直接原因；任何经营成因均为待核实假设，不能作为确定性结论。",
+      "required_evidence": [
+        "流动资产构成变动",
+        "受限及变现能力说明"
+      ],
+      "verification_status": "unverified"
+    }
+  ]
+}

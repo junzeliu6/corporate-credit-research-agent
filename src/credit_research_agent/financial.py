@@ -1,7 +1,8 @@
-"""V2.1/V2.2 财务事实、确定性计算与制品生成。
+"""V2.1-V2.3 财务事实、确定性计算与专业分析流程。
 
 本模块坚持一个边界：PDF 原文只负责形成带页码的事实，Python 只基于这些事实
-做可复现计算。任何经营原因、风险成因或预测均不在本模块中补造。
+做可复现计算。V2.3 允许形成支持性推断和待核实假设，但二者必须与公司披露
+原因分层保存，绝不能回写为 ``FactRecord`` 或冒充年报事实。
 """
 
 from __future__ import annotations
@@ -31,6 +32,7 @@ from credit_research_agent.models import (
     FactCategory,
     FactRecord,
     MissingInformation,
+    ModelInference,
     ResearchModule,
     SourceRecord,
 )
@@ -100,6 +102,23 @@ class FinancialChangeKind(str, Enum):
 class IssueSeverity(str, Enum):
     ERROR = "error"
     WARNING = "warning"
+
+
+class FinancialExplanationKind(str, Enum):
+    """财务变化解释的证据等级。"""
+
+    DISCLOSED_REASON = "disclosed_reason"
+    SUPPORTED_INFERENCE = "supported_inference"
+    UNVERIFIED_HYPOTHESIS = "unverified_hypothesis"
+
+
+class ReasonablenessStatus(str, Enum):
+    """原因合理性评价，不等同于审计或授信结论。"""
+
+    SUPPORTED = "supported"
+    PARTIALLY_SUPPORTED = "partially_supported"
+    CONTRADICTED = "contradicted"
+    INSUFFICIENT_EVIDENCE = "insufficient_evidence"
 
 
 class FinancialSourceInput(BaseModel):
@@ -194,6 +213,49 @@ class FinancialSeedCatalog(BaseModel):
                         evidence_ids=[line.evidence_id],
                     )
                 )
+        return EvidenceSeedCatalog(evidence=evidence, facts=facts)
+
+
+class FinancialExplanationLinkSeed(BaseModel):
+    """把人工核对的披露事实绑定到一个财务变动项目。"""
+
+    explanation_id: str
+    kind: FinancialExplanationKind
+    item: FinancialItem
+    prior_period: str
+    current_period: str
+    statement: str = Field(min_length=1)
+    fact_ids: List[str] = Field(min_items=1)
+
+
+class FinancialExplanationSeedCatalog(BaseModel):
+    """年报附注/管理层讨论中的原因证据锚点。
+
+    数值主表和原因披露分开维护：前者用于计算，后者只为解释提供原文证据。
+    """
+
+    entity_id: str
+    evidence: List[EvidenceSeed]
+    facts: List[FactSeed]
+    links: List[FinancialExplanationLinkSeed]
+    limitations: List[str] = Field(default_factory=list)
+
+    def source_ids(self) -> set[str]:
+        return {item.source_id for item in self.evidence}
+
+    def for_source(self, source_id: str) -> EvidenceSeedCatalog:
+        evidence = [item for item in self.evidence if item.source_id == source_id]
+        evidence_ids = {item.evidence_id for item in evidence}
+        facts = [
+            item
+            for item in self.facts
+            if set(item.evidence_ids).issubset(evidence_ids)
+        ]
+        if not evidence:
+            raise FinancialBuildError(
+                "missing_financial_explanation_seeds",
+                f"来源 {source_id} 没有财务原因证据锚点",
+            )
         return EvidenceSeedCatalog(evidence=evidence, facts=facts)
 
 
@@ -296,8 +358,70 @@ class FinancialRiskFlag(BaseModel):
     requires_follow_up: bool = True
 
 
+class FinancialChangeExplanation(BaseModel):
+    """一项重大变化的披露原因或支持性推断。"""
+
+    explanation_id: str
+    metric_id: str
+    kind: FinancialExplanationKind
+    statement: str = Field(min_length=1)
+    disclosed_fact_ids: List[str] = Field(default_factory=list)
+    supporting_fact_ids: List[str] = Field(default_factory=list)
+    inference_id: Optional[str] = None
+    evidence_ids: List[str] = Field(default_factory=list)
+    source_ids: List[str] = Field(default_factory=list)
+    limitation: Optional[str] = None
+
+    @root_validator
+    def validate_explanation_evidence(cls, values):
+        kind = values.get("kind")
+        disclosed_fact_ids = values.get("disclosed_fact_ids") or []
+        evidence_ids = values.get("evidence_ids") or []
+        source_ids = values.get("source_ids") or []
+        if kind is FinancialExplanationKind.DISCLOSED_REASON:
+            if not disclosed_fact_ids or not evidence_ids or not source_ids:
+                raise ValueError("年报披露原因必须关联事实、证据和来源")
+        if kind is FinancialExplanationKind.SUPPORTED_INFERENCE:
+            if not values.get("supporting_fact_ids") or not values.get("inference_id"):
+                raise ValueError("支持性推断必须关联事实和ModelInference")
+        return values
+
+
+class FinancialHypothesis(BaseModel):
+    """没有直接证据的待核实假设；禁止作为确定性企业事实输出。"""
+
+    hypothesis_id: str
+    metric_id: str
+    kind: FinancialExplanationKind = FinancialExplanationKind.UNVERIFIED_HYPOTHESIS
+    statement: str = Field(min_length=1)
+    required_evidence: List[str] = Field(min_items=1)
+    verification_status: str = "unverified"
+
+    @validator("kind")
+    def kind_is_hypothesis(cls, value: FinancialExplanationKind):
+        if value is not FinancialExplanationKind.UNVERIFIED_HYPOTHESIS:
+            raise ValueError("FinancialHypothesis.kind 必须为 unverified_hypothesis")
+        return value
+
+
+class FinancialReasonablenessAssessment(BaseModel):
+    """对变化解释的方向一致性和证据完整性作确定性评价。"""
+
+    assessment_id: str
+    metric_id: str
+    status: ReasonablenessStatus
+    conclusion: str = Field(min_length=1)
+    explanation_ids: List[str] = Field(default_factory=list)
+    supporting_metric_ids: List[str] = Field(default_factory=list)
+    supporting_fact_ids: List[str] = Field(default_factory=list)
+    contradicting_observations: List[str] = Field(default_factory=list)
+    missing_evidence: List[str] = Field(default_factory=list)
+    credit_concern: str = Field(min_length=1)
+    due_diligence_questions: List[str] = Field(min_items=1)
+
+
 class FinancialResearchBundle(BaseModel):
-    schema_version: str = "2.2.0"
+    schema_version: str = "2.3.0"
     identity: CompanyIdentity
     generated_at: datetime
     raw_facts: List[FactRecord]
@@ -308,9 +432,73 @@ class FinancialResearchBundle(BaseModel):
     metrics: List[FinancialMetric]
     ratios: List[FinancialRatio]
     risk_flags: List[FinancialRiskFlag]
+    explanations: List[FinancialChangeExplanation] = Field(default_factory=list)
+    inferences: List[ModelInference] = Field(default_factory=list)
+    hypotheses: List[FinancialHypothesis] = Field(default_factory=list)
+    reasonableness_assessments: List[FinancialReasonablenessAssessment] = Field(
+        default_factory=list
+    )
     validation: FinancialValidationResult
     missing_information: List[MissingInformation] = Field(default_factory=list)
     limitations: List[str] = Field(default_factory=list)
+
+    @root_validator
+    def validate_analysis_references(cls, values):
+        raw_facts = values.get("raw_facts") or []
+        evidence = values.get("evidence") or []
+        sources = values.get("sources") or []
+        metrics = values.get("metrics") or []
+        explanations = values.get("explanations") or []
+        inferences = values.get("inferences") or []
+        hypotheses = values.get("hypotheses") or []
+        assessments = values.get("reasonableness_assessments") or []
+        fact_ids = {item.fact_id for item in raw_facts}
+        evidence_ids = {item.evidence_id for item in evidence}
+        source_ids = {item.source_id for item in sources}
+        metric_ids = {item.metric_id for item in metrics}
+        explanation_ids = {item.explanation_id for item in explanations}
+
+        def require_subset(label: str, referenced, allowed) -> None:
+            missing = set(referenced) - set(allowed)
+            if missing:
+                raise ValueError(f"{label}存在悬空引用：{sorted(missing)}")
+
+        if len(explanation_ids) != len(explanations):
+            raise ValueError("explanation_id不得重复")
+        if len({item.inference_id for item in inferences}) != len(inferences):
+            raise ValueError("inference_id不得重复")
+        if len({item.hypothesis_id for item in hypotheses}) != len(hypotheses):
+            raise ValueError("hypothesis_id不得重复")
+        if len({item.assessment_id for item in assessments}) != len(assessments):
+            raise ValueError("assessment_id不得重复")
+        for item in explanations:
+            require_subset(f"解释{item.explanation_id}的metric", [item.metric_id], metric_ids)
+            require_subset(
+                f"解释{item.explanation_id}的fact",
+                [*item.disclosed_fact_ids, *item.supporting_fact_ids],
+                fact_ids,
+            )
+            require_subset(f"解释{item.explanation_id}的evidence", item.evidence_ids, evidence_ids)
+            require_subset(f"解释{item.explanation_id}的source", item.source_ids, source_ids)
+        for item in inferences:
+            require_subset(f"推断{item.inference_id}的fact", item.supporting_fact_ids, fact_ids)
+            require_subset(f"推断{item.inference_id}的evidence", item.evidence_ids, evidence_ids)
+        for item in hypotheses:
+            require_subset(f"假设{item.hypothesis_id}的metric", [item.metric_id], metric_ids)
+        for item in assessments:
+            require_subset(f"评价{item.assessment_id}的metric", [item.metric_id], metric_ids)
+            require_subset(
+                f"评价{item.assessment_id}的支持metric",
+                item.supporting_metric_ids,
+                metric_ids,
+            )
+            require_subset(
+                f"评价{item.assessment_id}的fact", item.supporting_fact_ids, fact_ids
+            )
+            require_subset(
+                f"评价{item.assessment_id}的解释", item.explanation_ids, explanation_ids
+            )
+        return values
 
 
 class FinancialArtifacts(BaseModel):
@@ -318,15 +506,21 @@ class FinancialArtifacts(BaseModel):
     facts_path: Path
     metrics_path: Path
     analysis_path: Path
+    data_appendix_path: Path
     risk_flags_path: Path
     sources_path: Path
     questions_path: Path
     validation_path: Path
+    explanations_path: Path
+    reasonableness_path: Path
     fact_count: int
     metric_count: int
     ratio_count: int
     risk_flag_count: int
     material_change_count: int
+    explanation_count: int
+    hypothesis_count: int
+    assessment_count: int
 
 
 REQUIRED_ITEMS: Tuple[FinancialItem, ...] = (
@@ -347,6 +541,15 @@ def load_financial_seed_catalog() -> FinancialSeedCatalog:
         "financial_seeds.json"
     )
     return FinancialSeedCatalog.parse_raw(path.read_text(encoding="utf-8"))
+
+
+def load_financial_explanation_seed_catalog() -> FinancialExplanationSeedCatalog:
+    path = resources.files("credit_research_agent.data").joinpath(
+        "financial_explanation_seeds.json"
+    )
+    return FinancialExplanationSeedCatalog.parse_raw(
+        path.read_text(encoding="utf-8")
+    )
 
 
 def _decimal(value: str) -> Decimal:
@@ -615,6 +818,21 @@ def build_financial_risk_flags(
         yoy_text = (
             f"同比{metric.yoy_percent}%" if metric.yoy_percent is not None else "基期为零"
         )
+        flags.append(
+            FinancialRiskFlag(
+                flag_id=f"RF{len(flags) + 1:03d}",
+                severity="attention",
+                topic=topic,
+                observation=(
+                    f"{metric.item_label}由{metric.prior_period}的"
+                    f"{metric.prior_value}元变为{metric.current_period}的"
+                    f"{metric.current_value}元，{yoy_text}。该项仅为量化观察，"
+                    "原因需结合年报附注和管理层说明核实。"
+                ),
+                supporting_metric_ids=[metric.metric_id],
+                supporting_fact_ids=metric.supporting_fact_ids,
+            )
+        )
     metric_lookup = {
         (metric.item, metric.current_period): metric for metric in metrics
     }
@@ -671,21 +889,6 @@ def build_financial_risk_flags(
                     ),
                 )
             )
-        flags.append(
-            FinancialRiskFlag(
-                flag_id=f"RF{len(flags) + 1:03d}",
-                severity="attention",
-                topic=topic,
-                observation=(
-                    f"{metric.item_label}由{metric.prior_period}的"
-                    f"{metric.prior_value}元变为{metric.current_period}的"
-                    f"{metric.current_value}元，{yoy_text}。该项仅为量化观察，"
-                    "原因需结合年报附注和管理层说明核实。"
-                ),
-                supporting_metric_ids=[metric.metric_id],
-                supporting_fact_ids=metric.supporting_fact_ids,
-            )
-        )
     lookup = {(fact.item, fact.period): fact for fact in facts}
     profit = lookup.get((FinancialItem.NET_PROFIT, "FY2025"))
     cash_flow = lookup.get((FinancialItem.OPERATING_CASH_FLOW, "FY2025"))
@@ -702,6 +905,342 @@ def build_financial_risk_flags(
             )
         )
     return flags
+
+
+_REQUIRED_EVIDENCE_BY_ITEM: Dict[FinancialItem, List[str]] = {
+    FinancialItem.MONETARY_FUNDS: ["受限资金明细", "主要银行账户余额", "资金变动构成"],
+    FinancialItem.ACCOUNTS_RECEIVABLE: ["客户账龄", "逾期余额", "期后回款", "前五大欠款方"],
+    FinancialItem.PREPAYMENTS: ["主要预付对象", "采购合同", "履约进度", "账龄"],
+    FinancialItem.INVENTORY: ["存货构成", "库龄", "跌价准备", "期后销售"],
+    FinancialItem.FIXED_ASSETS: ["固定资产增减明细", "产能利用率", "减值测试"],
+    FinancialItem.SHORT_TERM_BORROWINGS: ["借款明细", "到期安排", "担保抵押", "资金用途"],
+    FinancialItem.ACCOUNTS_PAYABLE: ["主要供应商", "采购背景", "合同账期", "逾期情况"],
+    FinancialItem.OPERATING_REVENUE: ["分产品销量价格桥接", "重大客户订单", "收入确认资料"],
+    FinancialItem.NET_PROFIT: ["利润变动桥接", "毛利变动明细", "期间费用与减值明细"],
+    FinancialItem.OPERATING_CASH_FLOW: ["销售回款明细", "营运资金变动表", "大额经营收支"],
+    FinancialItem.CURRENT_ASSETS: ["流动资产构成变动", "受限及变现能力说明"],
+}
+
+
+_CREDIT_CONCERN_BY_ITEM: Dict[FinancialItem, str] = {
+    FinancialItem.MONETARY_FUNDS: "关注货币资金增加是否可自由支配，以及是否主要来自经营积累。",
+    FinancialItem.ACCOUNTS_RECEIVABLE: "关注回款周期、客户集中和减值风险对经营资金占用的影响。",
+    FinancialItem.PREPAYMENTS: "关注预付款履约、长期挂账和供应商信用风险。",
+    FinancialItem.INVENTORY: "关注库存周转、近效期及跌价风险。",
+    FinancialItem.FIXED_ASSETS: "关注资产利用效率、资本开支压力和减值风险。",
+    FinancialItem.SHORT_TERM_BORROWINGS: "关注短期债务到期安排与可动用现金的匹配。",
+    FinancialItem.ACCOUNTS_PAYABLE: "关注付款节奏变化是否反映采购收缩或供应商账期变化。",
+    FinancialItem.OPERATING_REVENUE: "关注收入增长的产品结构、持续性及其与回款的匹配。",
+    FinancialItem.NET_PROFIT: "关注盈利修复的来源、持续性及非经常性因素。",
+    FinancialItem.OPERATING_CASH_FLOW: "关注销售回款改善的持续性及营运资金变化。",
+    FinancialItem.CURRENT_ASSETS: "关注流动资产增长的具体构成和实际变现能力。",
+}
+
+
+def _evidence_ids_for_fact_ids(
+    fact_ids: Sequence[str], facts: Sequence[FactRecord]
+) -> List[str]:
+    fact_by_id = {item.fact_id: item for item in facts}
+    return sorted(
+        {
+            evidence_id
+            for fact_id in fact_ids
+            for fact in [fact_by_id.get(fact_id)]
+            if fact is not None
+            for evidence_id in fact.evidence_ids
+        }
+    )
+
+
+def _source_ids_for_evidence_ids(
+    evidence_ids: Sequence[str], evidence: Sequence[EvidenceRecord]
+) -> List[str]:
+    evidence_by_id = {item.evidence_id: item for item in evidence}
+    return sorted(
+        {
+            evidence_by_id[evidence_id].source_id
+            for evidence_id in evidence_ids
+            if evidence_id in evidence_by_id
+        }
+    )
+
+
+def extract_change_explanations(
+    priority_items: Sequence[FinancialMetric],
+    disclosures: Sequence[FactRecord],
+    evidence: Sequence[EvidenceRecord],
+    *,
+    links: Sequence[FinancialExplanationLinkSeed] = (),
+    all_metrics: Sequence[FinancialMetric] = (),
+    ratios: Sequence[FinancialRatio] = (),
+) -> Tuple[
+    List[FinancialChangeExplanation],
+    List[ModelInference],
+    List[FinancialHypothesis],
+]:
+    """把原因分为披露事实、支持性推断和待核实假设。
+
+    该函数不做自由文本搜索或 LLM 因果归因。披露原因只能来自已通过
+    ``EvidenceBuilder`` 精确匹配的 ``FactRecord``；支持性推断只使用已验证事实和
+    Python 计算结果；剩余项目输出待核实假设。
+    """
+
+    metrics = list(all_metrics) or list(priority_items)
+    priority_by_key = {
+        (item.item, item.prior_period, item.current_period): item
+        for item in priority_items
+    }
+    fact_by_id = {item.fact_id: item for item in disclosures}
+    explanations: List[FinancialChangeExplanation] = []
+    inferences: List[ModelInference] = []
+
+    for link in links:
+        metric = priority_by_key.get((link.item, link.prior_period, link.current_period))
+        if metric is None:
+            continue
+        missing = sorted(set(link.fact_ids) - set(fact_by_id))
+        if missing:
+            raise FinancialBuildError(
+                "explanation_fact_missing",
+                f"原因 {link.explanation_id} 引用了不存在的事实：{missing}",
+            )
+        evidence_ids = _evidence_ids_for_fact_ids(link.fact_ids, disclosures)
+        source_ids = _source_ids_for_evidence_ids(evidence_ids, evidence)
+        if link.kind is FinancialExplanationKind.DISCLOSED_REASON:
+            explanations.append(
+                FinancialChangeExplanation(
+                    explanation_id=link.explanation_id,
+                    metric_id=metric.metric_id,
+                    kind=link.kind,
+                    statement=link.statement,
+                    disclosed_fact_ids=sorted(link.fact_ids),
+                    evidence_ids=evidence_ids,
+                    source_ids=source_ids,
+                )
+            )
+            continue
+        inference_id = f"I{280 + len(inferences):03d}"
+        inference = ModelInference(
+            inference_id=inference_id,
+            entity_id=metric.entity_id,
+            research_module=ResearchModule.FINANCIAL_ANALYSIS,
+            statement=link.statement,
+            supporting_fact_ids=sorted(link.fact_ids),
+            evidence_ids=evidence_ids,
+            confidence_note="方向性证据支持，但年报未将其表述为该总量变化的唯一直接原因。",
+        )
+        inferences.append(inference)
+        explanations.append(
+            FinancialChangeExplanation(
+                explanation_id=link.explanation_id,
+                metric_id=metric.metric_id,
+                kind=FinancialExplanationKind.SUPPORTED_INFERENCE,
+                statement=link.statement,
+                supporting_fact_ids=inference.supporting_fact_ids,
+                inference_id=inference_id,
+                evidence_ids=evidence_ids,
+                source_ids=source_ids,
+                limitation=inference.confidence_note,
+            )
+        )
+
+    # 净利润由负转正没有一条年报原文给出完整归因。这里仅把收入、成本和毛利率
+    # 的确定性变化组合成支持性推断，并明确保留“非完整因果解释”的边界。
+    priority_profit = next(
+        (
+            item
+            for item in priority_items
+            if item.item is FinancialItem.NET_PROFIT
+            and item.current_period == "FY2025"
+        ),
+        None,
+    )
+    if priority_profit and not any(
+        item.metric_id == priority_profit.metric_id for item in explanations
+    ):
+        revenue = next(
+            (
+                item
+                for item in metrics
+                if item.item is FinancialItem.OPERATING_REVENUE
+                and item.prior_period == priority_profit.prior_period
+                and item.current_period == priority_profit.current_period
+            ),
+            None,
+        )
+        cost = next(
+            (
+                item
+                for item in metrics
+                if item.item is FinancialItem.OPERATING_COST
+                and item.prior_period == priority_profit.prior_period
+                and item.current_period == priority_profit.current_period
+            ),
+            None,
+        )
+        gross_margin = {
+            item.period: item
+            for item in ratios
+            if item.name == "毛利率"
+            and item.period in {priority_profit.prior_period, priority_profit.current_period}
+        }
+        if revenue is not None and cost is not None and len(gross_margin) == 2:
+            supporting_fact_ids = sorted(
+                set(
+                    priority_profit.supporting_fact_ids
+                    + revenue.supporting_fact_ids
+                    + cost.supporting_fact_ids
+                    + gross_margin[priority_profit.prior_period].supporting_fact_ids
+                    + gross_margin[priority_profit.current_period].supporting_fact_ids
+                )
+            )
+            evidence_ids = _evidence_ids_for_fact_ids(
+                supporting_fact_ids, disclosures
+            )
+            statement = (
+                f"营业收入同比{revenue.yoy_percent}%、营业成本同比{cost.yoy_percent}%，"
+                f"毛利率由{gross_margin[priority_profit.prior_period].value_percent}%升至"
+                f"{gross_margin[priority_profit.current_period].value_percent}%，与净利润由负转正方向一致；"
+                "该组合仅构成支持性推断，并非公司披露的完整利润变动原因。"
+            )
+            inference_id = f"I{280 + len(inferences):03d}"
+            inferences.append(
+                ModelInference(
+                    inference_id=inference_id,
+                    entity_id=priority_profit.entity_id,
+                    research_module=ResearchModule.FINANCIAL_ANALYSIS,
+                    statement=statement,
+                    supporting_fact_ids=supporting_fact_ids,
+                    evidence_ids=evidence_ids,
+                    confidence_note="需补充利润变动桥接、费用、减值及非经常性损益明细。",
+                )
+            )
+            explanations.append(
+                FinancialChangeExplanation(
+                    explanation_id="FX-NET-PROFIT-001",
+                    metric_id=priority_profit.metric_id,
+                    kind=FinancialExplanationKind.SUPPORTED_INFERENCE,
+                    statement=statement,
+                    supporting_fact_ids=supporting_fact_ids,
+                    inference_id=inference_id,
+                    evidence_ids=evidence_ids,
+                    source_ids=_source_ids_for_evidence_ids(evidence_ids, evidence),
+                    limitation="不是年报直接归因，不能据此排除其他利润影响因素。",
+                )
+            )
+
+    explained_metric_ids = {item.metric_id for item in explanations}
+    hypotheses: List[FinancialHypothesis] = []
+    for index, metric in enumerate(priority_items, start=1):
+        if metric.metric_id in explained_metric_ids:
+            continue
+        required_evidence = _REQUIRED_EVIDENCE_BY_ITEM.get(
+            metric.item, ["科目附注明细", "管理层变动说明"]
+        )
+        hypotheses.append(
+            FinancialHypothesis(
+                hypothesis_id=f"FH{index:03d}",
+                metric_id=metric.metric_id,
+                statement=(
+                    f"当前证据未形成{metric.item_label}变动的直接原因；"
+                    "任何经营成因均为待核实假设，不能作为确定性结论。"
+                ),
+                required_evidence=required_evidence,
+            )
+        )
+    return explanations, inferences, hypotheses
+
+
+def assess_reasonableness(
+    explanations: Sequence[FinancialChangeExplanation],
+    priority_items: Sequence[FinancialMetric],
+    *,
+    all_metrics: Sequence[FinancialMetric] = (),
+    hypotheses: Sequence[FinancialHypothesis] = (),
+) -> List[FinancialReasonablenessAssessment]:
+    """检查原因与已验证数值是否方向一致，并记录证据缺口。"""
+
+    metrics = list(all_metrics) or list(priority_items)
+    explanation_by_metric: Dict[str, List[FinancialChangeExplanation]] = defaultdict(list)
+    for item in explanations:
+        explanation_by_metric[item.metric_id].append(item)
+    hypothesis_by_metric = {item.metric_id: item for item in hypotheses}
+    metric_by_key = {
+        (item.item, item.prior_period, item.current_period): item for item in metrics
+    }
+    assessments: List[FinancialReasonablenessAssessment] = []
+    for index, metric in enumerate(priority_items, start=1):
+        linked = explanation_by_metric.get(metric.metric_id, [])
+        status = ReasonablenessStatus.INSUFFICIENT_EVIDENCE
+        conclusion = "当前没有足够的直接原因证据，无法评价该变化原因是否合理。"
+        supporting_metric_ids = [metric.metric_id]
+        supporting_fact_ids = list(metric.supporting_fact_ids)
+        contradictions: List[str] = []
+        missing_evidence = list(
+            _REQUIRED_EVIDENCE_BY_ITEM.get(
+                metric.item, ["科目附注明细", "管理层变动说明"]
+            )
+        )
+
+        if metric.item is FinancialItem.OPERATING_CASH_FLOW and linked:
+            cash_received = metric_by_key.get(
+                (
+                    FinancialItem.CASH_RECEIVED_FROM_SALES,
+                    metric.prior_period,
+                    metric.current_period,
+                )
+            )
+            if cash_received is not None and cash_received.absolute_change > 0:
+                status = ReasonablenessStatus.SUPPORTED
+                supporting_metric_ids.append(cash_received.metric_id)
+                supporting_fact_ids.extend(cash_received.supporting_fact_ids)
+                conclusion = (
+                    "公司披露经营现金流净额增长主要因销售回款增加；"
+                    f"销售商品、提供劳务收到的现金同比{cash_received.yoy_percent}%，"
+                    "变动方向一致。该核对支持披露原因，但不代表已解释全部增幅。"
+                )
+                missing_evidence = ["经营现金流增幅的完整营运资金桥接"]
+            elif cash_received is not None:
+                status = ReasonablenessStatus.CONTRADICTED
+                supporting_metric_ids.append(cash_received.metric_id)
+                contradictions.append("销售商品、提供劳务收到的现金未同向增加")
+                conclusion = "披露原因与已提取的销售收现数据方向不一致，需优先复核口径和原文。"
+        elif linked:
+            status = ReasonablenessStatus.PARTIALLY_SUPPORTED
+            conclusion = (
+                "已有事实与该解释方向一致，但年报未提供完整因果桥接，"
+                "因此只能视为支持性推断。"
+            )
+            for item in linked:
+                supporting_fact_ids.extend(item.supporting_fact_ids)
+                supporting_fact_ids.extend(item.disclosed_fact_ids)
+        elif metric.metric_id in hypothesis_by_metric:
+            conclusion = hypothesis_by_metric[metric.metric_id].statement
+            missing_evidence = list(
+                hypothesis_by_metric[metric.metric_id].required_evidence
+            )
+
+        question_items = "、".join(missing_evidence)
+        assessments.append(
+            FinancialReasonablenessAssessment(
+                assessment_id=f"FA{index:03d}",
+                metric_id=metric.metric_id,
+                status=status,
+                conclusion=conclusion,
+                explanation_ids=[item.explanation_id for item in linked],
+                supporting_metric_ids=sorted(set(supporting_metric_ids)),
+                supporting_fact_ids=sorted(set(supporting_fact_ids)),
+                contradicting_observations=contradictions,
+                missing_evidence=missing_evidence,
+                credit_concern=_CREDIT_CONCERN_BY_ITEM.get(
+                    metric.item, "关注该变化对偿债能力和经营资金占用的影响。"
+                ),
+                due_diligence_questions=[
+                    f"请说明{metric.item_label}变动的具体原因，并提供{question_items}。"
+                ],
+            )
+        )
+    return assessments
 
 
 def _statement_by_fact_id(catalog: FinancialSeedCatalog) -> Dict[str, FinancialLineSeed]:
@@ -762,11 +1301,19 @@ class FinancialBuilder:
         identity: CompanyIdentity,
         source_inputs: Sequence[FinancialSourceInput],
         seeds: Optional[FinancialSeedCatalog] = None,
+        explanation_seeds: Optional[FinancialExplanationSeedCatalog] = None,
         materiality_threshold: Decimal = Decimal("20.00"),
     ) -> FinancialResearchBundle:
         seeds = seeds or load_financial_seed_catalog()
+        explanation_seeds = (
+            explanation_seeds or load_financial_explanation_seed_catalog()
+        )
         if seeds.entity_id != identity.entity_id:
             raise FinancialBuildError("seed_entity_mismatch", "财务种子主体与解析主体不一致")
+        if explanation_seeds.entity_id != identity.entity_id:
+            raise FinancialBuildError(
+                "explanation_seed_entity_mismatch", "财务原因种子主体与解析主体不一致"
+            )
         if not source_inputs:
             raise FinancialBuildError("missing_source_inputs", "至少需要一份官方年报输入")
 
@@ -794,6 +1341,25 @@ class FinancialBuilder:
         if len({item.evidence_id for item in evidence}) != len(evidence):
             raise FinancialBuildError("duplicate_evidence_id", "财务证据编号重复")
 
+        # 原因披露另走一套精确原文锚点，但继续复用同一个 EvidenceBuilder、
+        # SourceRecord / FactRecord / EvidenceRecord 数据管线。
+        explanation_facts: List[FactRecord] = []
+        explanation_evidence: List[EvidenceRecord] = []
+        explanation_source_ids = explanation_seeds.source_ids()
+        for item in source_inputs:
+            if item.source.source_id not in explanation_source_ids:
+                continue
+            disclosure_bundle = EvidenceBuilder(clock=self._clock).build(
+                identity=identity,
+                source=item.source,
+                download=item.download,
+                summary_path=item.summary_path,
+                pages_path=item.pages_path,
+                seeds=explanation_seeds.for_source(item.source.source_id),
+            )
+            explanation_facts.extend(disclosure_bundle.facts)
+            explanation_evidence.extend(disclosure_bundle.evidence)
+
         financial_facts = normalize_financial_items(raw_facts, evidence, seeds)
 
         normalized, validation = validate_financial_facts(financial_facts)
@@ -809,21 +1375,51 @@ class FinancialBuilder:
         )
         ratios = calculate_financial_ratios(normalized)
         flags = build_financial_risk_flags(metrics, normalized)
+        all_raw_facts = [*raw_facts, *explanation_facts]
+        all_evidence = [*evidence, *explanation_evidence]
+        if len({item.fact_id for item in all_raw_facts}) != len(all_raw_facts):
+            raise FinancialBuildError("duplicate_fact_id", "财务事实及原因事实编号重复")
+        if len({item.evidence_id for item in all_evidence}) != len(all_evidence):
+            raise FinancialBuildError("duplicate_evidence_id", "财务证据及原因证据编号重复")
+        priority_items = [
+            item
+            for item in rank_material_changes(metrics)
+            if item.current_period == "FY2025"
+        ]
+        explanations, inferences, hypotheses = extract_change_explanations(
+            priority_items,
+            all_raw_facts,
+            all_evidence,
+            links=explanation_seeds.links,
+            all_metrics=metrics,
+            ratios=ratios,
+        )
+        assessments = assess_reasonableness(
+            explanations,
+            priority_items,
+            all_metrics=metrics,
+            hypotheses=hypotheses,
+        )
         return FinancialResearchBundle(
             identity=identity,
             generated_at=self._clock(),
-            raw_facts=raw_facts,
+            raw_facts=all_raw_facts,
             financial_facts=financial_facts,
             normalized_facts=normalized,
-            evidence=evidence,
+            evidence=all_evidence,
             sources=sources,
             metrics=metrics,
             ratios=ratios,
             risk_flags=flags,
+            explanations=explanations,
+            inferences=inferences,
+            hypotheses=hypotheses,
+            reasonableness_assessments=assessments,
             validation=validation,
             missing_information=seeds.missing_information,
             limitations=[
                 *seeds.limitations,
+                *explanation_seeds.limitations,
                 "所有同比、比率和重大变动阈值均由确定性 Python 函数计算，未交由 LLM 判断。",
                 "重大变动和风险信号仅用于确定进一步核查方向，不等同于授信风险定性结论。",
             ],
@@ -838,9 +1434,15 @@ def _format_amount(value: Decimal) -> str:
     return f"{value:,.2f}"
 
 
-def render_financial_analysis(bundle: FinancialResearchBundle) -> str:
+def render_financial_data_appendix(bundle: FinancialResearchBundle) -> str:
+    """渲染确定性的财务数据附录，不撰写专业分析结论。
+
+    Python 可以机械呈现已经核验的金额、同比、比率、数据缺口和来源，但正式
+    财务分析正文必须由 LLM 基于这些数据撰写。该附录不得作为 LLM 分析失败时
+    的替代报告。
+    """
+
     facts = {(item.item, item.period): item for item in bundle.normalized_facts}
-    source_by_evidence = {item.evidence_id: item.source_id for item in bundle.evidence}
     periods = ["FY2023", "FY2024", "FY2025"]
     table_items = [
         FinancialItem.MONETARY_FUNDS,
@@ -855,8 +1457,9 @@ def render_financial_analysis(bundle: FinancialResearchBundle) -> str:
         FinancialItem.OPERATING_CASH_FLOW,
     ]
     lines = [
-        f"# {bundle.identity.short_name}财务分析",
+        f"# {bundle.identity.short_name}财务数据附录",
         "",
+        "> 本附录仅呈现 Python 校验或计算的数据，不包含专业分析结论。",
         "> 口径：合并报表；金额单位：人民币元。同比和比率均由 Python 确定性计算。",
         "",
         "## 可比财务事实",
@@ -891,7 +1494,7 @@ def render_financial_analysis(bundle: FinancialResearchBundle) -> str:
             lines.append(
                 f"- {metric.item_label}：{metric.prior_period} {_format_amount(metric.prior_value)}元，"
                 f"{metric.current_period} {_format_amount(metric.current_value)}元，同比 {yoy}；"
-                f"需结合附注核实原因。（{metric.metric_id}）"
+                f"确定性变动分类：{metric.change_kind.value}。（{metric.metric_id}）"
             )
     else:
         lines.append("- 当前已提取项目未触发重大变动阈值。")
@@ -902,12 +1505,6 @@ def render_financial_analysis(bundle: FinancialResearchBundle) -> str:
             lines.append(
                 f"- {ratio.period} {ratio.name}：{ratio.value_percent}%（{ratio.formula}）"
             )
-
-    lines.extend(["", "## 风险观察", ""])
-    if bundle.risk_flags:
-        lines.extend(f"- {flag.observation}" for flag in bundle.risk_flags)
-    else:
-        lines.append("- 当前确定性规则未产生额外风险信号；不代表不存在其他风险。")
 
     lines.extend(["", "## 数据完整性与限制", ""])
     for missing in bundle.missing_information:
@@ -932,19 +1529,33 @@ def render_financial_analysis(bundle: FinancialResearchBundle) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_financial_questions(bundle: FinancialResearchBundle) -> str:
-    lines = ["# 财务尽调问题清单", ""]
-    lines.extend(
-        [
-            "- 请说明营业收入、净利润及经营活动现金流重大变动的业务原因，并提供订单、回款及费用明细支持。",
-            "- 请提供货币资金受限情况、银行账户清单及最新银行对账资料。",
-            "- 请提供短期借款、长期借款、授信额度、抵质押和担保明细；当前年报主表未形成FY2024/FY2025短期借款可比事实。",
-            "- 请说明应收账款账龄、前五大客户、逾期及期后回款情况，并核查收入确认和回款匹配。",
-            "- 请说明存货构成、库龄、跌价准备、周转变化及主要产品备货安排。",
-            "- 请说明固定资产重大项目、产能利用率、在建工程转固及减值测试情况。",
-            "- 请逐项解释本报告中同比绝对变动达到20%的指标，并提供年报附注或管理层材料。",
-        ]
+def render_financial_analysis(bundle: FinancialResearchBundle) -> str:
+    """兼容旧调用：返回数据附录，而非 Python 模板分析正文。"""
+
+    return render_financial_data_appendix(bundle)
+
+
+def generate_financial_section(bundle: FinancialResearchBundle) -> str:
+    """兼容旧调用：只生成“等待 LLM 分析”的明确占位页。
+
+    该函数故意不再根据 Python 规则拼装专业分析文字，避免在 LLM 失败时把固定
+    模板误作正式研究结论。
+    """
+
+    return (
+        f"# {bundle.identity.short_name}财务分析（未完成）\n\n"
+        "> 结构化财务数据、计算指标和来源附录已经生成，但尚未取得通过校验的 "
+        "DeepSeek 分析正文。\n\n"
+        "正式报告不得以 Python 固定模板替代模型撰写；请运行 V2.3 财务 Agent。\n"
     )
+
+
+def render_financial_questions(bundle: FinancialResearchBundle) -> str:
+    """生成尽调问题占位页；具体问题由 DeepSeek 撰写。"""
+
+    lines = ["# 财务尽调问题清单（未完成）", ""]
+    lines.append("> 尚未取得通过校验的 DeepSeek 尽调问题。以下仅列示数据缺口。")
+    lines.append("")
     for missing in bundle.missing_information:
         lines.append(f"- 待补充：{missing.topic}——{missing.description}")
     return "\n".join(lines) + "\n"
@@ -967,6 +1578,7 @@ def build_financial_artifacts(
     output_dir: Path,
     comparison_inputs: Sequence[FinancialSourceInput] = (),
     seeds: Optional[FinancialSeedCatalog] = None,
+    explanation_seeds: Optional[FinancialExplanationSeedCatalog] = None,
     materiality_threshold: Decimal = Decimal("20.00"),
     clock: Optional[Callable[[], datetime]] = None,
 ) -> FinancialArtifacts:
@@ -985,16 +1597,20 @@ def build_financial_artifacts(
         identity=identity,
         source_inputs=inputs,
         seeds=seeds,
+        explanation_seeds=explanation_seeds,
         materiality_threshold=materiality_threshold,
     )
     entity_dir = Path(output_dir) / identity.entity_id
     facts_path = entity_dir / "financial_facts.json"
     metrics_path = entity_dir / "financial_metrics.json"
     analysis_path = entity_dir / "financial_analysis.md"
+    data_appendix_path = entity_dir / "financial_data_appendix.md"
     risk_flags_path = entity_dir / "financial_risk_flags.json"
     sources_path = entity_dir / "financial_sources.json"
     questions_path = entity_dir / "financial_questions.md"
     validation_path = entity_dir / "financial_validation.json"
+    explanations_path = entity_dir / "financial_explanations.json"
+    reasonableness_path = entity_dir / "financial_reasonableness.json"
     _atomic_write(
         facts_path,
         json.dumps(
@@ -1027,7 +1643,8 @@ def build_financial_artifacts(
         )
         + "\n",
     )
-    _atomic_write(analysis_path, render_financial_analysis(bundle))
+    _atomic_write(analysis_path, generate_financial_section(bundle))
+    _atomic_write(data_appendix_path, render_financial_data_appendix(bundle))
     _atomic_write(
         risk_flags_path,
         json.dumps(
@@ -1055,18 +1672,46 @@ def build_financial_artifacts(
         json.dumps(_model_data(bundle.validation), ensure_ascii=False, indent=2)
         + "\n",
     )
+    _atomic_write(
+        explanations_path,
+        json.dumps(
+            {
+                "explanations": [_model_data(item) for item in bundle.explanations],
+                "inferences": [_model_data(item) for item in bundle.inferences],
+                "hypotheses": [_model_data(item) for item in bundle.hypotheses],
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+    )
+    _atomic_write(
+        reasonableness_path,
+        json.dumps(
+            [_model_data(item) for item in bundle.reasonableness_assessments],
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+    )
     return FinancialArtifacts(
         entity_id=identity.entity_id,
         facts_path=facts_path.resolve(),
         metrics_path=metrics_path.resolve(),
         analysis_path=analysis_path.resolve(),
+        data_appendix_path=data_appendix_path.resolve(),
         risk_flags_path=risk_flags_path.resolve(),
         sources_path=sources_path.resolve(),
         questions_path=questions_path.resolve(),
         validation_path=validation_path.resolve(),
+        explanations_path=explanations_path.resolve(),
+        reasonableness_path=reasonableness_path.resolve(),
         fact_count=len(bundle.normalized_facts),
         metric_count=len(bundle.metrics),
         ratio_count=len(bundle.ratios),
         risk_flag_count=len(bundle.risk_flags),
         material_change_count=len(rank_material_changes(bundle.metrics)),
+        explanation_count=len(bundle.explanations),
+        hypothesis_count=len(bundle.hypotheses),
+        assessment_count=len(bundle.reasonableness_assessments),
     )

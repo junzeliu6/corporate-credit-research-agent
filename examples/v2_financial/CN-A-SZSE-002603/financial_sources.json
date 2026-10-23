@@ -374,6 +374,39 @@
       "quote": "经营活动产生的现金流量净额 611,013,171.11 155,457,433.79",
       "status": "verified",
       "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E280",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 58,
+      "line_number": 32,
+      "page_or_section": "管理层讨论与分析/现金流重大变动说明",
+      "quote": "（1）经营活动产生的现金流量净额同比增长 190.75%，主要是报告期内销售回款较同期增加所致。",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E281",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 52,
+      "line_number": 29,
+      "page_or_section": "管理层讨论与分析/营业收入构成",
+      "quote": "呼吸系统类 2,017,355,686.48 25.76% 795,134,832.89 12.21% 153.71%",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E282",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 54,
+      "line_number": 2,
+      "page_or_section": "管理层讨论与分析/实物销售变动原因",
+      "quote": "主要是呼吸系统类产品销量增加所致。",
+      "status": "verified",
+      "verification_method": "exact_text_match"
     }
   ]
 }

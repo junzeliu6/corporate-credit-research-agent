@@ -478,15 +478,21 @@ def test_cli_build_financial_downloads_comparison_and_returns_artifacts(
             facts_path=tmp_path / "financial_facts.json",
             metrics_path=tmp_path / "financial_metrics.json",
             analysis_path=tmp_path / "financial_analysis.md",
+            data_appendix_path=tmp_path / "financial_data_appendix.md",
             risk_flags_path=tmp_path / "financial_risk_flags.json",
             sources_path=tmp_path / "financial_sources.json",
             questions_path=tmp_path / "financial_questions.md",
             validation_path=tmp_path / "financial_validation.json",
+            explanations_path=tmp_path / "financial_explanations.json",
+            reasonableness_path=tmp_path / "financial_reasonableness.json",
             fact_count=46,
             metric_count=30,
             ratio_count=12,
-            risk_flag_count=7,
+            risk_flag_count=8,
             material_change_count=18,
+            explanation_count=3,
+            hypothesis_count=4,
+            assessment_count=7,
         )
 
     monkeypatch.setattr(cli, "OfficialPdfDownloader", FakeDownloader)
@@ -619,6 +625,12 @@ def test_cli_live_preview_requires_confirmation_without_downloading(
             "S01",
             "--llm-mode",
             "live",
+            "--max-output-tokens",
+            "50000",
+            "--request-timeout-seconds",
+            "120",
+            "--max-model-retries",
+            "0",
         ]
     )
     captured = capsys.readouterr()
@@ -627,6 +639,9 @@ def test_cli_live_preview_requires_confirmation_without_downloading(
     assert exit_code == 9
     assert output["agent_error"]["code"] == "live_confirmation_required"
     assert output["agent_config"]["model"] == "deepseek-flash"
+    assert output["agent_config"]["max_output_tokens"] == 50000
+    assert output["agent_config"]["request_timeout_seconds"] == 120.0
+    assert output["agent_config"]["max_retries"] == 0
     assert secret not in captured.out
     assert secret not in captured.err
     assert "live_request_preview" in captured.err
@@ -707,6 +722,90 @@ def test_cli_mock_agent_reuses_document_pipeline_and_runtime(
     assert output["agent_config"]["mode"] == "mock"
     assert output["agent_run"]["selected_skill"] == "ownership-structure"
     assert output["agent_run"]["tool_name"] == "build_ownership_artifacts"
+
+
+def test_cli_mock_financial_agent_binds_comparison_report(
+    tmp_path, monkeypatch, capsys
+) -> None:
+    downloaded = []
+
+    class FakeDownloader:
+        def download(self, source, destination_dir, *, force=False):
+            downloaded.append(source.source_id)
+            return DownloadResult(
+                source_id=source.source_id,
+                source_title=source.title,
+                source_url=str(source.url),
+                file_path=tmp_path / f"{source.source_id}.pdf",
+                manifest_path=tmp_path / f"{source.source_id}.metadata.json",
+                accessed_at=datetime(2026, 10, 23, tzinfo=timezone.utc),
+                final_url=str(source.url),
+                http_status=200,
+                bytes_written=1,
+                sha256="a" * 64,
+                from_cache=True,
+            )
+
+    def fake_extract(download, *args, **kwargs):
+        return ExtractionArtifacts(
+            source_id=download.source_id,
+            summary_path=tmp_path / "parsed" / download.source_id / "summary.json",
+            pages_path=tmp_path / "parsed" / download.source_id / "pages.jsonl",
+            sample_path=tmp_path / "parsed" / download.source_id / "sample.json",
+            total_pages=200,
+            pages_with_text=200,
+            failed_pages=0,
+        )
+
+    class FakeAgentResult(BaseModel):
+        final_output: str
+        selected_skill: str
+        tool_name: str
+        trace_path: Path
+
+    class FakeFinancialAgentRuntime:
+        def __init__(self, project_root, config):
+            assert config.mode.value == "mock"
+
+        def run_sync(self, **kwargs):
+            assert kwargs["source"].source_id == "S01"
+            assert [
+                item.source.source_id for item in kwargs["comparison_inputs"]
+            ] == ["S10"]
+            assert kwargs["financial_dir"] == tmp_path / "financial"
+            return FakeAgentResult(
+                final_output="经营现金流变动已形成有来源分析",
+                selected_skill="financial-analysis",
+                tool_name="build_financial_artifacts",
+                trace_path=kwargs["trace_output"],
+            )
+
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    monkeypatch.setattr(cli, "OfficialPdfDownloader", FakeDownloader)
+    monkeypatch.setattr(cli, "extract_to_artifacts", fake_extract)
+    monkeypatch.setattr(
+        cli, "FinancialResearchAgentRuntime", FakeFinancialAgentRuntime
+    )
+
+    exit_code = cli.main(
+        [
+            "002603.SZ",
+            "--run-agent",
+            "分析财务报表、现金流和同比变动",
+            "--agent-source",
+            "S01",
+            "--financial-comparison-source",
+            "S10",
+            "--financial-dir",
+            str(tmp_path / "financial"),
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert downloaded == ["S01", "S10"]
+    assert output["agent_run"]["selected_skill"] == "financial-analysis"
+    assert output["agent_run"]["tool_name"] == "build_financial_artifacts"
 
 
 def test_cli_build_report_reuses_research_pipeline(

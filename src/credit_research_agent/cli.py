@@ -23,6 +23,9 @@ from credit_research_agent.financial import (
     FinancialSourceInput,
     build_financial_artifacts,
 )
+from credit_research_agent.financial_agent_runtime import (
+    FinancialResearchAgentRuntime,
+)
 from credit_research_agent.ownership import (
     OwnershipBuildError,
     build_ownership_artifacts,
@@ -90,7 +93,7 @@ def _find_project_root() -> Path:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="credit-research-agent",
-        description="企业授信研究Agent V2.2：结构化研究、财务分析与可追溯公开资料检索。",
+        description="企业授信研究Agent V2.3：结构化研究、财务专业流程与可追溯公开资料检索。",
     )
     parser.add_argument("company", help="上市公司名称、证券代码或带交易所后缀的代码")
     parser.add_argument(
@@ -127,7 +130,10 @@ def build_parser() -> argparse.ArgumentParser:
     action_group.add_argument(
         "--build-financial",
         metavar="SOURCE_ID",
-        help="执行下载、解析及跨期核验，并生成V2.1/V2.2财务分析产物",
+        help=(
+            "执行下载、解析及跨期核验，生成V2.1-V2.3结构化财务数据、"
+            "计算结果和待LLM撰写占位页；不生成Python模板分析正文"
+        ),
     )
     action_group.add_argument(
         "--build-report",
@@ -142,7 +148,7 @@ def build_parser() -> argparse.ArgumentParser:
     action_group.add_argument(
         "--run-agent",
         metavar="TASK",
-        help="运行V1.3B主Agent；默认Mock，仅开放ownership-structure",
+        help="运行主Agent；默认Mock，可执行股权或V2.3财务单Skill任务",
     )
     action_group.add_argument(
         "--run-web-research",
@@ -213,7 +219,19 @@ def build_parser() -> argparse.ArgumentParser:
         "--max-output-tokens",
         type=int,
         default=800,
-        help="单次模型响应最大输出Token，默认800、上限5000；不是Agent总Token预算",
+        help="单次模型响应最大输出Token，默认800、上限50000；不是Agent总Token预算",
+    )
+    parser.add_argument(
+        "--request-timeout-seconds",
+        type=float,
+        default=30.0,
+        help="单次模型请求超时秒数，默认30、上限120",
+    )
+    parser.add_argument(
+        "--max-model-retries",
+        type=int,
+        default=1,
+        help="单次模型请求失败后的SDK自动重试次数，默认1、上限2；受控Live可设为0",
     )
     parser.add_argument(
         "--max-search-rounds",
@@ -438,6 +456,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                 max_turns=args.max_agent_turns or 4,
                 max_tool_calls=args.max_tool_calls or 1,
                 max_output_tokens=args.max_output_tokens,
+                request_timeout_seconds=args.request_timeout_seconds,
+                max_retries=args.max_model_retries,
             )
             output["agent_config"] = llm_config.sanitized_summary()
         except LLMConfigError as exc:
@@ -883,83 +903,161 @@ def main(argv: Optional[List[str]] = None) -> int:
                 return 8
 
         if args.run_agent:
-            agent_trace_output = (
-                Path(args.agent_trace_output)
-                if args.agent_trace_output
-                else Path(args.ownership_dir)
-                / company.entity_id
-                / "agent_execution_trace.json"
-            )
-            agent_skill_trace_output = (
-                Path(args.skill_trace_output)
-                if args.skill_trace_output
-                else Path(args.ownership_dir)
-                / company.entity_id
-                / "agent_skill_execution_trace.json"
-            )
             try:
                 assert project_root is not None and llm_config is not None
-                runtime = CreditResearchAgentRuntime(project_root, llm_config)
-                agent_result = runtime.run_sync(
-                    task=args.run_agent,
-                    identity=company,
-                    source=source,
-                    download=result,
-                    summary_path=artifacts.summary_path,
-                    pages_path=artifacts.pages_path,
-                    ownership_dir=Path(args.ownership_dir),
-                    trace_output=agent_trace_output,
-                    skill_trace_output=agent_skill_trace_output,
-                    confirmed_live=args.confirm_live,
-                    tool_output_overrides={
-                        "dataset_output": (
-                            Path(args.ownership_dataset_output)
-                            if args.ownership_dataset_output
-                            else None
-                        ),
-                        "graph_output": (
-                            Path(args.ownership_graph_output)
-                            if args.ownership_graph_output
-                            else None
-                        ),
-                        "svg_output": (
-                            Path(args.ownership_svg_output)
-                            if args.ownership_svg_output
-                            else None
-                        ),
-                        "citations_output": (
-                            Path(args.citations_output)
-                            if args.citations_output
-                            else None
-                        ),
-                        "summary_output": (
-                            Path(args.ownership_summary_output)
-                            if args.ownership_summary_output
-                            else None
-                        ),
-                        "validation_output": (
-                            Path(args.ownership_validation_output)
-                            if args.ownership_validation_output
-                            else None
-                        ),
-                        "sources_output": (
-                            Path(args.ownership_sources_output)
-                            if args.ownership_sources_output
-                            else None
-                        ),
-                        "questions_output": (
-                            Path(args.ownership_questions_output)
-                            if args.ownership_questions_output
-                            else None
-                        ),
-                    },
-                )
+                selected_agent_skill = SkillSelector(
+                    SkillRegistry(project_root)
+                ).select(args.run_agent).selected_skill
+                if selected_agent_skill == "financial-analysis":
+                    comparison_inputs: List[FinancialSourceInput] = []
+                    for comparison_source_id in (
+                        args.financial_comparison_source or ["S10"]
+                    ):
+                        if comparison_source_id == source.source_id:
+                            continue
+                        comparison_source = catalog.get(comparison_source_id)
+                        if comparison_source.entity_id not in (None, company.entity_id):
+                            raise FinancialBuildError(
+                                "comparison_source_entity_mismatch",
+                                f"可比来源 {comparison_source_id} 不属于 {company.ticker}",
+                            )
+                        comparison_download = OfficialPdfDownloader().download(
+                            comparison_source,
+                            Path(args.cache_dir),
+                            force=args.force_download,
+                        )
+                        comparison_extraction = extract_to_artifacts(
+                            comparison_download,
+                            Path(args.parsed_dir),
+                        )
+                        comparison_inputs.append(
+                            FinancialSourceInput(
+                                source=comparison_source,
+                                download=comparison_download,
+                                summary_path=comparison_extraction.summary_path,
+                                pages_path=comparison_extraction.pages_path,
+                            )
+                        )
+                    agent_base_dir = Path(args.financial_dir)
+                    agent_trace_output = (
+                        Path(args.agent_trace_output)
+                        if args.agent_trace_output
+                        else agent_base_dir
+                        / company.entity_id
+                        / "agent_execution_trace.json"
+                    )
+                    agent_skill_trace_output = (
+                        Path(args.skill_trace_output)
+                        if args.skill_trace_output
+                        else agent_base_dir
+                        / company.entity_id
+                        / "agent_skill_execution_trace.json"
+                    )
+                    financial_runtime = FinancialResearchAgentRuntime(
+                        project_root, llm_config
+                    )
+                    agent_result = financial_runtime.run_sync(
+                        task=args.run_agent,
+                        identity=company,
+                        source=source,
+                        download=result,
+                        summary_path=artifacts.summary_path,
+                        pages_path=artifacts.pages_path,
+                        comparison_inputs=comparison_inputs,
+                        financial_dir=Path(args.financial_dir),
+                        trace_output=agent_trace_output,
+                        skill_trace_output=agent_skill_trace_output,
+                        confirmed_live=args.confirm_live,
+                    )
+                else:
+                    agent_base_dir = Path(args.ownership_dir)
+                    agent_trace_output = (
+                        Path(args.agent_trace_output)
+                        if args.agent_trace_output
+                        else agent_base_dir
+                        / company.entity_id
+                        / "agent_execution_trace.json"
+                    )
+                    agent_skill_trace_output = (
+                        Path(args.skill_trace_output)
+                        if args.skill_trace_output
+                        else agent_base_dir
+                        / company.entity_id
+                        / "agent_skill_execution_trace.json"
+                    )
+                    runtime = CreditResearchAgentRuntime(project_root, llm_config)
+                    agent_result = runtime.run_sync(
+                        task=args.run_agent,
+                        identity=company,
+                        source=source,
+                        download=result,
+                        summary_path=artifacts.summary_path,
+                        pages_path=artifacts.pages_path,
+                        ownership_dir=Path(args.ownership_dir),
+                        trace_output=agent_trace_output,
+                        skill_trace_output=agent_skill_trace_output,
+                        confirmed_live=args.confirm_live,
+                        tool_output_overrides={
+                            "dataset_output": (
+                                Path(args.ownership_dataset_output)
+                                if args.ownership_dataset_output
+                                else None
+                            ),
+                            "graph_output": (
+                                Path(args.ownership_graph_output)
+                                if args.ownership_graph_output
+                                else None
+                            ),
+                            "svg_output": (
+                                Path(args.ownership_svg_output)
+                                if args.ownership_svg_output
+                                else None
+                            ),
+                            "citations_output": (
+                                Path(args.citations_output)
+                                if args.citations_output
+                                else None
+                            ),
+                            "summary_output": (
+                                Path(args.ownership_summary_output)
+                                if args.ownership_summary_output
+                                else None
+                            ),
+                            "validation_output": (
+                                Path(args.ownership_validation_output)
+                                if args.ownership_validation_output
+                                else None
+                            ),
+                            "sources_output": (
+                                Path(args.ownership_sources_output)
+                                if args.ownership_sources_output
+                                else None
+                            ),
+                            "questions_output": (
+                                Path(args.ownership_questions_output)
+                                if args.ownership_questions_output
+                                else None
+                            ),
+                        },
+                    )
                 output["agent_run"] = _as_dict(agent_result)
-            except AgentRuntimeError as exc:
+            except (
+                AgentRuntimeError,
+                SkillRegistryError,
+                SkillSelectionError,
+                SourceNotFoundError,
+                DownloadError,
+                PdfExtractionError,
+                FinancialBuildError,
+            ) as exc:
                 output["agent_error"] = {
-                    "code": exc.code,
+                    "code": getattr(exc, "code", "agent_run_failed"),
                     "message": str(exc),
-                    "trace_path": str(exc.trace_path) if exc.trace_path else None,
+                    "trace_path": (
+                        str(exc.trace_path)
+                        if getattr(exc, "trace_path", None)
+                        else None
+                    ),
                 }
                 print(json.dumps(output, ensure_ascii=False, indent=2))
                 return 9

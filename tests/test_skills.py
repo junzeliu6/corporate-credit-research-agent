@@ -34,7 +34,7 @@ def test_registry_only_contains_allowlisted_project_skills() -> None:
     assert len(ownership.sha256) == 64
     assert ownership.relative_path == ".agents/skills/ownership-structure/SKILL.md"
     assert financial.runtime_status is SkillRuntimeStatus.READY
-    assert financial.version == "2.2.0"
+    assert financial.version == "2.3.0"
     assert financial.tool_names == ["build_financial_artifacts"]
 
 
