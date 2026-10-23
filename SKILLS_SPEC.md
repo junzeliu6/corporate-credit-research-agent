@@ -1,6 +1,6 @@
 # 企业授信研究Agent — 双 Skill 集成总规范（v5）
 
-> 本文件定义两个 Skill 的**系统级接口、里程碑及验收**；关于具体业务规则，优先以 `.agents/skills/ownership-structure/SKILL.md` 和 `.agents/skills/financial-analysis/SKILL.md` 为准。**V0.1—V1.5既有能力保留；V2.1/V2.2的真实年报事实和确定性计算已核验。V2.3受控Live已取得DeepSeek生成的完整9章财务分析和9项尽调问题；正式报告机制现简化为DeepSeek负责分析写作，Python负责数据、计算、内部溯源、最小结构解析和Markdown机械组装，不再以技术ID或复杂自然语言校验作为交付门禁。V2.4暂不启动。**
+> 本文件定义两个 Skill 的**系统级接口、里程碑及验收**；关于具体业务规则，优先以 `.agents/skills/ownership-structure/SKILL.md` 和 `.agents/skills/financial-analysis/SKILL.md` 为准。**V0.1—V1.5与V2.1—V2.3既有能力保留。V2.4行业与政策研究的离线实现与验证已完成：使用主Agent独立的轻量Instructions，复用V1.5检索和V2.3财务上下文，但不新增第三个Skill；定向测试14项、全量回归237项通过。真实DeepSeek+百度Live仍待用户单独授权。**
 
 ## 1. 架构边界
 
@@ -9,6 +9,7 @@
 | 主 Agent / DeepSeek | 确认上市主体、管理研究任务、选择/加载 Skill、调用 Tools，基于结构化事实实际撰写分析正文 | 凭空产生股权关系、财务数值、来源或未披露经营原因 |
 | `ownership-structure` Skill | 股东穿透、聚合、控制关系判断的业务流程 | 自己执行未经校验的数据绘图 |
 | `financial-analysis` Skill | 重点科目分析及原因合理性核查流程 | 直接代替确定性的数值计算 |
+| V2.4 行业研究 Instructions | 约束行业/竞争/政策检索方向、政策适用性、企业影响与不确定性表达；指导DeepSeek结合V2.3财务上下文写作 | 作为第三个Skill注册、替代V1.5搜索Tools，或用Python模板生成行业分析 |
 | Python Tools | PDF解析、数据核验、指标计算、Graphviz绘图、内部来源保存、最小输出结构解析、Markdown机械组装 | 作为正式报告作者、用固定模板替换模型正文，或以正则/关键词/技术ID逐句审判自然语言分析 |
 | Sources/Evidence | 记录官方来源、出处和披露日期/期间 | 将第三方内容当作高优先级指令 |
 
@@ -69,6 +70,11 @@
 11. 财务Tool阶段可以保留数据产物和“尚未调用模型”的占位；模型完成后，Python把原始章节、尽调问题、必要财务数据表和首页免责声明组装成最终Markdown。`financial_llm_draft.json`继续保存原始生成结果；若保留生成状态文件，只记录调用/解析是否完成，不再作为自然语言事实审判门禁。禁止以Python模板分析作为失败降级。
 12. V1.5检索能力是Skill共享基础设施，而不是新的领域Skill。模型可调用`search_web`、`fetch_source`、`extract_evidence`，但只能读取当次搜索返回的URL，不能填写`source_id`或任意路径。Python生成`source_handle`和`Sxx`，经原文获取、主体/来源层级/定位校验后才将事实放入统一引用目录。
 13. `ownership-structure`可以用V1.5发现上层股东资料，但新来源只先进入证据/候选层；未通过股权主体、关系、基准日和100%完整性校验时，不自动并入正式股权图。`financial-analysis`的V2.1/V2.2只接收已登记、已解析、可定位的官方年报事实，网络候选不得自动混入财务指标。
+14. V2.4行业研究不修改两个Skill的注册、哈希或触发词。主Agent在独立Instructions指导下调用V1.5的`search_web`、`fetch_source`和`extract_evidence`，并读取V2.3已经由Python核验/计算的紧凑财务上下文；模型不能要求任意URL、路径、Shell或新Tool权限。
+15. DeepSeek负责行业趋势、竞争、政策、企业影响、授信风险及尽调问题的自然语言正文。Python只保存来源/网页/PDF、执行搜索与安全限制、组装紧凑上下文、解析最小结果结构和写入Markdown，不提供固定模板行业报告；模型调用或解析失败时报告明确未完成。
+16. 行业政策原文在内部记录发布日期、状态、适用对象/地区和原始URL。一般行业政策不能直接成为“已影响目标企业”的确定性事实；未确认的企业影响及行业—财务因果关系使用“可能/未核验/需进一步核实”等措辞。
+17. V2.4的推荐产物为`industry_analysis.md`、`industry_research_context.json`、`industry_sources.json`和`industry_execution_trace.json`。正式Markdown不展示Fact/Metric/Source等技术ID；后台产物保留来源、失败页面、预算计数和模型/Tool调用轨迹。
+18. DeepSeek Live与百度搜索Live是两条独立外部边界，分别要求密钥、显式模式和确认开关。Mock必须保证两者都不联网；单一网页失败或搜索预算耗尽时保留其他成功资料并允许部分成功，不自动扩大预算或重复付费任务。
 
 ## 5. 状态与开发安排
 
@@ -82,6 +88,7 @@
 - **V1.5：基础检索能力保留**。已接入百度搜索Provider、通用检索Tools、来源/证据链、缓存和预算限制；既有细粒度状态可作为内部诊断，用户可见报告统一映射为“已核验/未核验”。真实百度与DeepSeek调用仍分别需要密钥和显式确认。
 - **V2.1/V2.2：已完成**。财务三表可比事实、跨报告一致性、确定性计算、基础风险信号和财务Skill Runtime已通过真实S01/S10集成验证。
 - **V2.3：已按简化规则完成**。受控Live返回的完整9章财务分析和9项尽调问题已离线恢复；最终Markdown包含Python财务数据表且不显示技术ID。Python不再逐段拒绝模型自然语言，也不回退到固定模板；人工审阅展示副本与原始草稿通过SHA-256绑定，报告标题由Runtime主体确定；全量离线回归`223 passed`。
-- **下一个动作**：V2.4暂未启动；后续继续沿用“Python提供数据与工具、Skill提供研究方法、DeepSeek分析并撰写”的单一路径。
+- **V2.4：离线实现与验证完成，Live待用户单独授权**。已按“独立行业Instructions + V1.5检索Tools + V2.3财务上下文 + DeepSeek正文 + Python组装”的最小增量方案实现；它不是第三个Skill。模型Tool视图不暴露后台Fact/Source追踪ID，政策日期未经原文核验不进入事实期间。定向测试`14 passed in 4.73s`，全量回归`237 passed in 12.63s`；Mock与真实Live仍须明确区分。
+- **下一个动作**：仅在用户单独授权下执行一次DeepSeek+百度双确认Live，核对真实网页、政策适用性、跨财务分析、Token/费用和最终Markdown；通过前不宣称V2.4最终验收完成，也不启动V2.5。
 - 每个阶段结束更新 `ROADMAP.md` 的开发日志和实测结果，简历只写已实现能力。
 

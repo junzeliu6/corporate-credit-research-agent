@@ -111,6 +111,7 @@ class RetrievalExecutionTrace(BaseModel):
     schema_version: str = "1.5.0"
     trace_id: str
     task: str
+    workflow_name: str = "web_research_v1_5"
     status: RetrievalStatus = RetrievalStatus.RUNNING
     entity_id: str
     llm_config: Dict[str, Any]
@@ -133,6 +134,9 @@ class RetrievalExecutionTrace(BaseModel):
     usage: AgentTokenUsage = Field(default_factory=AgentTokenUsage)
     model_candidate_output: Optional[str] = None
     model_candidate_output_sha256: Optional[str] = None
+    finish_reasons: List[Optional[str]] = Field(default_factory=list)
+    artifact_paths: List[str] = Field(default_factory=list)
+    degraded_reasons: List[str] = Field(default_factory=list)
     events: List[RetrievalEvent] = Field(default_factory=list)
     error_code: Optional[str] = None
     error_message: Optional[str] = None
@@ -1045,6 +1049,15 @@ def _find_nested_domain_error(
         if isinstance(context, BaseException):
             pending.append(context)
     return None
+
+
+# V2.4 等共享检索工作流使用的公开编排接口。保留原私有名称以兼容既有测试和
+# 调用方；这些别名只暴露运行轨迹机制，不改变 V1.5 的最终 Fact-ID 输出契约。
+RetrievalRunHooks = _RetrievalHooks
+append_retrieval_event = _append_event
+retrieval_budget_limits = _budget_limits
+find_retrieval_domain_error = _find_nested_domain_error
+write_retrieval_trace = _write_trace
 
 
 class InformationRetrievalRuntime:

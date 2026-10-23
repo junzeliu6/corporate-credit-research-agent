@@ -928,6 +928,21 @@ def classify_source(
 
 
 def _question_module(question: str) -> ResearchModule:
+    if any(word in question for word in ("政策", "监管", "医保", "集采", "带量采购", "药品目录")):
+        return ResearchModule.POLICY_REGULATION
+    if any(
+        word in question
+        for word in (
+            "行业",
+            "市场规模",
+            "竞争格局",
+            "竞争对手",
+            "市场地位",
+            "发展趋势",
+            "周期性",
+        )
+    ):
+        return ResearchModule.INDUSTRY_RESEARCH
     if "发展" in question or "历史" in question:
         return ResearchModule.DEVELOPMENT_HISTORY
     if "产品" in question:
@@ -940,6 +955,39 @@ def _question_module(question: str) -> ResearchModule:
 
 
 QUESTION_TERM_GROUPS: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
+    (
+        ("政策", "监管", "医保", "集采", "带量采购", "药品目录"),
+        (
+            "政策",
+            "监管",
+            "医保",
+            "药品目录",
+            "集中带量采购",
+            "集采",
+            "中医药",
+            "药品注册",
+            "药品生产",
+            "质量监管",
+            "实施时间",
+            "适用范围",
+        ),
+    ),
+    (
+        ("行业", "市场规模", "竞争格局", "竞争对手", "市场地位", "发展趋势", "周期性"),
+        (
+            "行业",
+            "市场规模",
+            "增长",
+            "需求",
+            "周期",
+            "驱动因素",
+            "竞争格局",
+            "竞争企业",
+            "市场地位",
+            "发展趋势",
+            "风险",
+        ),
+    ),
     (
         ("主营业务", "业务构成", "核心业务", "业务板块"),
         (
@@ -1188,18 +1236,27 @@ class WebEvidenceStore:
 
         subject_match = _subject_matches(fetched, self.identity)
         module = _question_module(research_question)
+        contextual_module = module in {
+            ResearchModule.INDUSTRY_RESEARCH,
+            ResearchModule.POLICY_REGULATION,
+        }
         field_name = f"web_{module.value}_" + hashlib.sha256(
             " ".join(research_question.split()).encode("utf-8")
         ).hexdigest()[:12]
-        period = source.report_period or (
-            source.published_at.isoformat() if source.published_at else None
-        )
+        # 百度搜索结果中的 published_at 只是发现阶段元数据，不能替代网页原文
+        # 对政策发布日期/实施日期的核验。只有来源本身已绑定报告期间时才写入
+        # Fact.period；网页发布日期继续保存在 SourceRecord 供后台人工核查。
+        period = source.report_period
 
         for segment in selected:
             evidence_id = self._allocate_id("E", self._used_evidence_ids)
             is_injection = contains_prompt_injection(segment.text)
-            verified = source.trusted_tier <= 2 and subject_match and not is_injection
-            single_source = source.trusted_tier > 2 and subject_match and not is_injection
+            # 行业与政策事实描述的是外部环境，不要求网页必须出现目标企业名称；
+            # 但仍要求问题关键词命中、原文可定位且来源级别可判断。企业自身事实
+            # 继续执行原有主体匹配规则，避免把一般行业信息误记为公司披露。
+            relevant_subject = subject_match or contextual_module
+            verified = source.trusted_tier <= 2 and relevant_subject and not is_injection
+            single_source = source.trusted_tier > 2 and relevant_subject and not is_injection
             status = (
                 EvidenceStatus.VERIFIED
                 if verified
@@ -1227,10 +1284,19 @@ class WebEvidenceStore:
                 fact = FactRecord(
                     fact_id=fact_id,
                     entity_id=self.identity.entity_id,
+                    subject=(
+                        (source.title or source.publisher)
+                        if contextual_module
+                        else self.identity.legal_name
+                    ),
                     category=(
                         FactCategory.IDENTITY
                         if module is ResearchModule.COMPANY_IDENTITY
-                        else FactCategory.BUSINESS
+                        else (
+                            FactCategory.INDUSTRY
+                            if contextual_module
+                            else FactCategory.BUSINESS
+                        )
                     ),
                     research_module=module,
                     field_name=field_name,
@@ -1296,7 +1362,7 @@ class WebEvidenceStore:
                 )
                 if is_injection:
                     self.warnings.append("检测到疑似Prompt Injection；页面文字仅按不可信数据保存")
-                elif not subject_match:
+                elif not relevant_subject:
                     self.warnings.append("网页正文无法确认与当前研究主体一致")
                 elif source.trusted_tier > 2:
                     self.warnings.append("第三方网页未通过主体核对，仅作为待核实线索")

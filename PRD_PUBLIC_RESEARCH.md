@@ -27,6 +27,15 @@
 - **运行时接入要求**：主 Agent 根据任务选择并加载相应 Skill，再调用已有或新增的 Python Tools；在 OpenAI Agents SDK 下需显式集成技能加载/选择逻辑，不能假定 SDK 自动发现本地 `SKILL.md`。
 - **V0 已核验完成**：不重做 V0；公司识别、官方来源登记、文档下载缓存、PDF逐页解析、Source/Evidence 模型和 CLI 均作为 Skill 的公共基础设施。
 
+### 3.1 V2.4 行业与政策研究运行规范
+
+- 行业研究采用主Agent独立的轻量Instructions，**不是第三个Skill**；现有`ownership-structure`与`financial-analysis`双Skill白名单保持不变。
+- DeepSeek根据企业主营业务识别行业及细分赛道，自主研究行业阶段/趋势、需求和驱动因素、周期性、竞争格局、主要竞争者、企业市场地位、政策监管以及授信风险与尽调问题。数据不足时允许定性分析，不强制编造市场规模、份额或排名。
+- 政策研究优先读取政府、监管机构等一手原文，并保留发布日期、政策状态、适用对象/地区和有效范围。模型只能把政策对目标企业的具体影响写成已确认结论时，相关企业业务与政策适用关系已有资料支持；否则使用“可能”“未核验”“需进一步核实”等表述。
+- 模型复用V1.5的`search_web → fetch_source → extract_evidence`链路自主制定和执行检索，并读取V2.3经过Python计算的财务上下文开展行业—企业—财务关联分析。Python负责工具、安全、预算、缓存、来源保存、最小结果解析及Markdown组装，不编写固定模板行业正文。
+- 正式产物至少包括`industry_analysis.md`、`industry_research_context.json`、`industry_sources.json`和`industry_execution_trace.json`。正文不显示Fact/Metric等技术ID；来源URL、原文定位、失败记录和执行轨迹保存在后台文件中。
+- Mock模式禁止真实外部请求。DeepSeek Live与百度搜索Live必须分别具备密钥、显式选择并由用户确认；完成离线验收前不得执行付费Live。单个来源读取失败时继续利用其他成功资料，模型整体失败或最小结构无法解析时标记报告未完成，不以Python模板替写。
+
 ## 4. 主要验收场景
 | ID | 场景 | 验收要求 |
 | --- | --- | --- |
@@ -56,6 +65,10 @@
 | U24 | 检索证据链 | Python内部绑定`source_id`并保存来源；报告层只显示“已核验/未核验”，其中可靠披露和确定性计算为已核验，单一来源、未确认候选、冲突信息或分析假设为未核验；无依据内容不得作为企业事实输出 |
 | U26 | 部分成功 | 单个网页403/404、超时或正文不足不得终止整项研究；保留成功来源与失败候选，并以`PARTIAL_SUCCESS`生成带状态标识的局部报告 |
 | U25 | 联网安全与费用保护 | Mock永不联网；百度搜索与DeepSeek Live分别需密钥、模式开关和显式确认，运行时强制次数/条数/抓取预算 |
+| U27 | 行业研究自主检索 | DeepSeek根据主营业务制定检索方向并实际调用V1.5白名单Tools；Python执行URL安全、预算、缓存和来源登记，不使用固定检索结果冒充自主研究 |
+| U28 | 政策适用性 | 保存政策发布日期、状态、适用对象和范围；一般政策不得直接认定为已对目标企业产生确定影响，未证实因果关系使用不确定性措辞 |
+| U29 | 行业与财务联动 | DeepSeek读取V2.3结构化财务上下文，分析行业/竞争/政策与收入、毛利、存货、现金流等指标的可能关系；财务数值仍由Python提供和计算 |
+| U30 | 行业报告交付 | Markdown正文来自DeepSeek且覆盖趋势、竞争、政策、企业影响、授信风险和尽调问题；后台独立保存研究上下文、来源与执行轨迹，单个来源失败允许部分成功 |
 
 ## 5. 最小数据模型（建议 Pydantic）
 - `CompanyIdentity`: legal_name, alias, ticker, exchange, country_of_incorporation, entity_scope, resolved_at, evidence_ids.
@@ -64,6 +77,7 @@
 - `FinancialDatum`: metric, value, currency, unit, period_start/end, period_type(`FY`/`H1`/`Q`), scope, source_id, page?, raw_label.
 - `AnalysisFinding`: category(`fact`/`calculated`/`risk_signal`/`hypothesis`/`missing_info`), title, explanation, evidence_ids, confidence_note?.
 - `DueDiligenceQuestion`: priority, module, question, reason, requested_document?, related_evidence_ids.
+- `IndustryResearchContext`: identity, business_context, financial_context, retrieved_sources, source_failures, policy_metadata, research_limits；只保存模型研究所需的紧凑上下文，不重复嵌入完整网页或PDF。
 - `ResearchReport`: identity, as_of_date, chapters, findings, questions, sources, limitations.
 
 数据结构只需做到支撑当前任务，允许实现时逐步精简；尽量避免一次性实现全部模型。

@@ -2,7 +2,7 @@
 
 企业授信研究Agent（Corporate Credit Research Agent）是一个面向银行对公场景的学习型项目：从上市公司公开披露出发，逐步构建可追溯的企业研究辅助 Agent。
 
-当前代码版本是 **V2.3：DeepSeek 财务分析正文架构调整**；需求基线为 **v5**。V2.1使用以岭药业官方2025/2024年报建立FY2023—FY2025合并口径财务事实，V2.2由Python计算同比、比率和重大变动；V2.3受控Live已取得DeepSeek生成的完整9章财务分析和9项尽调问题，当前按简化后的正式报告规则离线恢复该正文：DeepSeek负责分析和写作，Python负责数据、计算、内部溯源、最小结构解析和Markdown组装，不再以技术ID或复杂自然语言校验作为交付门禁。V2.4暂不启动。本项目不是授信审批系统，不给出授信额度、贷款定价或具有审批效力的结论。
+当前代码版本正在推进 **V2.4：DeepSeek 行业与政策研究能力**；需求基线为 **v5**。V2.1—V2.3已保留以岭药业FY2023—FY2025可比财务事实、Python确定性计算和DeepSeek财务正文；V2.4复用V1.5百度搜索/原文工具及V2.3财务上下文，由DeepSeek自主研究行业、竞争和政策并撰写Markdown，Python只负责工具、安全/预算、来源保存、最小结构解析与文件组装。V2.4的**离线实现与验证已完成**：定向测试`14 passed in 4.73s`、全量回归`237 passed in 12.63s`；本阶段真实DeepSeek+百度Live尚未执行，仍待用户单独授权。本项目不是授信审批系统，不给出授信额度、贷款定价或具有审批效力的结论。
 
 ## V0.1—V0.4 已实现
 
@@ -121,7 +121,17 @@
 - Mock Agent命令：`.venv\Scripts\python.exe -m credit_research_agent.cli 002603.SZ --run-agent "分析财务报表、现金流和重大同比变动" --agent-source S01 --financial-comparison-source S10 --llm-mode mock --financial-dir data/financial`。
 - 示例产物：`examples/v2_financial/CN-A-SZSE-002603/`。最新受控Live已验证模型调用Tool并完整撰写9章正文和9项尽调问题；120秒超时和0次自动重试配置有效。本轮直接使用已保存草稿离线恢复最终报告，不重新调用DeepSeek。
 
-当前仍未实现全部附注原因的自动覆盖、完整审计意见分析、V2.4多来源行业政策研究、V2.5同一任务双Skill编排、RAG、MCP或Streamlit。当前只收尾V2.3正文恢复与报告组装，不提前启动V2.4。
+当前仍未实现全部附注原因的自动覆盖、完整审计意见分析、V2.5同一任务双Skill编排、RAG、MCP或Streamlit。V2.4只新增行业研究运行时，不重构V2.3财务内核。
+
+## V2.4 离线实现已验证：DeepSeek 行业与政策研究（Live待授权）
+
+- V2.4不新增第三个Skill。现有`ownership-structure`和`financial-analysis`双Skill白名单保持不变；行业方法由主Agent独立、轻量的Instructions约束。
+- DeepSeek负责识别企业所属行业/细分赛道，自主制定行业趋势、需求与驱动、竞争格局、企业市场地位和政策监管的检索方向，并结合V2.3财务表现撰写分析、风险与尽调问题。
+- Python复用V1.5的`search_web`、`fetch_source`、`extract_evidence`以及缓存、URL安全、无效页面识别和预算计数；同时把企业业务资料和V2.3确定性财务结果整理为紧凑上下文。Python不生成固定模板行业正文。
+- 政策资料优先使用政府/监管机构一手原文，后台保留发布日期、政策状态、适用对象/地区和URL。一般行业政策及其与企业收入、毛利、存货或现金流的关系，未经确认时只能作为“可能/未核验/需进一步核实”的分析。
+- 正式Markdown不展示Fact/Metric/Source技术编号；后台独立保存`industry_research_context.json`、`industry_sources.json`和`industry_execution_trace.json`，原始模型结果另行保存以便诊断。单个网页失败时允许继续使用其他成功来源；模型整体失败时标记报告未完成，不以Python模板替代。
+- 默认Mock不创建外部网络请求。真实运行同时跨越DeepSeek和百度搜索两个外部边界，必须分别配置密钥、选择Live模式并显式确认；V2.4离线Mock与全量回归已通过，但受控Live仍需用户单独授权。
+- 已验证离线交付：`industry_analysis.md`、`industry_research_context.json`、`industry_sources.json`、`industry_execution_trace.json`，以及原始草稿/交付状态诊断文件。V2.4给模型的Tool结果会隐藏后台Fact/Source等追踪ID，搜索结果日期只保留为来源元数据，不自动升级为已核验政策日期。定向测试`14 passed in 4.73s`，全量回归`237 passed in 12.63s`；结果详见`V2_4_STATUS.md`。Mock测试成功不等同于真实行业研究Live验收完成。
 
 ## v5 文档与 Skill 规范
 
@@ -163,6 +173,7 @@ corporate-credit-research-agent/
 │  ├─ search.py              # V1.5百度SearchProvider、缓存、预算与错误映射
 │  ├─ web_sources.py         # V1.5安全HTML/PDF获取、运行时来源与证据登记
 │  ├─ retrieval_runtime.py   # V1.5 Agent检索Tools、事实选择和执行轨迹
+│  ├─ industry_agent_runtime.py # V2.4行业研究Instructions、检索编排、LLM正文和Markdown组装
 │  ├─ pdf_parser.py          # 逐页提取、质量摘要和章节定位
 │  └─ cli.py                 # 企业识别、来源处理和Skill运行入口
 ├─ examples/
@@ -184,7 +195,8 @@ corporate-credit-research-agent/
 │  ├─ V1.3_skill_execution_trace.json # 真实S01 Skill执行追踪
 │  ├─ v1_3_runtime/          # V1.3真实Tool调用的独立制品
 │  ├─ v1_4_report/           # V1.4历史MVP Markdown样例（不代表V2.3正式LLM报告）
-│  └─ v1_5_mock/             # V1.5离线检索轨迹与证据链样例
+│  ├─ v1_5_mock/             # V1.5离线检索轨迹与证据链样例
+│  └─ v2_4_industry_mock/    # V2.4离线行业报告、上下文、来源与执行轨迹
 ├─ tests/
 │  ├─ integration/test_yiling_fundamentals.py
 │  ├─ integration/test_yiling_ownership.py
@@ -206,6 +218,8 @@ corporate-credit-research-agent/
 │  ├─ test_web_sources.py
 │  ├─ test_retrieval_runtime.py
 │  ├─ test_cli_v15.py
+│  ├─ test_industry_agent_runtime.py
+│  ├─ test_cli_v24.py
 │  └─ test_cli.py
 ├─ .env.example
 ├─ pyproject.toml
@@ -213,6 +227,7 @@ corporate-credit-research-agent/
 ├─ V0_AUDIT.md
 ├─ V1_4_STATUS.md
 ├─ V1_5_STATUS.md
+├─ V2_4_STATUS.md
 └─ ROADMAP.md
 ```
 
@@ -361,6 +376,43 @@ python -m credit_research_agent "002603.SZ" `
 ```
 
 官方页面的接口定义与curl示例对鉴权头的展示不一致：程序默认按接口定义使用`Authorization: Bearer ...`；只有当百度控制台/在线调试对当前应用明确给出`X-Appbuilder-Authorization`时，才修改`BAIDU_SEARCH_AUTH_HEADER`。程序每次只发送一个鉴权头，不会双发或自动放宽后重试。
+
+运行 V2.4 完全离线 Mock 行业研究（不会调用DeepSeek或百度网络接口）：
+
+```powershell
+python -m credit_research_agent "002603.SZ" `
+  --run-industry-research "研究以岭药业所属行业的发展趋势、竞争格局和政策监管，并结合公司业务及财务表现分析授信风险，提出尽调问题。" `
+  --llm-mode mock `
+  --search-mode mock `
+  --industry-fundamentals-path "examples/S01_fundamentals_sample.json" `
+  --industry-financial-dir "examples/v2_financial/CN-A-SZSE-002603" `
+  --industry-dir "examples/v2_4_industry_mock" `
+  --industry-trace-output "examples/v2_4_industry_mock/CN-A-SZSE-002603/industry_execution_trace.json"
+```
+
+Mock使用包内行业检索fixture，目标是验证同一Agents SDK Runner中的`search_web → fetch_source → extract_evidence → DeepSeek风格正文 → Markdown组装`流程、V2.3财务上下文复用、来源/轨迹产物和无网络边界。Mock正文及fixture内容都是测试数据，不是以岭药业的真实行业研究结论，也不能替代Live验收。`--industry-financial-dir`应指向包含V2.3六项核心财务JSON的实体目录；省略时程序尝试`--financial-dir/<entity_id>`。`--industry-fundamentals-path`省略时程序尝试`--fundamentals-dir/<entity_id>/fundamentals.json`。
+
+完成离线验收并取得用户单独授权后，受控V2.4 Live需同时确认DeepSeek和百度搜索两个外部边界：
+
+```powershell
+python -m credit_research_agent "002603.SZ" `
+  --run-industry-research "请研究以岭药业所属行业的发展趋势、竞争格局和政策监管，结合公司主营业务与FY2024/FY2025财务表现分析潜在影响、授信风险并提出尽调问题。" `
+  --llm-mode live --confirm-live `
+  --search-mode live --confirm-search-live `
+  --industry-fundamentals-path "examples/S01_fundamentals_sample.json" `
+  --industry-financial-dir "examples/v2_financial/CN-A-SZSE-002603" `
+  --industry-dir "data/industry_research/live_yiling" `
+  --industry-trace-output "data/industry_research/live_yiling/CN-A-SZSE-002603/industry_execution_trace.json" `
+  --max-agent-turns 70 --max-tool-calls 60 `
+  --max-search-rounds 10 --max-search-calls 10 `
+  --max-search-requests 10 --max-search-results 5 `
+  --max-source-fetches 20 --max-extract-calls 20 `
+  --max-output-tokens 50000 `
+  --request-timeout-seconds 120 `
+  --max-model-retries 0
+```
+
+这条命令是后续受控验收建议，不代表已经执行。首次Live前应先省略两个确认参数检查脱敏配置与路径；只有同时加入`--confirm-live`和`--confirm-search-live`才允许模型与搜索发出真实请求。运行预算是本地保护机制，不等于供应商账单硬上限，不得自动扩大后重试。
 
 通过 V1.3 运行时执行同一项任务：
 
@@ -590,12 +642,13 @@ V1.4报告组装/降级/来源与主体校验/CLI及可信度分层：11项
 V1.4真实S01报告集成：1项（仓库内已核验研究产物不存在时明确跳过）
 V1.5百度Provider/缓存/预算、HTML/PDF获取、来源证据、部分成功、Mock Agent/Tool/CLI与安全边界：50项
 V2.1—V2.3财务模型、原因资料、CLI、真实年报、Skill Runtime、LLM正文直出、最小结构解析与无模板回退：测试数量以当前pytest实测为准
-最近一次架构简化后完整离线回归：219项通过（2026-10-23）；其中受影响财务定向测试10项通过。所有Mock测试禁止真实DeepSeek、百度或其他外部网络请求
+V2.4行业Instructions、检索Tool编排、V2.3财务上下文复用、来源/轨迹产物、部分成功、双Live确认、技术ID投影、政策日期边界与无模板回退：14项
+V2.4定向测试：14 passed in 4.73s；完整离线回归：237 passed in 12.63s。所有Mock测试禁止真实DeepSeek、百度或其他外部网络请求
 ```
 
 网络请求使用离线假响应测试，因此日常 `pytest` 不依赖巨潮资讯、百度搜索或 DeepSeek 是否可访问。
 
 ## 下一阶段
 
-V2.1/V2.2的确定性数据内核继续稳定复用；真实S01/S10已生成46条归一财务事实、30个逐年变动指标、12个基础比率、3条披露/分析原因资料、4条待核实假设和7项合理性观察。V2.3已从受控Live保存草稿离线恢复9章DeepSeek正文和9项尽调问题，加入Python财务数据表、比率表和“AI生成研究初稿，需人工复核”声明，最终Markdown不含技术ID；人工审阅展示副本通过SHA-256绑定原始草稿，报告标题由Python绑定企业身份生成。全量离线回归`223 passed`。V2.4暂不启动。
+V2.4离线行业研究运行时已完成验证：复用V1.5检索工具和预算边界、V2.3结构化财务上下文及既有来源记录，Mock模型实际完成搜索、原文获取、证据提取和自然语言Markdown组装，四项核心产物及无网络边界均已核查。下一步仅在用户单独授权下，以DeepSeek与百度搜索双确认执行一次受控Live，重点核对真实政策原文、企业适用性、行业—财务联动、Token/费用和最终报告质量。Live通过前不标记V2.4最终完成，也不启动V2.5。
 

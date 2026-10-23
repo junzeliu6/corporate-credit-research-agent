@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.5.0",
+  "source_handle": "DOC001",
+  "source_id": "S05",
+  "title": "以岭药业V2.4离线Mock业务资料",
+  "original_url": "https://www.yiling.cn/v2-4-industry-mock",
+  "final_url": "https://www.yiling.cn/v2-4-industry-mock",
+  "source_domain": "www.yiling.cn",
+  "accessed_at": "2026-10-23 12:01:50.539478+00:00",
+  "content_type": "text/html; charset=utf-8",
+  "cache_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_4_industry_mock\\CN-A-SZSE-002603\\sources\\S05\\source.html",
+  "sha256": "3f8fa97e42b9492c259eaa9dfbf71386fce0085f5713527de114c9f4b9cc21ba",
+  "bytes_written": 360,
+  "from_cache": false,
+  "parser_name": "fixture-html-parser",
+  "content_truncated": false,
+  "prompt_injection_detected": false,
+  "segments": [
+    {
+      "segment_id": "P001",
+      "page_number": 1,
+      "line_number": 1,
+      "locator": "网页段落P001",
+      "text": "【离线Mock夹具】石家庄以岭药业股份有限公司主营业务涉及创新中药研发、生产和销售，仅用于验证业务与行业映射。"
+    },
+    {
+      "segment_id": "P002",
+      "page_number": 1,
+      "line_number": 2,
+      "locator": "网页段落P002",
+      "text": "【离线Mock夹具】主要产品和核心竞争优势需在真实公司披露中重新核验。"
+    }
+  ]
+}

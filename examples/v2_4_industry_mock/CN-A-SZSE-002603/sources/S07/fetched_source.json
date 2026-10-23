@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.5.0",
+  "source_handle": "DOC003",
+  "source_id": "S07",
+  "title": "中药行业趋势V2.4离线Mock资料",
+  "original_url": "https://industry.example.org.cn/v2-4-trend-mock",
+  "final_url": "https://industry.example.org.cn/v2-4-trend-mock",
+  "source_domain": "industry.example.org.cn",
+  "accessed_at": "2026-10-23 12:01:50.565703+00:00",
+  "content_type": "text/html; charset=utf-8",
+  "cache_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_4_industry_mock\\CN-A-SZSE-002603\\sources\\S07\\source.html",
+  "sha256": "9a270d656ce2b8ed549113b1e5c1f5e6e277b7b131e97c1f050544e7c88e8e92",
+  "bytes_written": 330,
+  "from_cache": false,
+  "parser_name": "fixture-html-parser",
+  "content_truncated": false,
+  "prompt_injection_detected": false,
+  "segments": [
+    {
+      "segment_id": "P001",
+      "page_number": 1,
+      "line_number": 1,
+      "locator": "网页段落P001",
+      "text": "【离线Mock夹具】中药行业需求、竞争格局和发展趋势存在多种驱动因素，本段只验证行业资料召回。"
+    },
+    {
+      "segment_id": "P002",
+      "page_number": 1,
+      "line_number": 2,
+      "locator": "网页段落P002",
+      "text": "【离线Mock夹具】该第三方资料不提供可核验的市场份额或企业排名。"
+    }
+  ]
+}

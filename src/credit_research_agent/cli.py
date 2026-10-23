@@ -26,6 +26,11 @@ from credit_research_agent.financial import (
 from credit_research_agent.financial_agent_runtime import (
     FinancialResearchAgentRuntime,
 )
+from credit_research_agent.industry_agent_runtime import (
+    IndustryResearchAgentRuntime,
+    IndustryRuntimeError,
+    load_industry_search_fixture,
+)
 from credit_research_agent.ownership import (
     OwnershipBuildError,
     build_ownership_artifacts,
@@ -93,7 +98,7 @@ def _find_project_root() -> Path:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="credit-research-agent",
-        description="企业授信研究Agent V2.3：结构化研究、财务专业流程与可追溯公开资料检索。",
+        description="企业授信研究Agent V2.4：结构化研究、财务分析与可追溯行业政策检索。",
     )
     parser.add_argument("company", help="上市公司名称、证券代码或带交易所后缀的代码")
     parser.add_argument(
@@ -155,6 +160,11 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="TASK",
         help="运行V1.5基础信息检索Agent；默认LLM与百度搜索均为Mock",
     )
+    action_group.add_argument(
+        "--run-industry-research",
+        metavar="TASK",
+        help="运行V2.4行业与政策研究Agent；默认LLM与百度搜索均为Mock",
+    )
     parser.add_argument(
         "--skill-source",
         metavar="SOURCE_ID",
@@ -193,7 +203,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--search-fixture",
-        help="可选的V1.5离线Mock fixture JSON；默认使用包内明确标记的测试夹具",
+        help="可选的V1.5/V2.4离线Mock fixture JSON；默认按任务使用包内测试夹具",
     )
     parser.add_argument(
         "--env-file",
@@ -218,8 +228,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--max-output-tokens",
         type=int,
-        default=800,
-        help="单次模型响应最大输出Token，默认800、上限50000；不是Agent总Token预算",
+        default=None,
+        help=(
+            "单次模型响应最大输出Token，上限50000；V2.4默认8000，"
+            "其他流程默认800，不是Agent总Token预算"
+        ),
     )
     parser.add_argument(
         "--request-timeout-seconds",
@@ -386,6 +399,23 @@ def build_parser() -> argparse.ArgumentParser:
         "--retrieval-trace-output",
         help="可选的V1.5 RetrievalExecutionTrace JSON输出路径",
     )
+    parser.add_argument(
+        "--industry-dir",
+        default="data/industry_research",
+        help="V2.4行业报告、网页原文、来源与上下文产物目录",
+    )
+    parser.add_argument(
+        "--industry-trace-output",
+        help="可选的V2.4 IndustryExecutionTrace JSON输出路径",
+    )
+    parser.add_argument(
+        "--industry-financial-dir",
+        help="可选的V2.3实体财务产物目录；默认使用 --financial-dir/<entity_id>",
+    )
+    parser.add_argument(
+        "--industry-fundamentals-path",
+        help="可选的fundamentals.json；默认使用 --fundamentals-dir/<entity_id>/fundamentals.json",
+    )
     return parser
 
 
@@ -435,7 +465,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 9
 
     project_root: Optional[Path] = None
-    if args.run_skill or args.run_agent or args.run_web_research:
+    if (
+        args.run_skill
+        or args.run_agent
+        or args.run_web_research
+        or args.run_industry_research
+    ):
         try:
             project_root = _find_project_root()
         except RuntimeError as exc:
@@ -446,16 +481,23 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(json.dumps(output, ensure_ascii=False, indent=2))
             return 9
     llm_config = None
-    if args.run_agent or args.run_web_research:
+    if args.run_agent or args.run_web_research or args.run_industry_research:
         assert project_root is not None
+        retrieval_style_run = bool(
+            args.run_web_research or args.run_industry_research
+        )
         try:
             llm_config = load_deepseek_config(
                 project_root,
                 mode=args.llm_mode,
                 env_file=Path(args.env_file) if args.env_file else None,
-                max_turns=args.max_agent_turns or 4,
-                max_tool_calls=args.max_tool_calls or 1,
-                max_output_tokens=args.max_output_tokens,
+                max_turns=args.max_agent_turns or (70 if retrieval_style_run else 4),
+                max_tool_calls=args.max_tool_calls or (60 if retrieval_style_run else 1),
+                max_output_tokens=(
+                    args.max_output_tokens
+                    if args.max_output_tokens is not None
+                    else (8000 if args.run_industry_research else 800)
+                ),
                 request_timeout_seconds=args.request_timeout_seconds,
                 max_retries=args.max_model_retries,
             )
@@ -482,7 +524,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 print(json.dumps(output, ensure_ascii=False, indent=2))
                 return 9
     search_config = None
-    if args.run_web_research:
+    if args.run_web_research or args.run_industry_research:
         assert project_root is not None
         try:
             search_config = load_baidu_search_config(
@@ -1151,6 +1193,111 @@ def main(argv: Optional[List[str]] = None) -> int:
             }
             print(json.dumps(output, ensure_ascii=False, indent=2))
             return 11
+
+    if args.run_industry_research:
+        assert project_root is not None and llm_config is not None and search_config is not None
+        industry_dir = Path(args.industry_dir) / company.entity_id
+        trace_output = (
+            Path(args.industry_trace_output)
+            if args.industry_trace_output
+            else industry_dir / "industry_execution_trace.json"
+        )
+        provider_override = None
+        fetcher_override = None
+        if search_config.mode is SearchMode.MOCK:
+            try:
+                fixture = load_industry_search_fixture(
+                    Path(args.search_fixture) if args.search_fixture else None
+                )
+                provider_override, fetcher_override = build_mock_retrieval_dependencies(
+                    fixture
+                )
+            except (OSError, ValueError, json.JSONDecodeError) as exc:
+                output["industry_error"] = {
+                    "code": "invalid_search_fixture",
+                    "message": str(exc),
+                }
+                print(json.dumps(output, ensure_ascii=False, indent=2))
+                return 12
+
+        fundamentals_path = (
+            Path(args.industry_fundamentals_path)
+            if args.industry_fundamentals_path
+            else Path(args.fundamentals_dir)
+            / company.entity_id
+            / "fundamentals.json"
+        )
+        financial_context_dir = (
+            Path(args.industry_financial_dir)
+            if args.industry_financial_dir
+            else Path(args.financial_dir) / company.entity_id
+        )
+        used_fact_ids: List[str] = []
+        used_evidence_ids: List[str] = []
+        if fundamentals_path.is_file():
+            try:
+                fundamentals = json.loads(
+                    fundamentals_path.read_text(encoding="utf-8")
+                )
+                used_fact_ids = [
+                    str(item["fact_id"])
+                    for item in fundamentals.get("facts", [])
+                    if item.get("fact_id")
+                ]
+                used_evidence_ids = [
+                    str(item["evidence_id"])
+                    for item in fundamentals.get("evidence", [])
+                    if item.get("evidence_id")
+                ]
+            except (OSError, ValueError, json.JSONDecodeError):
+                output["industry_warning"] = (
+                    "既有fundamentals.json无法读取，行业研究将不复用其ID空间"
+                )
+        try:
+            budget = SearchBudget(
+                max_search_rounds=args.max_search_rounds,
+                max_search_calls=args.max_search_calls,
+                max_search_requests=args.max_search_requests,
+                max_results_per_request=args.max_search_results,
+                max_fetches=args.max_source_fetches,
+                max_extractions=args.max_extract_calls,
+                max_total_tool_calls=(
+                    args.max_tool_calls
+                    if args.max_tool_calls is not None
+                    else args.max_total_tool_calls
+                ),
+                max_agent_turns=args.max_agent_turns or 70,
+                max_supplemental_rounds=args.max_supplemental_searches,
+            )
+            runtime = IndustryResearchAgentRuntime(
+                project_root,
+                llm_config,
+                search_config,
+                search_provider_override=provider_override,
+                source_fetcher_override=fetcher_override,
+            )
+            industry_result = runtime.run_sync(
+                task=args.run_industry_research,
+                identity=company,
+                output_dir=industry_dir,
+                trace_output=trace_output,
+                fundamentals_path=fundamentals_path,
+                financial_dir=financial_context_dir,
+                confirmed_llm_live=args.confirm_live,
+                confirmed_search_live=args.confirm_search_live,
+                budget=budget,
+                used_fact_ids=used_fact_ids,
+                used_evidence_ids=used_evidence_ids,
+            )
+            output["industry_research"] = _as_dict(industry_result)
+        except (IndustryRuntimeError, SearchError) as exc:
+            output["industry_error"] = {
+                "code": getattr(exc, "code", "industry_research_failed"),
+                "message": str(exc),
+                "trace_path": str(getattr(exc, "trace_path", "") or "") or None,
+            }
+            print(json.dumps(output, ensure_ascii=False, indent=2))
+            return 12
 
     print(json.dumps(output, ensure_ascii=False, indent=2))
     return 0

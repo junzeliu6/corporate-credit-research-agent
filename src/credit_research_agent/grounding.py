@@ -210,7 +210,7 @@ def build_evidence_bundle_grounding_catalog(
             CitableFact(
                 fact_id=item.fact_id,
                 company=bundle.identity.legal_name,
-                subject=bundle.identity.legal_name,
+                subject=item.subject or bundle.identity.legal_name,
                 metric=item.field_name,
                 value=item.value,
                 period=item.period,

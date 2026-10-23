@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.5.0",
+  "source_handle": "DOC002",
+  "source_id": "S06",
+  "title": "中医药行业政策V2.4离线Mock原文",
+  "original_url": "https://www.gov.cn/zhengce/v2-4-policy-mock",
+  "final_url": "https://www.gov.cn/zhengce/v2-4-policy-mock",
+  "source_domain": "www.gov.cn",
+  "accessed_at": "2026-10-23 12:01:50.553087+00:00",
+  "content_type": "text/html; charset=utf-8",
+  "cache_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_4_industry_mock\\CN-A-SZSE-002603\\sources\\S06\\source.html",
+  "sha256": "a524eb6602dcb9e8f99300a4cd194851b854b408b131926e24f0e6310f25cead",
+  "bytes_written": 396,
+  "from_cache": false,
+  "parser_name": "fixture-html-parser",
+  "content_truncated": false,
+  "prompt_injection_detected": false,
+  "segments": [
+    {
+      "segment_id": "P001",
+      "page_number": 1,
+      "line_number": 1,
+      "locator": "网页段落P001",
+      "text": "【离线Mock夹具】本政策测试文本用于验证中医药政策、药品质量监管、实施时间和适用范围的原文提取，不代表任何真实现行政策。"
+    },
+    {
+      "segment_id": "P002",
+      "page_number": 1,
+      "line_number": 2,
+      "locator": "网页段落P002",
+      "text": "【离线Mock夹具】一般行业政策不能直接认定已经对某一家企业造成收入或利润影响。"
+    }
+  ]
+}

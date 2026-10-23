@@ -1,0 +1,50 @@
+[
+  {
+    "source_id": "S05",
+    "entity_id": "CN-A-SZSE-002603",
+    "title": "以岭药业V2.4离线Mock业务资料",
+    "source_type": "company_website",
+    "publisher": "石家庄以岭药业股份有限公司",
+    "url": "https://www.yiling.cn/v2-4-industry-mock",
+    "published_at": "2026-10-01",
+    "report_period": null,
+    "trusted_tier": 1,
+    "status": "parsed",
+    "accessed_at": "2026-10-23 12:01:50.539478+00:00",
+    "local_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_4_industry_mock\\CN-A-SZSE-002603\\sources\\S05\\source.html",
+    "page_or_section": "网页段落Pxxx",
+    "notes": "由V1.5百度搜索发现；搜索摘要不作为已验证事实。"
+  },
+  {
+    "source_id": "S06",
+    "entity_id": "CN-A-SZSE-002603",
+    "title": "中医药行业政策V2.4离线Mock原文",
+    "source_type": "government_website",
+    "publisher": "www.gov.cn",
+    "url": "https://www.gov.cn/zhengce/v2-4-policy-mock",
+    "published_at": "2026-09-20",
+    "report_period": null,
+    "trusted_tier": 1,
+    "status": "parsed",
+    "accessed_at": "2026-10-23 12:01:50.553087+00:00",
+    "local_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_4_industry_mock\\CN-A-SZSE-002603\\sources\\S06\\source.html",
+    "page_or_section": "网页段落Pxxx",
+    "notes": "由V1.5百度搜索发现；搜索摘要不作为已验证事实。"
+  },
+  {
+    "source_id": "S07",
+    "entity_id": "CN-A-SZSE-002603",
+    "title": "中药行业趋势V2.4离线Mock资料",
+    "source_type": "web_page",
+    "publisher": "industry.example.org.cn",
+    "url": "https://industry.example.org.cn/v2-4-trend-mock",
+    "published_at": "2026-09-15",
+    "report_period": null,
+    "trusted_tier": 3,
+    "status": "parsed",
+    "accessed_at": "2026-10-23 12:01:50.565703+00:00",
+    "local_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_4_industry_mock\\CN-A-SZSE-002603\\sources\\S07\\source.html",
+    "page_or_section": "网页段落Pxxx",
+    "notes": "由V1.5百度搜索发现；搜索摘要不作为已验证事实。"
+  }
+]

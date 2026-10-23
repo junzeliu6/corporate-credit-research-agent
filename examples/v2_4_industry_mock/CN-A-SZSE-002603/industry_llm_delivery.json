@@ -1,0 +1,26 @@
+{
+  "schema_version": "2.4.0",
+  "status": "partial_success",
+  "provider": "deepseek",
+  "model": "deepseek-flash",
+  "mode": "mock",
+  "llm_authored_report": false,
+  "authorship": "scripted_mock",
+  "model_path_exercised": true,
+  "python_rewrote_llm_text": false,
+  "content_validation_gate": "minimal_json_structure_only",
+  "human_review_required": true,
+  "delivered_topics": [
+    "industry_overview_and_trends",
+    "competition_and_market_position",
+    "policy_and_regulation",
+    "company_impact",
+    "credit_risks_and_due_diligence"
+  ],
+  "missing_topics": [],
+  "question_count": 2,
+  "limitations": [
+    "离线Mock仅验证系统编排，不代表真实行业研究结论。",
+    "部分行业资料仅有单一第三方来源，相关分析属于未核验信息，需交叉核实"
+  ]
+}

@@ -55,6 +55,8 @@ class ResearchModule(str, Enum):
     MAIN_PRODUCTS = "main_products"
     OWNERSHIP_STRUCTURE = "ownership_structure"
     FINANCIAL_ANALYSIS = "financial_analysis"
+    INDUSTRY_RESEARCH = "industry_research"
+    POLICY_REGULATION = "policy_regulation"
 
 
 class StatementType(str, Enum):
@@ -149,6 +151,9 @@ class FactRecord(BaseModel):
 
     fact_id: str
     entity_id: str
+    # 事实主体默认是研究企业；行业/政策外部环境事实必须显式填写来源主题，
+    # 防止把一般政策误表示成目标企业自身披露或已发生事项。
+    subject: Optional[str] = None
     category: FactCategory
     research_module: ResearchModule = ResearchModule.COMPANY_IDENTITY
     statement_type: StatementType = StatementType.DISCLOSED_FACT

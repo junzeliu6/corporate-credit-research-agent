@@ -422,6 +422,134 @@ def _build_financial_analysis_context_from_artifacts(
     }
 
 
+def build_financial_snapshot_from_artifacts(
+    artifacts: Mapping[str, Any],
+) -> Dict[str, Any]:
+    """为其他研究模块提供不含内部技术 ID 的紧凑财务快照。
+
+    V2.4 行业研究只需要确定性的财务表现和已披露原因，不需要财务
+    Agent 自己的响应契约、证据长文或风险提示模板。这里复用 V2.3 已有
+    的选数与计算结果，再采用字段白名单投影，避免把 Fact/Metric/Source
+    等内部编号或大段原文重复发送给模型。
+    """
+
+    context = _build_financial_analysis_context_from_artifacts(artifacts)
+    metric_fields = (
+        "item",
+        "item_label",
+        "prior_period",
+        "current_period",
+        "prior_value",
+        "current_value",
+        "absolute_change",
+        "yoy_percent",
+        "change_kind",
+        "change_display",
+        "requires_deep_analysis",
+        "trigger_reasons",
+    )
+    ratio_fields = (
+        "name",
+        "period",
+        "value_percent",
+        "formula",
+    )
+    explanation_fields = (
+        "financial_item",
+        "item_label",
+        "kind",
+        "statement",
+        "limitation",
+        "period",
+    )
+    inference_fields = (
+        "kind",
+        "statement",
+        "conclusion",
+        "limitation",
+        "status",
+        "verification_status",
+        "required_evidence",
+    )
+    missing_fields = ("topic", "description", "reason", "impact")
+
+    def project(items: Any, fields: Sequence[str]) -> List[Dict[str, Any]]:
+        if not isinstance(items, list):
+            return []
+        return [
+            {key: item[key] for key in fields if key in item}
+            for item in items
+            if isinstance(item, Mapping)
+        ]
+
+    identity = context.get("identity") or {}
+    metrics = project(context.get("metrics"), metric_fields)
+    for metric in metrics:
+        if metric.get("change_kind") == "sign_change" or metric.get("yoy_percent") is None:
+            # 跨正负号时机械百分比没有通常的同比含义，不把该值发送给行业模型。
+            metric["yoy_percent"] = None
+            metric["change_display"] = "不适用（跨符号或基期不可比）"
+        else:
+            metric["change_display"] = f"{metric['yoy_percent']}%"
+
+    raw_facts_payload = _json_load(artifacts["facts_path"])
+    raw_explanations_payload = _json_load(artifacts["explanations_path"])
+    linked_fact_ids = {
+        fact_id
+        for item in raw_explanations_payload.get("explanations", [])
+        for field_name in ("disclosed_fact_ids", "supporting_fact_ids")
+        for fact_id in item.get(field_name, [])
+    }
+    supporting_disclosures = [
+        {
+            key: item[key]
+            for key in ("field_name", "period", "claim", "value")
+            if key in item
+        }
+        for item in raw_facts_payload.get("raw_facts", [])
+        if item.get("fact_id") in linked_fact_ids
+    ]
+
+    explanations = project(context.get("explanations"), explanation_fields)
+    return {
+        "company": {
+            key: identity[key]
+            for key in (
+                "legal_name",
+                "short_name",
+                "ticker",
+                "exchange",
+                "entity_scope",
+            )
+            if key in identity
+        },
+        "scope": {
+            "periods": ["FY2024", "FY2025"],
+            "currency": "CNY",
+            "amount_unit": "yuan",
+            "statement_scope": identity.get("entity_scope", "consolidated"),
+        },
+        "verified_financial_metrics": metrics,
+        "verified_ratios": project(context.get("ratios"), ratio_fields),
+        "disclosed_reasons": [
+            item for item in explanations if item.get("kind") == "disclosed_reason"
+        ],
+        "supported_inferences": [
+            item for item in explanations if item.get("kind") == "supported_inference"
+        ],
+        "supporting_disclosures": supporting_disclosures,
+        "analysis_hypotheses": project(context.get("hypotheses"), inference_fields),
+        "missing_information": project(
+            context.get("missing_information"), missing_fields
+        ),
+        "usage_note": (
+            "金额、比率和同比变化由Python基于V2.3结构化产物提供；"
+            "disclosed_reasons仅包含公司明确披露原因；supported_inferences与"
+            "analysis_hypotheses均不是企业披露，使用时必须保留推断或待核实措辞。"
+        ),
+    }
+
+
 def _build_financial_analysis_context(result: SkillExecutionResult) -> Dict[str, Any]:
     """构造发送给模型的紧凑事实包，而不是发送完整 PDF 或全量 JSON。"""
 
