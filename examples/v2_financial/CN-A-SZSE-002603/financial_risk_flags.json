@@ -1,0 +1,107 @@
+[
+  {
+    "flag_id": "RF001",
+    "severity": "attention",
+    "topic": "净利润重大变动",
+    "observation": "净利润由FY2024的-734183532.26元变为FY2025的1281729907.88元，同比274.58%。该项仅为量化观察，原因需结合年报附注和管理层说明核实。",
+    "supporting_metric_ids": [
+      "FM018"
+    ],
+    "supporting_fact_ids": [
+      "F225",
+      "F226",
+      "F256"
+    ],
+    "requires_follow_up": true
+  },
+  {
+    "flag_id": "RF002",
+    "severity": "attention",
+    "topic": "经营活动产生的现金流量净额重大变动",
+    "observation": "经营活动产生的现金流量净额由FY2024的611013171.11元变为FY2025的1776508378.47元，同比190.75%。该项仅为量化观察，原因需结合年报附注和管理层说明核实。",
+    "supporting_metric_ids": [
+      "FM020"
+    ],
+    "supporting_fact_ids": [
+      "F229",
+      "F230",
+      "F260"
+    ],
+    "requires_follow_up": true
+  },
+  {
+    "flag_id": "RF003",
+    "severity": "attention",
+    "topic": "预付款项重大变动",
+    "observation": "预付款项由FY2024的52771323.79元变为FY2025的70825121.85元，同比34.21%。该项仅为量化观察，原因需结合年报附注和管理层说明核实。",
+    "supporting_metric_ids": [
+      "FM026"
+    ],
+    "supporting_fact_ids": [
+      "F205",
+      "F206",
+      "F235"
+    ],
+    "requires_follow_up": true
+  },
+  {
+    "flag_id": "RF004",
+    "severity": "attention",
+    "topic": "货币资金重大变动",
+    "observation": "货币资金由FY2024的853034839.38元变为FY2025的1104952885.33元，同比29.53%。该项仅为量化观察，原因需结合年报附注和管理层说明核实。",
+    "supporting_metric_ids": [
+      "FM016"
+    ],
+    "supporting_fact_ids": [
+      "F201",
+      "F202",
+      "F231"
+    ],
+    "requires_follow_up": true
+  },
+  {
+    "flag_id": "RF005",
+    "severity": "attention",
+    "topic": "应付账款重大变动",
+    "observation": "应付账款由FY2024的1846575493.59元变为FY2025的1468269274.13元，同比-20.49%。该项仅为量化观察，原因需结合年报附注和管理层说明核实。",
+    "supporting_metric_ids": [
+      "FM002"
+    ],
+    "supporting_fact_ids": [
+      "F215",
+      "F216",
+      "F246"
+    ],
+    "requires_follow_up": true
+  },
+  {
+    "flag_id": "RF006",
+    "severity": "attention",
+    "topic": "营业收入重大变动",
+    "observation": "营业收入由FY2024的6512734471.77元变为FY2025的7830737438.74元，同比20.24%。该项仅为量化观察，原因需结合年报附注和管理层说明核实。",
+    "supporting_metric_ids": [
+      "FM024"
+    ],
+    "supporting_fact_ids": [
+      "F221",
+      "F222",
+      "F252"
+    ],
+    "requires_follow_up": true
+  },
+  {
+    "flag_id": "RF007",
+    "severity": "attention",
+    "topic": "流动资产合计重大变动",
+    "observation": "流动资产合计由FY2024的4334951809.12元变为FY2025的5206141683.31元，同比20.10%。该项仅为量化观察，原因需结合年报附注和管理层说明核实。",
+    "supporting_metric_ids": [
+      "FM008"
+    ],
+    "supporting_fact_ids": [
+      "F209",
+      "F210",
+      "F239"
+    ],
+    "requires_follow_up": true
+  }
+]

@@ -18,6 +18,11 @@ from credit_research_agent.company import CompanyResolutionError, CompanyResolve
 from credit_research_agent.downloader import DownloadError, OfficialPdfDownloader
 from credit_research_agent.evidence import EvidenceBuildError, build_evidence_artifacts
 from credit_research_agent.fundamentals import build_fundamental_artifacts
+from credit_research_agent.financial import (
+    FinancialBuildError,
+    FinancialSourceInput,
+    build_financial_artifacts,
+)
 from credit_research_agent.ownership import (
     OwnershipBuildError,
     build_ownership_artifacts,
@@ -38,6 +43,12 @@ from credit_research_agent.search import (
     load_baidu_search_config,
 )
 from credit_research_agent.skill_runtime import SkillRuntime, SkillRuntimeError
+from credit_research_agent.skills import (
+    SkillRegistry,
+    SkillRegistryError,
+    SkillSelectionError,
+    SkillSelector,
+)
 from credit_research_agent.sources import SourceCatalog, SourceNotFoundError
 
 
@@ -79,7 +90,7 @@ def _find_project_root() -> Path:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="credit-research-agent",
-        description="企业授信研究Agent V1.5：结构化研究、受控Agent与可追溯公开资料检索。",
+        description="企业授信研究Agent V2.2：结构化研究、财务分析与可追溯公开资料检索。",
     )
     parser.add_argument("company", help="上市公司名称、证券代码或带交易所后缀的代码")
     parser.add_argument(
@@ -112,6 +123,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--build-ownership",
         metavar="SOURCE_ID",
         help="执行下载、解析，并生成V1.2股权数据、展示图JSON、DOT和SVG",
+    )
+    action_group.add_argument(
+        "--build-financial",
+        metavar="SOURCE_ID",
+        help="执行下载、解析及跨期核验，并生成V2.1/V2.2财务分析产物",
     )
     action_group.add_argument(
         "--build-report",
@@ -296,6 +312,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="股权结构运行产物目录，默认 data/ownership",
     )
     parser.add_argument(
+        "--financial-dir",
+        default="data/financial",
+        help="财务分析运行产物目录，默认 data/financial",
+    )
+    parser.add_argument(
+        "--financial-comparison-source",
+        action="append",
+        metavar="SOURCE_ID",
+        help="可比年度官方年报来源，可重复；默认使用 S10（2024年报）",
+    )
+    parser.add_argument(
         "--ownership-dataset-output",
         help="可选的原始股权数据 JSON 输出路径",
     )
@@ -476,6 +503,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             or args.build_evidence
             or args.build_fundamentals
             or args.build_ownership
+            or args.build_financial
             or args.build_report
         )
     )
@@ -515,6 +543,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             or args.build_evidence
             or args.build_fundamentals
             or args.build_ownership
+            or args.build_financial
             or args.build_report
             or args.run_skill
             or args.run_agent
@@ -651,6 +680,60 @@ def main(argv: Optional[List[str]] = None) -> int:
                 print(json.dumps(output, ensure_ascii=False, indent=2))
                 return 7
 
+        if args.build_financial:
+            try:
+                comparison_inputs: List[FinancialSourceInput] = []
+                comparison_source_ids = args.financial_comparison_source or ["S10"]
+                for comparison_source_id in comparison_source_ids:
+                    if comparison_source_id == source.source_id:
+                        continue
+                    comparison_source = catalog.get(comparison_source_id)
+                    if comparison_source.entity_id not in (None, company.entity_id):
+                        raise FinancialBuildError(
+                            "comparison_source_entity_mismatch",
+                            f"可比来源 {comparison_source_id} 不属于 {company.ticker}",
+                        )
+                    comparison_download = OfficialPdfDownloader().download(
+                        comparison_source,
+                        Path(args.cache_dir),
+                        force=args.force_download,
+                    )
+                    comparison_extraction = extract_to_artifacts(
+                        comparison_download,
+                        Path(args.parsed_dir),
+                    )
+                    comparison_inputs.append(
+                        FinancialSourceInput(
+                            source=comparison_source,
+                            download=comparison_download,
+                            summary_path=comparison_extraction.summary_path,
+                            pages_path=comparison_extraction.pages_path,
+                        )
+                    )
+                financial_artifacts = build_financial_artifacts(
+                    identity=company,
+                    source=source,
+                    download=result,
+                    summary_path=artifacts.summary_path,
+                    pages_path=artifacts.pages_path,
+                    comparison_inputs=comparison_inputs,
+                    output_dir=Path(args.financial_dir),
+                )
+                output["financial"] = _as_dict(financial_artifacts)
+            except (
+                SourceNotFoundError,
+                DownloadError,
+                PdfExtractionError,
+                EvidenceBuildError,
+                FinancialBuildError,
+            ) as exc:
+                output["financial_error"] = {
+                    "code": getattr(exc, "code", "financial_build_failed"),
+                    "message": str(exc),
+                }
+                print(json.dumps(output, ensure_ascii=False, indent=2))
+                return 12
+
         if args.build_report:
             try:
                 report_artifacts = build_report_artifacts(
@@ -676,21 +759,47 @@ def main(argv: Optional[List[str]] = None) -> int:
                 return 10
 
         if args.run_skill:
-            trace_output = (
-                Path(args.skill_trace_output)
-                if args.skill_trace_output
-                else Path(args.ownership_dir)
-                / company.entity_id
-                / "skill_execution_trace.json"
-            )
             try:
                 assert project_root is not None
                 runtime = SkillRuntime(project_root)
-                skill_result = runtime.execute(
-                    task=args.run_skill,
-                    identity=company,
-                    source=source,
-                    tool_arguments={
+                selected_skill = SkillSelector(
+                    SkillRegistry(project_root)
+                ).select(args.run_skill).selected_skill
+                if selected_skill == "financial-analysis":
+                    comparison_inputs = []
+                    for comparison_source_id in (
+                        args.financial_comparison_source or ["S10"]
+                    ):
+                        if comparison_source_id == source.source_id:
+                            continue
+                        comparison_source = catalog.get(comparison_source_id)
+                        comparison_download = OfficialPdfDownloader().download(
+                            comparison_source,
+                            Path(args.cache_dir),
+                            force=args.force_download,
+                        )
+                        comparison_extraction = extract_to_artifacts(
+                            comparison_download,
+                            Path(args.parsed_dir),
+                        )
+                        comparison_inputs.append(
+                            FinancialSourceInput(
+                                source=comparison_source,
+                                download=comparison_download,
+                                summary_path=comparison_extraction.summary_path,
+                                pages_path=comparison_extraction.pages_path,
+                            )
+                        )
+                    tool_arguments = {
+                        "download": result,
+                        "summary_path": artifacts.summary_path,
+                        "pages_path": artifacts.pages_path,
+                        "comparison_inputs": comparison_inputs,
+                        "output_dir": Path(args.financial_dir),
+                    }
+                    default_trace_dir = Path(args.financial_dir)
+                else:
+                    tool_arguments = {
                         "download": result,
                         "summary_path": artifacts.summary_path,
                         "pages_path": artifacts.pages_path,
@@ -735,15 +844,40 @@ def main(argv: Optional[List[str]] = None) -> int:
                             if args.ownership_questions_output
                             else None
                         ),
-                    },
+                    }
+                    default_trace_dir = Path(args.ownership_dir)
+                trace_output = (
+                    Path(args.skill_trace_output)
+                    if args.skill_trace_output
+                    else default_trace_dir
+                    / company.entity_id
+                    / "skill_execution_trace.json"
+                )
+                skill_result = runtime.execute(
+                    task=args.run_skill,
+                    identity=company,
+                    source=source,
+                    tool_arguments=tool_arguments,
                     trace_output=trace_output,
                 )
                 output["skill_run"] = _as_dict(skill_result)
-            except SkillRuntimeError as exc:
+            except (
+                SkillRuntimeError,
+                SkillRegistryError,
+                SkillSelectionError,
+                SourceNotFoundError,
+                DownloadError,
+                PdfExtractionError,
+                FinancialBuildError,
+            ) as exc:
                 output["skill_error"] = {
-                    "code": exc.code,
+                    "code": getattr(exc, "code", "skill_execution_failed"),
                     "message": str(exc),
-                    "trace_path": str(exc.trace_path) if exc.trace_path else None,
+                    "trace_path": (
+                        str(exc.trace_path)
+                        if getattr(exc, "trace_path", None)
+                        else None
+                    ),
                 }
                 print(json.dumps(output, ensure_ascii=False, indent=2))
                 return 8

@@ -97,34 +97,48 @@ def test_runtime_selects_loads_and_calls_actual_registered_callable(
     assert saved["events"][4]["stage"] == "tool_called"
 
 
-def test_runtime_loads_but_does_not_execute_spec_only_financial_skill(
+def test_runtime_loads_and_executes_ready_financial_skill(
     tmp_path: Path,
 ) -> None:
     identity, source = _identity_and_source()
     trace_path = tmp_path / "financial_trace.json"
+    calls = []
+
+    def fake_financial_tool(**kwargs):
+        calls.append(kwargs)
+        result_path = tmp_path / "financial_facts.json"
+        citations_path = tmp_path / "financial_sources.json"
+        result_path.write_text("{}\n", encoding="utf-8")
+        citations_path.write_text("{}\n", encoding="utf-8")
+        return _FakeArtifacts(result_path=result_path, citations_path=citations_path)
+
     runtime = SkillRuntime(
         PROJECT_ROOT,
+        tools={
+            "financial-analysis": ToolRegistration(
+                name="build_financial_artifacts",
+                skill_name="financial-analysis",
+                executor=fake_financial_tool,
+            )
+        },
         clock=lambda: FIXED_TIME,
         trace_id_factory=lambda: "TR-TEST000002",
     )
 
-    with pytest.raises(SkillRuntimeError, match="仅有规范") as error:
-        runtime.execute(
-            task="分析财务报表和现金流",
-            identity=identity,
-            source=source,
-            tool_arguments={},
-            trace_output=trace_path,
-        )
+    result = runtime.execute(
+        task="分析财务报表和现金流",
+        identity=identity,
+        source=source,
+        tool_arguments={"input_marker": "financial-offline-test"},
+        trace_output=trace_path,
+    )
 
-    assert error.value.code == "skill_not_executable"
+    assert len(calls) == 1
+    assert result.tool_name == "build_financial_artifacts"
     saved = json.loads(trace_path.read_text(encoding="utf-8"))
-    assert saved["status"] == "failed"
+    assert saved["status"] == "succeeded"
     assert saved["selected_skill"] == "financial-analysis"
-    assert [item["stage"] for item in saved["events"]][-2:] == [
-        "skill_loaded",
-        "failed",
-    ]
+    assert saved["tool_name"] == "build_financial_artifacts"
 
 
 def test_runtime_rejects_mismatched_source_before_skill_selection(

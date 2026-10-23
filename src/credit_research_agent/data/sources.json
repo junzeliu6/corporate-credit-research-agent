@@ -53,6 +53,32 @@
     "trusted_tier": 1,
     "status": "registered",
     "notes": "用于核对公司公开介绍及投资者关系资料；具体事实仍需逐条登记来源。"
+  },
+  {
+    "source_id": "S10",
+    "entity_id": "CN-A-SZSE-002603",
+    "title": "石家庄以岭药业股份有限公司2024年年度报告",
+    "source_type": "annual_report",
+    "publisher": "巨潮资讯网（上市公司公告）",
+    "url": "https://static.cninfo.com.cn/finalpage/2025-04-29/1223376453.PDF",
+    "published_at": "2025-04-29",
+    "report_period": "FY2024",
+    "trusted_tier": 1,
+    "status": "registered",
+    "notes": "V2.1通过巨潮资讯官方检索真实发现的2024年年度报告全文；本记录不等于已下载或完成财务结构化。"
+  },
+  {
+    "source_id": "S11",
+    "entity_id": "CN-A-SZSE-002603",
+    "title": "石家庄以岭药业股份有限公司2023年年度报告",
+    "source_type": "annual_report",
+    "publisher": "巨潮资讯网（上市公司公告）",
+    "url": "https://static.cninfo.com.cn/finalpage/2024-04-27/1219858811.PDF",
+    "published_at": "2024-04-27",
+    "report_period": "FY2023",
+    "trusted_tier": 1,
+    "status": "registered",
+    "notes": "V2.1通过巨潮资讯官方检索真实发现的2023年年度报告全文；用于后续期初余额和跨报告口径复核。"
   }
 ]
 

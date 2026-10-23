@@ -28,10 +28,14 @@ def test_registry_only_contains_allowlisted_project_skills() -> None:
         "ownership-structure",
     ]
     ownership = next(item for item in registrations if item.name == "ownership-structure")
+    financial = next(item for item in registrations if item.name == "financial-analysis")
     assert ownership.runtime_status is SkillRuntimeStatus.READY
     assert ownership.tool_names == ["build_ownership_artifacts"]
     assert len(ownership.sha256) == 64
     assert ownership.relative_path == ".agents/skills/ownership-structure/SKILL.md"
+    assert financial.runtime_status is SkillRuntimeStatus.READY
+    assert financial.version == "2.2.0"
+    assert financial.tool_names == ["build_financial_artifacts"]
 
 
 def test_selector_routes_ownership_and_financial_tasks_deterministically() -> None:

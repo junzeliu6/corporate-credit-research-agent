@@ -16,6 +16,7 @@ from uuid import uuid4
 
 from pydantic.v1 import BaseModel, Field
 
+from credit_research_agent.financial import build_financial_artifacts
 from credit_research_agent.models import CompanyIdentity, SourceRecord
 from credit_research_agent.ownership import OwnershipArtifacts, build_ownership_artifacts
 from credit_research_agent.skills import (
@@ -147,7 +148,12 @@ class SkillRuntime:
                 name="build_ownership_artifacts",
                 skill_name="ownership-structure",
                 executor=build_ownership_artifacts,
-            )
+            ),
+            "financial-analysis": ToolRegistration(
+                name="build_financial_artifacts",
+                skill_name="financial-analysis",
+                executor=build_financial_artifacts,
+            ),
         }
         self._tools = dict(tools) if tools is not None else default_tools
 
@@ -263,6 +269,9 @@ class SkillRuntime:
                 "result_type": type(result).__name__,
                 "artifact_count": len(artifact_paths),
                 "render_engine": artifacts.get("render_engine"),
+                "fact_count": artifacts.get("fact_count"),
+                "metric_count": artifacts.get("metric_count"),
+                "risk_flag_count": artifacts.get("risk_flag_count"),
             }
             trace.status = SkillExecutionStatus.SUCCEEDED
             self._append(

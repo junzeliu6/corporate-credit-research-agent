@@ -109,9 +109,9 @@ APPROVED_SKILLS: Tuple[_ApprovedSkill, ...] = (
     _ApprovedSkill(
         name="financial-analysis",
         relative_path=".agents/skills/financial-analysis/SKILL.md",
-        version="0.1.0",
-        runtime_status=SkillRuntimeStatus.SPEC_ONLY,
-        tool_names=(),
+        version="2.2.0",
+        runtime_status=SkillRuntimeStatus.READY,
+        tool_names=("build_financial_artifacts",),
         keywords=(
             "财务",
             "报表",

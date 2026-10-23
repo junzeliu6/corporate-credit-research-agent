@@ -36,9 +36,9 @@
 - V1.5 Mock 测试必须证明 Agent 按顺序调用搜索、原文获取和证据提取，且不发送网络请求。搜索摘要不得直接成为事实；未核验第三方资料、冲突值、验证码页和疑似网页指令注入必须隔离。单任务默认最多10轮检索、10次搜索Tool/API请求、5条/次、20次抓取、20次提取、60次总Tool调用和70轮Agent，由Python分别计数并强制；第10轮允许、第11轮阻止。
 
 ## [ ] V2：财务与行业研究
-- [ ] **V2.1 可比财务事实层**：真实发现并登记 2024/2023 年官方年报，不猜测 URL；从 2024、2025 合并财务报表及附注提取三表数据，必要时使用 2023 期初余额。每个数据点保留原始科目、期间、币种、单位、合并/母公司口径、`source_id` 和页码；表格结构化结果必须回看原文核验。
-- [ ] **V2.2 财务确定性 Tools**：开发 `normalize_financial_items`、`validate_financial_facts`、`calculate_financial_metrics`、`rank_material_changes`。统一同比公式、精度和错误状态，禁止 LLM 徒手计算关键数值；Pandas 仅用于确定性数据处理。
-- [ ] **V2.3 `financial-analysis` 专业流程**：主 Agent 加载 Skill 后，按“金额 → 变化额/比例 → 已披露原因或待核实假设 → 合理性验证 → 授信关注/尽调问题”输出；再逐步增加 `extract_change_explanations`、`assess_reasonableness`、`generate_financial_section`。事实、支持性推断、未核实假设严格分层。
+- [x] **V2.1 可比财务事实层**：真实发现并登记 2024/2023 年官方年报，不猜测 URL；从 2024、2025 合并财务报表及附注提取三表数据，必要时使用 2023 期初余额。每个数据点保留原始科目、期间、币种、单位、合并/母公司口径、`source_id` 和页码；表格结构化结果必须回看原文核验。
+- [x] **V2.2 财务确定性 Tools**：开发 `normalize_financial_items`、`validate_financial_facts`、`calculate_financial_metrics`、`rank_material_changes`。统一同比公式、精度和错误状态，禁止 LLM 徒手计算关键数值；Pandas 仅用于确定性数据处理。
+- [ ] **V2.3 `financial-analysis` 专业流程**：确定性 Skill Runtime、六项标准产物和基础授信风险观察已可执行；主 LLM Agent 的 Function Tool 开放、附注原因抽取与原因合理性评价仍留在本阶段。完成后按“金额 → 变化额/比例 → 已披露原因或待核实假设 → 合理性验证 → 授信关注/尽调问题”输出；再逐步增加 `extract_change_explanations`、`assess_reasonableness`、`generate_financial_section`。事实、支持性推断、未核实假设严格分层。
 - [ ] **V2.4 行业与政策研究**：定向检索政府/监管一手来源，保留发布日期、实施状态、适用范围和企业影响的不确定性。
 - [ ] **V2.5 双 Skill 集成**：同一次研究任务按需加载两个 Skill，复用统一的主体、来源、证据和报告引用，生成股权图、财务分析、风险信号与确实缺失的尽调问题。
 
@@ -274,3 +274,13 @@
 - Tool预算耗尽不再抛弃已有成果：Runtime停止新增调用，Python保留所有合法Fact/Candidate，拒绝未经校验的模型文字，并确定性输出`success / partial_success / failed`状态及`web_research_report.md`。没有事实和候选时仍输出“资料不足”报告框架。
 - Tool载荷缩短为最多3个300字预览段落；证据提取只回传本次新增Fact/Candidate/Conflict，完整网页继续保存在本地并复用缓存。
 - V1.5专项测试50项，全量离线回归`196 passed in 13.21s`；示例产物位于`examples/v1_5_stability_offline/`。本轮未调用DeepSeek或百度API，等待用户确认下一次Live测试。
+
+### 2026-10-23 — V2.1/V2.2 可比财务事实与确定性 Tools 完成
+
+- 通过巨潮资讯官方披露真实登记S10（2024年报）和S11（2023年报），并完成PDF下载、SHA-256校验及逐页解析；S10为233页、S11为224页，均无提取失败。V2.1首版事实使用S01/S10形成FY2023—FY2025序列，S11保留为下一轮扩大独立复核的官方来源。
+- 新增`financial.py`和`financial_seeds.json`：继续使用`FactRecord`、`EvidenceRecord`、`SourceRecord`和物理页码精确文本锚点，共形成61条单来源财务事实，归一为46条同主体、同期间、同币种、同单位、合并口径事实；FY2024重复值在S01/S10之间自动交叉核对。
+- 实现`normalize_financial_items`、`validate_financial_facts`、`calculate_financial_metrics`、`rank_material_changes`以及基础比率/风险信号。同比统一使用`(本期-上期)/abs(上期)*100%`，金额使用`Decimal`；覆盖恰好20%、零基期、负值、正负切换、跨报告冲突及单位/口径冲突。
+- `financial-analysis`在确定性`SkillRuntime`中由`spec_only`升级为`ready`，白名单高层Tool为`build_financial_artifacts`；LLM主Agent仍未开放财务Function Tool，避免提前越过V2.3边界。
+- 真实以岭药业产物包含46条归一事实、30个逐年变动指标、12个基础比率及7个FY2025量化关注信号；FY2024/FY2025短期借款主表空白没有被擅自解释为零，而是进入明确待核查项。
+- 输出`financial_facts.json`、`financial_metrics.json`、`financial_analysis.md`、`financial_risk_flags.json`、`financial_sources.json`、`financial_questions.md`和额外校验文件；示例位于`examples/v2_financial/CN-A-SZSE-002603/`。
+- 财务核心定向测试16项通过，新增财务CLI测试后完整离线回归`206 passed in 11.48s`。本阶段未调用DeepSeek或百度API，没有新增付费调用。

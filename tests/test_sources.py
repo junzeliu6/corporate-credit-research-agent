@@ -42,7 +42,14 @@ def test_entity_catalog_contains_report_and_general_official_portals(
     catalog: SourceCatalog,
 ) -> None:
     sources = catalog.list_for_entity("CN-A-SZSE-002603")
-    assert {source.source_id for source in sources} == {"S01", "S02", "S03", "S04"}
+    assert {source.source_id for source in sources} == {
+        "S01",
+        "S02",
+        "S03",
+        "S04",
+        "S10",
+        "S11",
+    }
 
 
 def test_unknown_source_id_fails_explicitly(catalog: SourceCatalog) -> None:

@@ -10,6 +10,7 @@ from credit_research_agent.documents import DownloadResult, ExtractionArtifacts
 from credit_research_agent.downloader import DownloadError
 from credit_research_agent.evidence import EvidenceArtifacts, EvidenceBuildError
 from credit_research_agent.fundamentals import FundamentalArtifacts
+from credit_research_agent.financial import FinancialArtifacts
 from credit_research_agent.ownership import OwnershipArtifacts
 from credit_research_agent.pdf_parser import PdfExtractionError
 from credit_research_agent.reporting import (
@@ -432,6 +433,81 @@ def test_cli_build_ownership_runs_reused_document_pipeline(
     assert output["ownership"]["node_count"] == 5
     assert output["ownership"]["edge_count"] == 5
     assert output["ownership"]["render_engine"] == "internal-tree-fallback"
+
+
+def test_cli_build_financial_downloads_comparison_and_returns_artifacts(
+    tmp_path, monkeypatch, capsys
+) -> None:
+    downloaded = []
+
+    class FakeDownloader:
+        def download(self, source, destination_dir, *, force=False):
+            downloaded.append(source.source_id)
+            return DownloadResult(
+                source_id=source.source_id,
+                source_title=source.title,
+                source_url=str(source.url),
+                file_path=tmp_path / f"{source.source_id}.pdf",
+                manifest_path=tmp_path / f"{source.source_id}.metadata.json",
+                accessed_at=datetime(2026, 10, 23, tzinfo=timezone.utc),
+                final_url=str(source.url),
+                http_status=200,
+                bytes_written=1,
+                sha256="a" * 64,
+                from_cache=True,
+            )
+
+    def fake_extract(download, *args, **kwargs):
+        return ExtractionArtifacts(
+            source_id=download.source_id,
+            summary_path=tmp_path / "parsed" / download.source_id / "summary.json",
+            pages_path=tmp_path / "parsed" / download.source_id / "pages.jsonl",
+            sample_path=tmp_path / "parsed" / download.source_id / "sample.json",
+            total_pages=200,
+            pages_with_text=200,
+            failed_pages=0,
+        )
+
+    def fake_build(**kwargs):
+        assert kwargs["source"].source_id == "S01"
+        assert [item.source.source_id for item in kwargs["comparison_inputs"]] == [
+            "S10"
+        ]
+        return FinancialArtifacts(
+            entity_id="CN-A-SZSE-002603",
+            facts_path=tmp_path / "financial_facts.json",
+            metrics_path=tmp_path / "financial_metrics.json",
+            analysis_path=tmp_path / "financial_analysis.md",
+            risk_flags_path=tmp_path / "financial_risk_flags.json",
+            sources_path=tmp_path / "financial_sources.json",
+            questions_path=tmp_path / "financial_questions.md",
+            validation_path=tmp_path / "financial_validation.json",
+            fact_count=46,
+            metric_count=30,
+            ratio_count=12,
+            risk_flag_count=7,
+            material_change_count=18,
+        )
+
+    monkeypatch.setattr(cli, "OfficialPdfDownloader", FakeDownloader)
+    monkeypatch.setattr(cli, "extract_to_artifacts", fake_extract)
+    monkeypatch.setattr(cli, "build_financial_artifacts", fake_build)
+
+    exit_code = cli.main(
+        [
+            "002603.SZ",
+            "--build-financial",
+            "S01",
+            "--financial-comparison-source",
+            "S10",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert downloaded == ["S01", "S10"]
+    assert output["financial"]["fact_count"] == 46
+    assert output["financial"]["metric_count"] == 30
 
 
 def test_cli_run_skill_requires_explicit_source(capsys) -> None:

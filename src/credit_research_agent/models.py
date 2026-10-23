@@ -54,6 +54,7 @@ class ResearchModule(str, Enum):
     OPERATING_MODEL = "operating_model"
     MAIN_PRODUCTS = "main_products"
     OWNERSHIP_STRUCTURE = "ownership_structure"
+    FINANCIAL_ANALYSIS = "financial_analysis"
 
 
 class StatementType(str, Enum):

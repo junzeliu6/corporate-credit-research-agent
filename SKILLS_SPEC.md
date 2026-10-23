@@ -1,6 +1,6 @@
 # 企业授信研究Agent — 双 Skill 集成总规范（v5）
 
-> 本文件定义两个 Skill 的**系统级接口、里程碑及验收**；关于具体业务规则，优先以 `.agents/skills/ownership-structure/SKILL.md` 和 `.agents/skills/financial-analysis/SKILL.md` 为准。**V0.1—V0.4、V1.1—V1.2 与 V1.3A 已经本地代码与测试核验；V1.3B DeepSeek Agent Runtime 已完成离线验证并真实验证连接、Function Calling、Skill加载和Python Tool。ownership已具备统一事实目录、Fact/Missing ID、有证据分析Claim、Python确定性渲染和Runtime来源绑定；最新Live通过来源与Tool链路，但最终分析Claim因缺少对应控制关系Fact ID被拒绝。`financial-analysis` 已登记为 `spec_only`，其 Tools 尚未实现。**
+> 本文件定义两个 Skill 的**系统级接口、里程碑及验收**；关于具体业务规则，优先以 `.agents/skills/ownership-structure/SKILL.md` 和 `.agents/skills/financial-analysis/SKILL.md` 为准。**V0.1—V1.5既有能力保留；V2.1/V2.2已经真实年报、代码和测试核验。`financial-analysis`现已登记为确定性运行时`ready`，可调用`build_financial_artifacts`生成事实、指标、风险观察、来源和问题清单；V2.3之前仍不向LLM主Agent开放财务Function Tool。**
 
 ## 1. 架构边界
 
@@ -63,11 +63,11 @@
 5. `ownership` 与 `finance` 的工具返回结构化对象，主 Agent 负责生成七模块报告；遇到源数据不足可只输出部分章节和待核查问题。
 6. **集成验收**必须有运行日志或自动化测试证明加载哪一个 `SKILL.md`、何时使用何种工具以及得到何种校验结果；不将“文件放对路径”误当已运行。
 7. V1.3B 主 Agent 只注册 `run_ownership_research`；LLM可填写的Tool输入仅有已解析ticker。`source_id`及文件路径由Python Runtime从已验证应用上下文绑定；Runtime复核来源登记、主体和下载产物一致性，并拒绝模型提供来源覆盖字段。LLM无权执行Python、Shell或读写任意路径。
-8. 默认使用不会联网的Mock模型；Live DeepSeek必须显式选择、存在`DEEPSEEK_API_KEY`并再次确认。`financial-analysis`在V2完成前不得注册为LLM Tool。
+8. 默认使用不会联网的Mock模型；Live DeepSeek必须显式选择、存在`DEEPSEEK_API_KEY`并再次确认。`financial-analysis`已进入确定性Skill Runtime白名单，但在V2.3完成前不得注册为LLM Function Tool。
 9. Tool返回模型的内容应压缩为核实关系、控制关系、比例校验、来源、缺失信息和产物，不重复发送完整PDF文本。Python通过统一事实适配层复用现有`FactRecord`、`EvidenceRecord`、`SourceRecord`及股权边/控制关系ID，构造`response_contract`；企业披露事实、Python计算值、资料缺口、完整性校验规则和Skill展示阈值必须分型，阈值不得冒充企业持股事实。
 10. 模型最终响应选择Tool返回的Fact ID与Missing ID，并可提交逐条绑定支持ID的分析判断；不得直接填写企业比例、年份、来源编号、链接或新的主体事实。Python验证ID、核验事实的主体/期间/来源/状态，再确定性渲染具体事实与引用。支持性判断和风险信号必须引用可交付事实，尽调问题必须关联资料缺口；未核实网页候选不能作为确定性事实。原始模型候选响应、摘要、Tool参数、返回/选择的Fact ID与Missing ID、分析Claim ID、用量、可获得的`finish_reason`、拒绝句和规则编号写入脱敏本地轨迹。
 11. V1.5检索能力是Skill共享基础设施，而不是新的领域Skill。模型可调用`search_web`、`fetch_source`、`extract_evidence`，但只能读取当次搜索返回的URL，不能填写`source_id`或任意路径。Python生成`source_handle`和`Sxx`，经原文获取、主体/来源层级/定位校验后才将事实放入统一引用目录。
-12. `ownership-structure`可以用V1.5发现上层股东资料，但新来源只先进入证据/候选层；未通过股权主体、关系、基准日和100%完整性校验时，不自动并入正式股权图。`financial-analysis`仍保持`spec_only`。
+12. `ownership-structure`可以用V1.5发现上层股东资料，但新来源只先进入证据/候选层；未通过股权主体、关系、基准日和100%完整性校验时，不自动并入正式股权图。`financial-analysis`的V2.1/V2.2只接收已登记、已解析、可定位的官方年报事实，网络候选不得自动混入财务指标。
 
 ## 5. 状态与开发安排
 
@@ -79,7 +79,7 @@
 - **V1.3B：Fact-Grounded与来源绑定离线修复完成，Live部分验证**。DeepSeek配置、SDK Agent/Runner、Function Tool、Mock/Live隔离、轮次/Tool限制、Token使用、Agent轨迹及统一事实契约已建立；ownership场景已支持 Fact ID / Missing ID / 有证据分析 Claim。最新真实调用已验证模型只提交ticker、Runtime绑定来源和完整Tool链路，但分析Claim的控制关系引用仍被严格校验拒绝，不能声称完整端到端成功。
 - **V1.4：已完成**。确定性Markdown报告不依赖LLM成功也能交付基础章节。
 - **V1.5：离线实现完成，Live待验证**。已接入百度搜索Provider、通用检索Tools、来源/证据链、缓存和预算限制；尚未配置或调用真实百度搜索。首次Live只能在用户配置`BAIDU_SEARCH_API_KEY`并显式授权后进行；如同时使用DeepSeek，还需独立的`--confirm-live`。
-- **下一个动作**：受控验证百度搜索鉴权头、实际`references`字段和官网原文获取；通过后再评估是否将已核验外部事实汇入V1.4报告。`financial-analysis`继续保持`spec_only`。
-- 后续依次：财务三表与财务计算内核 → 财务 Skill → 双 Skill 集成 → 行业政策/报告界面与导出。
+- **V2.1/V2.2：已完成**。财务三表可比事实、跨报告一致性、确定性计算、基础风险信号和财务Skill Runtime已通过真实S01/S10集成验证。
+- **下一个动作**：进入V2.3，增量开发附注原因抽取、原因合理性评价和受控LLM财务Function Tool；不得绕过现有事实与计算校验。之后再做双Skill报告集成。
 - 每个阶段结束更新 `ROADMAP.md` 的开发日志和实测结果，简历只写已实现能力。
 

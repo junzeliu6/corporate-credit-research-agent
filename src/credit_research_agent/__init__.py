@@ -3,6 +3,15 @@
 from credit_research_agent.company import CompanyResolver
 from credit_research_agent.evidence import EvidenceBuilder
 from credit_research_agent.fundamentals import FundamentalsBuilder
+from credit_research_agent.financial import (
+    FinancialBuilder,
+    FinancialResearchBundle,
+    build_financial_artifacts,
+    calculate_change,
+    calculate_financial_metrics,
+    normalize_financial_items,
+    validate_financial_facts,
+)
 from credit_research_agent.grounding import (
     CitableFact,
     FactGroundingCatalog,
@@ -71,6 +80,8 @@ __all__ = [
     "EvidenceRecord",
     "FactRecord",
     "FactGroundingCatalog",
+    "FinancialBuilder",
+    "FinancialResearchBundle",
     "FundamentalResearchBundle",
     "FundamentalsBuilder",
     "InformationRetrievalRuntime",
@@ -106,11 +117,16 @@ __all__ = [
     "ValidatedAgentAnalysis",
     "assemble_report_artifacts",
     "build_report_artifacts",
+    "build_financial_artifacts",
     "build_ownership_graph",
     "build_evidence_bundle_grounding_catalog",
     "build_ownership_grounding_catalog",
     "validate_ownership_facts",
+    "calculate_change",
+    "calculate_financial_metrics",
+    "normalize_financial_items",
+    "validate_financial_facts",
 ]
 
-__version__ = "1.5.0"
+__version__ = "2.2.0"
 
