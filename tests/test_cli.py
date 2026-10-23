@@ -12,6 +12,11 @@ from credit_research_agent.evidence import EvidenceArtifacts, EvidenceBuildError
 from credit_research_agent.fundamentals import FundamentalArtifacts
 from credit_research_agent.ownership import OwnershipArtifacts
 from credit_research_agent.pdf_parser import PdfExtractionError
+from credit_research_agent.reporting import (
+    AnalysisValidationStatus,
+    ReportArtifacts,
+    ReportBuildError,
+)
 
 
 def test_cli_resolves_company_and_lists_registered_sources(capsys) -> None:
@@ -626,3 +631,126 @@ def test_cli_mock_agent_reuses_document_pipeline_and_runtime(
     assert output["agent_config"]["mode"] == "mock"
     assert output["agent_run"]["selected_skill"] == "ownership-structure"
     assert output["agent_run"]["tool_name"] == "build_ownership_artifacts"
+
+
+def test_cli_build_report_reuses_research_pipeline(
+    tmp_path, monkeypatch, capsys
+) -> None:
+    class FakeDownloader:
+        def download(self, source, destination_dir, *, force=False):
+            return DownloadResult(
+                source_id="S01",
+                source_title=source.title,
+                source_url=str(source.url),
+                file_path=tmp_path / "S01.pdf",
+                manifest_path=tmp_path / "S01.metadata.json",
+                accessed_at=datetime(2026, 10, 22, tzinfo=timezone.utc),
+                final_url=str(source.url),
+                http_status=200,
+                bytes_written=1,
+                sha256="a" * 64,
+                from_cache=True,
+            )
+
+    extraction = ExtractionArtifacts(
+        source_id="S01",
+        summary_path=tmp_path / "parsed" / "S01" / "summary.json",
+        pages_path=tmp_path / "parsed" / "S01" / "pages.jsonl",
+        sample_path=tmp_path / "parsed" / "S01" / "sample.json",
+        total_pages=229,
+        pages_with_text=229,
+        failed_pages=0,
+    )
+
+    def fake_build_report(**kwargs):
+        assert kwargs["identity"].ticker == "002603.SZ"
+        assert kwargs["source"].source_id == "S01"
+        assert kwargs["pages_path"] == extraction.pages_path
+        assert kwargs["fundamentals_dir"] == tmp_path / "fundamentals"
+        assert kwargs["ownership_dir"] == tmp_path / "ownership"
+        assert kwargs["report_dir"] == tmp_path / "reports"
+        assert kwargs["report_output"] == tmp_path / "report.md"
+        return ReportArtifacts(
+            entity_id="CN-A-SZSE-002603",
+            report_path=tmp_path / "report.md",
+            ownership_svg_path=tmp_path / "assets" / "ownership_structure.svg",
+            ownership_png_path=tmp_path / "assets" / "ownership_structure.png",
+            fundamentals_path=tmp_path / "fundamentals.json",
+            ownership_dataset_path=tmp_path / "ownership.json",
+            ownership_graph_path=tmp_path / "ownership_graph.json",
+            ownership_validation_path=tmp_path / "ownership_validation.json",
+            source_ids=["S01"],
+            fact_count=21,
+            missing_information_count=5,
+            analysis_status=AnalysisValidationStatus.NOT_RUN,
+        )
+
+    monkeypatch.setattr(cli, "OfficialPdfDownloader", FakeDownloader)
+    monkeypatch.setattr(cli, "extract_to_artifacts", lambda *args, **kwargs: extraction)
+    monkeypatch.setattr(cli, "build_report_artifacts", fake_build_report)
+
+    exit_code = cli.main(
+        [
+            "002603.SZ",
+            "--build-report",
+            "S01",
+            "--fundamentals-dir",
+            str(tmp_path / "fundamentals"),
+            "--ownership-dir",
+            str(tmp_path / "ownership"),
+            "--report-dir",
+            str(tmp_path / "reports"),
+            "--report-output",
+            str(tmp_path / "report.md"),
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert output["report"]["fact_count"] == 21
+    assert output["report"]["analysis_status"] == "not_run"
+    assert output["report"]["source_ids"] == ["S01"]
+
+
+def test_cli_report_failure_is_explicit(tmp_path, monkeypatch, capsys) -> None:
+    class FakeDownloader:
+        def download(self, source, destination_dir, *, force=False):
+            return DownloadResult(
+                source_id="S01",
+                source_title=source.title,
+                source_url=str(source.url),
+                file_path=tmp_path / "S01.pdf",
+                manifest_path=tmp_path / "S01.metadata.json",
+                accessed_at=datetime(2026, 10, 22, tzinfo=timezone.utc),
+                final_url=str(source.url),
+                http_status=200,
+                bytes_written=1,
+                sha256="a" * 64,
+                from_cache=True,
+            )
+
+    extraction = ExtractionArtifacts(
+        source_id="S01",
+        summary_path=tmp_path / "summary.json",
+        pages_path=tmp_path / "pages.jsonl",
+        sample_path=tmp_path / "sample.json",
+        total_pages=229,
+        pages_with_text=229,
+        failed_pages=0,
+    )
+
+    def failing_build_report(**kwargs):
+        raise ReportBuildError("report_entity_mismatch", "模拟主体不一致")
+
+    monkeypatch.setattr(cli, "OfficialPdfDownloader", FakeDownloader)
+    monkeypatch.setattr(cli, "extract_to_artifacts", lambda *args, **kwargs: extraction)
+    monkeypatch.setattr(cli, "build_report_artifacts", failing_build_report)
+
+    exit_code = cli.main(["002603.SZ", "--build-report", "S01"])
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 10
+    assert output["report_error"] == {
+        "code": "report_entity_mismatch",
+        "message": "模拟主体不一致",
+    }

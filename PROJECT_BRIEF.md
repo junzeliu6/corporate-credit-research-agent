@@ -1,6 +1,6 @@
 # 企业授信研究Agent — 上市公司公开信息驱动的企业授信研究 Agent
 
-> 版本：2026-10-22 / v5 需求基线（整合两份完整 Skill 规范）。状态：**V0.1—V0.4、V1.1、ownership-structure 的 V1.2 确定性 Tools、V1.3A Skill Runtime 及 V1.3B LLM Agent Runtime 的离线能力已经本地代码、真实年报产物和测试核验；V1.3B 已真实连接DeepSeek并完成Function Calling、Skill加载和Python Tool执行。ownership链路已升级为统一事实目录、Fact ID/Missing ID、有证据分析Claim、Python确定性渲染及Runtime来源绑定。最新Live已通过来源绑定和Tool链路，但最终分析Claim因缺少对应控制关系Fact ID被拒绝；V1.4暂未启动，financial-analysis Tools尚未开发**。
+> 版本：2026-10-23 / v5 需求基线 + V1.5 检索扩展。状态：**V0.1—V0.4、V1.1、ownership-structure 的 V1.2 确定性 Tools、V1.3A Skill Runtime 和 V1.4 Markdown报告已经本地代码、真实年报产物和测试核验；V1.3B 已真实连接DeepSeek并完成Function Calling、Skill加载和Python Tool执行，但最终分析Claim仍是Live部分验证。V1.5两次Live已验证DeepSeek自主搜索、百度真实结果、官网及第三方网页原文获取、来源登记和证据提取调用；最终稳定性修复现已离线解决S05/S06零Fact、S07验证码误判、预算终止和总Tool未限额问题，并能确定性生成部分成功/资料不足报告，等待后续受控Live验收。financial-analysis Tools尚未开发**。
 > 本版本替代此前“从用户上传 Excel 开始”的旧版范围定义。
 
 ## 项目命名约定
@@ -72,6 +72,7 @@
 - **明确开发两个可测试的 Agent Skills**：`ownership-structure`（逐层穿透、控制关系核验、股权图）和 `financial-analysis`（重大科目变化、原因合理性核查及授信分析）。正式操作规则分别见 `.agents/skills/ownership-structure/SKILL.md` 和 `.agents/skills/financial-analysis/SKILL.md`；整合要求见 `SKILLS_SPEC.md`。
 - Skill 是专业流程规范和可复用资源；绘图、计算和文件解析使用确定性 Python Tools。运行时 Agent 必须显式支持技能选择、加载和调用；V1.3A 已做到 Registry/Selector/Loader/Tool 的确定性调用，V1.3B 已把这一高层入口封装为受限 Function Tool，而未复制底层实现。不要误认为开发环境中的 Codex 自动发现 Skill，就代表应用运行时自动使用。
 - LLM 配置独立于业务代码，默认 Mock 模式。首个 Live Provider 使用 `DEEPSEEK_API_KEY`、`https://api.deepseek.com` 和 `deepseek-flash`；Live 必须显式选择并确认，密钥不得进入日志、Git 或 Codex 自身模型供应商配置。初期固定关闭 thinking，真实兼容性测试需单独授权。
+- V1.5将百度智能云官方“百度搜索”封装为通用`SearchProvider`。LLM只决定搜索主题和选择白名单Tool；Python负责搜索请求、URL安全、原文获取、缓存、`Sxx/Fxxx/Exxx`登记和后置校验。事实由Python映射为`verified / single_source / unverified / unsupported`：可信原始披露可直接核验，只有单一可读原文的事实带“待交叉核实”标签，未读搜索摘要只能进入候选区，无来源内容禁止输出。网页文字不是Agent指令，真实搜索和模型仍需分别显式开启并确认。
 - Tool返回LLM前由Python把现有 Fact/Evidence/Source 与股权结果适配成统一可引用事实目录，并构造`response_contract`。模型只选择可引用 Fact ID、Missing ID，并可提交逐条绑定证据的分析判断；具体比例、主体、期间和来源由Python渲染。模型不得自行加总，业务规则阈值不得冒充企业事实，最终文字还要经过确定性契约校验。
 - RAG/MCP 按需要引入，不为堆栈而堆栈。
 - 第一轮使用 CLI 即可，Streamlit 和 Word 导出留至主要功能跑通以后。

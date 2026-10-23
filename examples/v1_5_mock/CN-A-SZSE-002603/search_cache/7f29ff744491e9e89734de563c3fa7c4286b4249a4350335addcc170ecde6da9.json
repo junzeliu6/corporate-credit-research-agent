@@ -1,0 +1,30 @@
+{
+  "query": {
+    "query": "以岭药业 主营业务 主要产品 经营模式 官网",
+    "max_results": 5,
+    "domain_filter": [
+      "yiling.cn"
+    ],
+    "recency": null
+  },
+  "results": [
+    {
+      "result_id": "R001",
+      "title": "以岭药业V1.5离线Mock企业介绍",
+      "url": "https://www.yiling.cn/v1-5-offline-mock",
+      "snippet": "这是离线Mock搜索摘要，不能登记为企业事实。",
+      "source_domain": "www.yiling.cn",
+      "published_at": "2026-10-01T00:00:00+08:00",
+      "searched_at": "2026-10-23T01:30:58.788333Z",
+      "provider": "baidu",
+      "provider_reference_id": 1,
+      "authority_score": 0.99,
+      "rerank_score": 0.98,
+      "is_search_snippet": true
+    }
+  ],
+  "request_id": "MOCK-001",
+  "provider": "baidu",
+  "searched_at": "2026-10-23T01:30:58.788333Z",
+  "from_cache": false
+}

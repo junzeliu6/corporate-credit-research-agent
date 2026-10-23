@@ -24,6 +24,9 @@ class SourceType(str, Enum):
     DISCLOSURE_PORTAL = "disclosure_portal"
     EXCHANGE_WEBSITE = "exchange_website"
     COMPANY_WEBSITE = "company_website"
+    GOVERNMENT_WEBSITE = "government_website"
+    INDUSTRY_ASSOCIATION = "industry_association"
+    WEB_PAGE = "web_page"
 
 
 class SourceStatus(str, Enum):
@@ -63,12 +66,15 @@ class StatementType(str, Enum):
 
 class EvidenceStatus(str, Enum):
     VERIFIED = "verified"
+    SINGLE_SOURCE = "single_source"
     CONFLICTING = "conflicting"
     UNVERIFIED = "unverified"
+    UNSUPPORTED = "unsupported"
 
 
 class VerificationMethod(str, Enum):
     EXACT_TEXT_MATCH = "exact_text_match"
+    SEARCH_SNIPPET = "search_snippet"
 
 
 class CompanyIdentity(BaseModel):
@@ -161,7 +167,10 @@ class FactRecord(BaseModel):
     @validator("statement_type")
     def facts_must_be_disclosed(cls, value: StatementType) -> StatementType:
         if value is not StatementType.DISCLOSED_FACT:
-            raise ValueError("FactRecord 只保存年报披露事实，推断和缺失信息必须使用独立模型")
+            raise ValueError(
+                "FactRecord 只保存年报披露事实或其他有原文证据的披露事实，"
+                "推断和缺失信息必须使用独立模型"
+            )
         return value
 
 

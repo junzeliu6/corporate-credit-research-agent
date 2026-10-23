@@ -1,0 +1,21 @@
+{
+  "description": "V1.5离线Mock夹具，仅用于验证搜索、原文获取和证据链，不代表真实企业披露。",
+  "results": [
+    {
+      "title": "以岭药业V1.5离线Mock企业介绍",
+      "url": "https://www.yiling.cn/v1-5-offline-mock",
+      "snippet": "这是离线Mock搜索摘要，不能登记为企业事实。",
+      "published_at": "2026-10-01T00:00:00+08:00",
+      "provider_reference_id": 1,
+      "authority_score": 0.99,
+      "rerank_score": 0.98
+    }
+  ],
+  "pages": {
+    "https://www.yiling.cn/v1-5-offline-mock": {
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "body": "<html><head><title>以岭药业V1.5离线Mock企业介绍</title></head><body><p>【离线Mock夹具】石家庄以岭药业股份有限公司主营业务测试段落，仅用于验证证据链，不代表真实披露。</p><p>【离线Mock夹具】主要产品与经营模式测试段落不得写入真实授信报告。</p></body></html>"
+    }
+  }
+}

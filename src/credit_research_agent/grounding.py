@@ -20,14 +20,17 @@ from credit_research_agent.models import EvidenceBundle, EvidenceStatus
 class FactProvenance(str, Enum):
     DISCLOSED_FACT = "disclosed_fact"
     PYTHON_CALCULATION = "python_calculation"
+    EXTERNAL_FACT = "external_fact"
     VERIFIED_EXTERNAL_FACT = "verified_external_fact"
 
 
 class FactVerificationStatus(str, Enum):
     VERIFIED = "verified"
+    SINGLE_SOURCE = "single_source"
     CALCULATED = "calculated"
     UNVERIFIED = "unverified"
     CONFLICTING = "conflicting"
+    UNSUPPORTED = "unsupported"
 
 
 class AnalysisClaimType(str, Enum):
@@ -71,6 +74,7 @@ class CitableFact(BaseModel):
             raise ValueError("只有Python计算结果可以标记为calculated")
         if self.verification_status in {
             FactVerificationStatus.VERIFIED,
+            FactVerificationStatus.SINGLE_SOURCE,
             FactVerificationStatus.CALCULATED,
         } and self.source_id is None:
             raise ValueError("可引用事实必须关联source_id")
@@ -80,6 +84,7 @@ class CitableFact(BaseModel):
     def is_citable(self) -> bool:
         return self.verification_status in {
             FactVerificationStatus.VERIFIED,
+            FactVerificationStatus.SINGLE_SOURCE,
             FactVerificationStatus.CALCULATED,
         }
 
@@ -184,10 +189,23 @@ def build_evidence_bundle_grounding_catalog(
         statuses = {record.status for record in linked_evidence}
         if statuses == {EvidenceStatus.VERIFIED}:
             verification = FactVerificationStatus.VERIFIED
+        elif statuses and statuses.issubset(
+            {EvidenceStatus.VERIFIED, EvidenceStatus.SINGLE_SOURCE}
+        ):
+            verification = FactVerificationStatus.SINGLE_SOURCE
         elif EvidenceStatus.CONFLICTING in statuses:
             verification = FactVerificationStatus.CONFLICTING
+        elif EvidenceStatus.UNSUPPORTED in statuses:
+            verification = FactVerificationStatus.UNSUPPORTED
         else:
             verification = FactVerificationStatus.UNVERIFIED
+        provenance = FactProvenance.DISCLOSED_FACT
+        if bundle.schema_version.startswith("1.5"):
+            provenance = (
+                FactProvenance.VERIFIED_EXTERNAL_FACT
+                if verification is FactVerificationStatus.VERIFIED
+                else FactProvenance.EXTERNAL_FACT
+            )
         facts.append(
             CitableFact(
                 fact_id=item.fact_id,
@@ -202,7 +220,7 @@ def build_evidence_bundle_grounding_catalog(
                 source_location=_source_location(linked_evidence),
                 source_url=(str(source.url) if source else None),
                 evidence_ids=list(item.evidence_ids),
-                provenance=FactProvenance.DISCLOSED_FACT,
+                provenance=provenance,
                 verification_status=verification,
             )
         )

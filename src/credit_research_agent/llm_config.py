@@ -82,8 +82,8 @@ class DeepSeekLLMConfig(BaseModel):
     api_key_env: Literal["DEEPSEEK_API_KEY"] = DEEPSEEK_API_KEY_ENV
     api_key: Optional[SecretStr] = Field(default=None, exclude=True, repr=False)
     thinking: Literal["disabled"] = "disabled"
-    max_turns: int = Field(default=4, ge=2, le=8)
-    max_tool_calls: int = Field(default=1, ge=1, le=3)
+    max_turns: int = Field(default=4, ge=2, le=70)
+    max_tool_calls: int = Field(default=1, ge=1, le=60)
     # 该值限制每次模型响应的输出，不是整个Agent Loop的输入+输出总预算。
     max_output_tokens: int = Field(default=800, ge=128, le=5000)
     request_timeout_seconds: float = Field(default=30.0, gt=0, le=120)

@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .pytest_tmp*/
+bt/
 .mypy_cache/
 .ruff_cache/
 .coverage
@@ -27,6 +28,8 @@ data/evidence/
 data/fundamentals/
 data/ownership/
 data/parsed/
+data/reports/
+data/web_research/
 *.pdf
 
 # Editors and operating systems

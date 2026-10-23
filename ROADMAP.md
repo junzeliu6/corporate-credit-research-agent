@@ -1,6 +1,6 @@
 # 企业授信研究Agent — 公共信息研究 Agent 开发路线（v5：双 Skill 集成）
 
-> V0.1—V0.4、V1.1—V1.2、V1.3A 与 V1.3B 离线实现已由本地代码、真实年报产物和测试核验；`ownership-structure` 已接入白名单确定性 Skill Runtime 与 SDK Agent Loop。V1.3B 已真实验证DeepSeek连接和完整Tool链路；ownership离线实现已升级为统一事实目录、Fact ID/Missing ID、有证据分析Claim、Python渲染事实及Runtime来源绑定。最新Live已解决模型猜测source_id的问题，但最终分析Claim因控制关系Fact ID绑定不足被拒绝，V1.4 暂不启动。首个标的为`以岭药业 / 002603.SZ`，默认不上传资料。
+> V0.1—V0.4、V1.1—V1.2、V1.3A 与 V1.4 已由本地代码、真实年报产物和测试核验；`ownership-structure` 已接入白名单确定性 Skill Runtime 与 SDK Agent Loop。V1.3B 已真实验证DeepSeek连接和完整Tool链路，但最终分析Claim仍因控制关系Fact ID绑定不足被拒绝，因此保持“Live部分验证”。V1.4 已实现不依赖LLM成功的八章节Markdown报告。V1.5最终稳定性修复已通过离线验证：保存的S05/S06正文可形成带来源的单一来源事实，S07验证码页被排除，预算耗尽可降级生成确定性报告；等待用户确认下一次Live复测。
 
 ## [x] V0：上市公司数据入口与证据基础
 - [x] **V0.1** 建立项目骨架、最少依赖、README、实体识别/映射（`以岭药业`、`002603`、`002603.SZ`→`石家庄以岭药业股份有限公司 / 002603.SZ`）及官方来源种子目录；编写离线测试。首个种子为2025年年报（`https://static.cninfo.com.cn/finalpage/2026-04-28/1225205683.PDF`）；同时登记深交所、巨潮资讯和公司官网。V0.1不要求真实下载，也不需要立即写通用搜索引擎。
@@ -22,7 +22,8 @@
 - [x] **V1.2 `ownership-structure` 确定性内核**：定义股权节点、边、控制关系、基准日、核验状态及展示配置，并实现 `validate_ownership_facts`、`validate_ownership_percentages`、`aggregate_ownership_holders`、`build_ownership_graph`、`render_ownership_graph`。逐个被展开主体校验同一时点/股本口径的100%完整性；只有全部通过的 `formal_ready` 图才输出SVG/PNG。公开资料检索/下载/PDF读取继续复用 V0，不复制第二套管线。
 - [x] **V1.3A 确定性 Skill Runtime**：实现白名单 `SkillRegistry`（`name`、`description`、路径、版本/哈希）、按任务选择的 `SkillSelector`、只读 `SkillLoader` 及 `SkillExecutionTrace`。调用顺序固定为“解析主体 → 获取/校验来源 → 选择并加载 Skill → 调用确定性 Tools → 校验结构化结果 → 生成引用/文字”；真实S01集成测试已证明 `ownership-structure` 被选择、加载并实际调用 `build_ownership_artifacts`。本阶段没有LLM判断、Agent Loop 或付费 API 调用。
 - [ ] **V1.3B DeepSeek LLM Agent Runtime（Fact-Grounded离线修复完成，Live部分验证）**：使用 OpenAI Agents SDK 的 `Agent`、`Runner` 和受限 Function Tool 接入 DeepSeek OpenAI 兼容接口。默认 Mock 模式且禁止联网；Live 模式必须显式选择、存在 `DEEPSEEK_API_KEY` 并由用户确认。第一阶段只向模型开放 `ownership-structure` 高层 Tool，运行时真实经过 Registry、Loader 与现有确定性内核，并记录模型选择、Skill加载、Tool调用、比例校验、产物和Token使用轨迹。`thinking`固定为disabled。LLM仅填写ticker，Python绑定并验证source_id。最新Live已通过来源绑定、Skill与Tool链路，但最终分析Claim缺少对应控制关系Fact ID，完整验收仍未通过。
-- [ ] **V1.4 报告初稿**：Markdown 渲染正文`[S01]`引用、来源附录、股权图和待核查信息；数据不足时允许只输出局部结果和明确限制。
+- [x] **V1.4 报告初稿**：Markdown 渲染正文`[S01]`引用、来源附录、股权图和待核查信息；数据不足时允许只输出局部结果和明确限制。报告由Python确定性组装；可选LLM分析只有通过现有事实校验才纳入，未运行或被拒绝时自动降级为基础报告。
+- [x] **V1.5 基础信息检索（最终稳定性修复离线完成，Live部分验证）**：实现通用`SearchProvider`与百度官方Web Search Provider，注册`search_web`、`fetch_source`、`extract_evidence`三个白名单Tool。Python确定性映射`verified / single_source / unverified / unsupported`，单页读取失败、无效页面和预算耗尽均可降级并尽可能生成Markdown报告；搜索摘要不升级为事实。默认Mock且搜索API请求数为0；Live需`BAIDU_SEARCH_API_KEY`、`--search-mode live`与`--confirm-search-live`。
 
 **V1 验收测试**：
 
@@ -32,6 +33,7 @@
 - 以岭药业端到端案例只使用经核验披露，不将虚构 fixture 或未知比例写入真实图。
 - 运行日志或集成测试证明 `ownership-structure` 被选择、加载并调用了实际 Tool；只存在 `SKILL.md` 不算验收通过。
 - V1.3B Mock 测试不得产生任何外部 LLM 请求；Live 模式缺少密钥、缺少显式确认或超出轮次/Tool次数时必须安全终止。模型分析中的比例和来源编号必须能在 Tool 返回的结构化事实与证据中找到。
+- V1.5 Mock 测试必须证明 Agent 按顺序调用搜索、原文获取和证据提取，且不发送网络请求。搜索摘要不得直接成为事实；未核验第三方资料、冲突值、验证码页和疑似网页指令注入必须隔离。单任务默认最多10轮检索、10次搜索Tool/API请求、5条/次、20次抓取、20次提取、60次总Tool调用和70轮Agent，由Python分别计数并强制；第10轮允许、第11轮阻止。
 
 ## [ ] V2：财务与行业研究
 - [ ] **V2.1 可比财务事实层**：真实发现并登记 2024/2023 年官方年报，不猜测 URL；从 2024、2025 合并财务报表及附注提取三表数据，必要时使用 2023 期初余额。每个数据点保留原始科目、期间、币种、单位、合并/母公司口径、`source_id` 和页码；表格结构化结果必须回看原文核验。
@@ -230,3 +232,45 @@
 - 新增7项离线测试，覆盖不填写source_id、自动绑定S01、绑定其他合法来源、未登记、元数据不匹配、来源主体不匹配、下载来源不匹配以及模型覆盖拒绝；完整回归为`134 passed in 10.42s`。
 - 经用户授权执行一次Live：2次模型响应、1次Tool调用；模型只提交`ticker="002603.SZ"`，Runtime绑定`S01`，Skill加载、10个产物和两个分支比例校验均成功。
 - Live Usage为7,740 Input、971 Output、8,711 Total Tokens，远低于5000单次输出限制。最终A002使用“控股股东”表述但未绑定`CR001`控制关系Fact ID，被`ANALYSIS-CONTROL-001`拒绝；确定性产物全部保留。V1.3B继续保持Live部分验证，不启动V1.4。
+
+### 2026-10-22 — V1.4 初版Markdown报告完成
+
+- 新增`reporting.py`与`--build-report SOURCE_ID`：复用V1.1基本面构建器、V1.2股权构建器、V0来源/证据及PDF缓存，不复制抽取、来源或绘图管线。
+- 报告由Python确定性生成8个章节：企业基本信息、发展历史、主营业务与经营模式、主要产品、股权结构图、主要股东及控制关系、待核查事项、来源及引用附录。
+- 报告输入会复核主体、股权基准日、图与比例校验产物的一致性；正文事实经Evidence反查`[Sxx]`，来源附录汇总PDF页码、章节和原文URL。
+- 正式SVG/PNG复制至报告`assets/`并使用相对路径嵌入；图未达到`formal_ready`时仍输出局部报告，但不嵌入正式股权图。
+- LLM分析改为可选增强：只有成功通过Agent Runtime校验且带合法来源的正文可纳入；未运行或被拒绝时输出明确状态，基础报告继续交付，不关闭现有事实校验。
+- 真实以岭药业缓存生成`examples/v1_4_report/CN-A-SZSE-002603/credit_research_report.md`，包含21条基本面事实、5项明确缺失、S01来源附录和股权图；本次未调用DeepSeek。
+- V1.4专项报告/CLI/真实产物测试共11项；全量离线回归为`145 passed in 12.53s`。V1.3B的A002/`CR001`绑定问题保留为技术债，未标记为完整验收。
+
+### 2026-10-23 — V1.5 百度基础信息检索离线开发
+
+- 核对百度智能云官方接口：`POST https://qianfan.baidubce.com/v2/ai_search/web_search`，内部统一使用`query/max_results/domain_filter/recency`，映射为官方`messages`、`resource_type_filter`、`search_filter`和`search_recency_filter`。由于官方页面的接口定义与curl示例展示两种头名，程序默认`Authorization`，允许通过`BAIDU_SEARCH_AUTH_HEADER`显式选择，每次只发送一个鉴权头，不自动双发或降级重试。
+- 新增`search.py`、`web_sources.py`和`retrieval_runtime.py`：提供搜索Provider/缓存/预算，HTML/PDF获取、SSRF防护、重定向逐跳复核、原文分段，运行时`Sxx`绑定，证据/候选/冲突分型，以及SDK Agent的`search_web → fetch_source → extract_evidence`调用。
+- 网页事实继续使用`FactRecord`、`EvidenceRecord`和`SourceRecord`；统一引用目录将V1.5经核验网页事实标记为`verified_external_fact`。第三方页面、无主体匹配、无原文、冲突数值或疑似Prompt Injection不会进入可引用事实。
+- CLI新增`--run-web-research`与搜索预算/确认参数。离线Mock端到端轨迹记录三个Tool、Runtime绑定来源、Fact ID、Token和本地搜索计数；Mock的`search_api_requests=0`且本地费用估算为0。
+- 本阶段没有发送真实百度或DeepSeek请求。定向V1.5测试为`40 passed in 4.15s`；全量离线回归为`185 passed in 11.29s`。
+
+### 2026-10-23 — V1.5 可信度分层与部分成功策略
+
+- 首次Live完成2次DeepSeek响应和2次百度搜索，百度返回5个真实候选；同花顺页面成功获取109,364字节并解析35个段落，另一候选页面返回403，导致旧逻辑在`extract_evidence`前整体终止。
+- `EvidenceStatus`和统一事实目录增量支持`single_source`与`unsupported`：可信官方原始披露保持`verified`；主体匹配的单一第三方原文可形成Fact，但报告必须标注“单一来源，待交叉核实”；未读取原文的搜索摘要只保存为`unverified` Candidate；无来源内容继续拒绝。
+- `fetch_source`对403/404、超时及其他受控读取失败不再终止Agent，而是标记来源失败、保存候选及错误码并引导模型继续；存在失败来源、单一来源、候选或冲突时，运行状态为`partial_success`。
+- V1.4报告器新增可选V1.5证据输入和确定性分层章节；冲突来源并列展示，不自动选择。示例见`examples/v1_5_partial_report/credibility_tier_report.md`。
+- 可信度分层与部分成功改造阶段仅进行离线开发与Mock测试，没有调用DeepSeek或百度API；V1.5定向测试为`43 passed in 4.29s`，含V1.4报告集成的定向测试为`52 passed in 4.40s`，全量离线回归为`189 passed in 11.00s`。
+
+### 2026-10-23 — V1.5 可信度分层后的受控Live复测
+
+- 经用户明确授权只执行一次：DeepSeek 4次模型请求，18,475 Input、902 Output、19,377 Total Tokens；百度3次真实搜索，本地估算0.108元。
+- 模型自主调用三个检索Tool；Python抓取并登记S04—S07共4份HTML（含以岭药业官网），并对S05、S06调用证据提取，但没有生成Fact。
+- 模型随后尝试第4次搜索，超过`max_supplemental_rounds=2`边界；Python以`supplemental_search_limit_exceeded`停止，没有自动重试，也没有生成最终分析或报告。
+- 复测暴露检索Runtime尚未执行通用`--max-tool-calls`总上限，以及验证码页可能被当作普通正文登记的问题。V1.5继续标记为Live部分验证，后续应先离线修复预算一致性、无效正文识别和证据提取召回，再由用户决定是否复测。
+
+### 2026-10-23 — V1.5 最终稳定性离线修复
+
+- 段落召回从少量精确词升级为确定性的研究主题同义词评分，覆盖“核心业务、业务布局、营业收入、产品群、药物、销售模式、营销模式、学术推广”等表达；保存的S05、S06正文离线重放后分别形成5条`single_source`事实。
+- 新增验证码、登录限制、Access Denied、反爬URL及正文标记检测。保存的S07被识别为`access_restricted_content`，不登记为有效正文，只保留带原搜索来源的`unverified`候选。
+- 搜索轮次、搜索Tool调用、真实API请求、抓取、证据提取、总Function Tool及Agent轮次分别计数；默认上限为10/10/10/20/20/60/70。显式`--max-tool-calls`现在是V1.5总Tool硬上限，旧`--max-supplemental-searches`保留兼容语义。
+- Tool预算耗尽不再抛弃已有成果：Runtime停止新增调用，Python保留所有合法Fact/Candidate，拒绝未经校验的模型文字，并确定性输出`success / partial_success / failed`状态及`web_research_report.md`。没有事实和候选时仍输出“资料不足”报告框架。
+- Tool载荷缩短为最多3个300字预览段落；证据提取只回传本次新增Fact/Candidate/Conflict，完整网页继续保存在本地并复用缓存。
+- V1.5专项测试50项，全量离线回归`196 passed in 13.21s`；示例产物位于`examples/v1_5_stability_offline/`。本轮未调用DeepSeek或百度API，等待用户确认下一次Live测试。

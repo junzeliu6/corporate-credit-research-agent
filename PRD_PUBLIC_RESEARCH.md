@@ -51,6 +51,11 @@
 | U19 | 20%财务重点分析 | 1000→1200恰好20%须分析；<20%但现金流重大异常仍须分析 |
 | U20 | 财务合理性评价 | 区分公司已披露原因、支持性分析和未核实假设；分析收入/应收/现金流一致性 |
 | U21 | 非公开银行资料缺失 | 不臆造具体存款银行、贷款银行、交易明细或客户银行流水 |
+| U22 | 通用搜索Tool | DeepSeek可按任务选择`search_web`；请求经预算约束且候选摘要不直接转为事实 |
+| U23 | 网页/PDF原文获取 | 只读取搜索返回的公网URL，阻断本机/内网/云元数据及危险重定向；HTML保留段落，PDF保留页码 |
+| U24 | 检索证据链 | Python绑定`source_id`并判定可信度；可信原始披露为`verified`，单一可读原文可标记`single_source`进入报告，未读摘要为`unverified`候选，冲突值并列展示，无来源`unsupported`内容不得输出 |
+| U26 | 部分成功 | 单个网页403/404、超时或正文不足不得终止整项研究；保留成功来源与失败候选，并以`PARTIAL_SUCCESS`生成带状态标识的局部报告 |
+| U25 | 联网安全与费用保护 | Mock永不联网；百度搜索与DeepSeek Live分别需密钥、模式开关和显式确认，运行时强制次数/条数/抓取预算 |
 
 ## 5. 最小数据模型（建议 Pydantic）
 - `CompanyIdentity`: legal_name, alias, ticker, exchange, country_of_incorporation, entity_scope, resolved_at, evidence_ids.

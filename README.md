@@ -2,7 +2,7 @@
 
 企业授信研究Agent（Corporate Credit Research Agent）是一个面向银行对公场景的学习型项目：从上市公司公开披露出发，逐步构建可追溯的企业研究辅助 Agent。
 
-当前代码版本是 **V1.3B：DeepSeek LLM Agent Runtime**；需求基线为 **v5**。V1.3A 已完成白名单 Skill 注册、选择、只读加载、真实 Tool 调用及追踪；V1.3B 使用 OpenAI Agents SDK 建立 Mock/Live 隔离的单 Agent Loop，并只向模型开放现有 `ownership-structure` 高层 Tool。`financial-analysis` 仍为 `spec_only`，V1.4 暂未启动。本项目不是授信审批系统，不给出授信额度、贷款定价或具有审批效力的结论。
+当前代码版本是 **V1.5：基础信息检索（百度搜索 API）**；需求基线为 **v5**。V1.5 在 V1.4 确定性 Markdown 报告之上增加通用搜索、HTML/PDF原文获取、运行时来源登记、证据提取和 Agent Tool Calling。两次Live已验证DeepSeek自主搜索、百度真实结果、官网及第三方网页原文获取、来源登记和证据提取调用；第二次复测因模型尝试超过允许轮数的补充检索而被Python预算边界停止，仍未生成最终分析。当前已离线加入事实可信度分层及`PARTIAL_SUCCESS`容错，不能把Live状态描述为完整成功。V1.3B 的 A002 控制关系 Fact ID 绑定仍是待办，`financial-analysis` 仍为 `spec_only`。本项目不是授信审批系统，不给出授信额度、贷款定价或具有审批效力的结论。
 
 ## V0.1—V0.4 已实现
 
@@ -79,7 +79,29 @@
 - 领域数据模型暂通过 Pydantic 2 提供的 `pydantic.v1` 兼容命名空间保持 V0—V1.3A 语义；V1.3B 配置与 Tool 输入使用 Pydantic 2。
 - 已完成离线 Mock、错误参数、Runtime来源绑定/覆盖拒绝、轮次/Tool 限制、密钥安全、无网络、Fact ID/证据关联、CLI 与真实 S01 缓存集成测试。最新Live已证明模型只提交`ticker`、Runtime绑定`S01`并完成完整Tool链路；最终A002分析Claim提到控股股东但未绑定控制关系Fact ID，被严格校验器拒绝，因此Live状态仍是“部分验证”。
 
-当前仍未实现完整报告渲染、财务字段结构化、财务分析、RAG、MCP 或 Streamlit。这些能力按 `ROADMAP.md` 分阶段引入。
+## V1.4 已实现
+
+- 新增 `reporting.py`，读取并重新校验 `FundamentalResearchBundle`、`OwnershipDataset`、`OwnershipGraph` 和逐分支比例校验结果，不复制事实抽取、股权分析或绘图逻辑。
+- 使用 Python 确定性生成企业基本信息、发展历史、主营业务与经营模式、主要产品、股权图、主要股东与控制关系、待核查事项、来源附录八个章节。
+- 正文事实通过 Evidence 反查来源并生成 `[Sxx]`；附录合并来源元数据、PDF页码、章节定位和原文 URL。
+- 将已通过校验的 SVG/PNG 复制到报告 `assets/`，使用相对路径嵌入 Markdown；非 `formal_ready` 图降级为明确说明，不伪装成正式图。
+- LLM 分析采用独立交付状态：只有已通过 Agent Runtime 校验且含合法 `[Sxx]` 的正文可加入报告；未运行或被拒绝时仍生成基础报告，并显示状态和原因。
+- CLI 新增 `--build-report S01`；以岭药业真实缓存端到端生成21条基本面事实、5项缺失信息和S01来源附录，全量离线回归为145项。
+
+## V1.5 已实现（最终稳定性修复已离线验证，Live待复测）
+
+- 新增通用`SearchProvider`契约和百度官方Web Search Provider，把内部`query/max_results/domain_filter/recency`映射到百度官方请求字段，并将`references`转换为统一搜索结果。
+- 新增`search_web`、`fetch_source`和`extract_evidence`三个 Agents SDK 白名单Tool。模型可决定搜索词和选择来源，不能填写`source_id`、执行Shell或读取任意路径。
+- HTML保留可定位段落，PDF复用V0解析器并保留物理页码；下载缓存、超时、大小、重定向和内网/本机/云元数据地址由Python限制。
+- 运行时从已搜索URL确定性生成`source_handle`和`Sxx`，复用`SourceRecord`、`EvidenceRecord`、`FactRecord`和`FactGroundingCatalog`。事实状态由Python判定：官方原始披露为`verified`，单一可读第三方原文为`single_source`，未读取原文的搜索线索为`unverified`，无来源内容为`unsupported`。
+- `single_source`可进入报告但必须标注“单一来源，待交叉核实”；搜索摘要只能以“某来源称”的候选形式展示，冲突来源并列保留，`unsupported`不得进入正文。疑似Prompt Injection继续隔离。
+- 单个网页403/404、超时或正文不足会记录失败来源和未核验Candidate，并允许Agent继续读取其他来源。存在失败来源、单一来源、候选或冲突时，运行结果标记为`partial_success`而不是整体失败。
+- 中文段落召回使用研究主题及同义表达（如核心业务、产品群、营业收入、营销模式和学术推广）；验证码、登录墙、Access Denied与反爬占位页不会登记为有效正文。
+- 单任务默认最多10轮检索、10次`search_web`、10次真实搜索API请求、5条/次、20次抓取、20次证据提取、60次总Function Tool调用和70个Agent轮次。所有限制由Python计数；第10轮允许、第11轮拒绝。预算耗尽后停止新增工具，使用已有Fact/Candidate生成确定性局部报告。
+- 完整网页保存在本地；Tool只返回受限摘要、相关段落、Fact/Candidate ID和来源信息，重复查询与网页复用缓存。
+- 默认LLM和搜索都是Mock；两者Live必须分别选择、配置密钥和显式确认。日常测试不会发送真实百度或DeepSeek请求；已获用户逐次授权的Live验收另行记录。
+
+当前仍未实现财务字段结构化、财务分析、多来源行业政策研究、RAG、MCP 或 Streamlit。这些能力按 `ROADMAP.md` 分阶段引入。
 
 ## v5 文档与 Skill 规范
 
@@ -116,7 +138,11 @@ corporate-credit-research-agent/
 │  ├─ skill_runtime.py       # V1.3A确定性Tool Calling与执行追踪
 │  ├─ llm_config.py          # V1.3B DeepSeek配置、密钥与SDK模型设置
 │  ├─ agent_runtime.py       # V1.3B主Agent、Function Tool、限制和执行追踪
+│  ├─ reporting.py           # V1.4确定性Markdown报告组装与LLM降级
 │  ├─ grounding.py           # 统一可引用事实视图与既有证据/股权结果适配
+│  ├─ search.py              # V1.5百度SearchProvider、缓存、预算与错误映射
+│  ├─ web_sources.py         # V1.5安全HTML/PDF获取、运行时来源与证据登记
+│  ├─ retrieval_runtime.py   # V1.5 Agent检索Tools、事实选择和执行轨迹
 │  ├─ pdf_parser.py          # 逐页提取、质量摘要和章节定位
 │  └─ cli.py                 # 企业识别、来源处理和Skill运行入口
 ├─ examples/
@@ -136,12 +162,15 @@ corporate-credit-research-agent/
 │  ├─ ownership_questions.md
 │  ├─ ownership_citations.md
 │  ├─ V1.3_skill_execution_trace.json # 真实S01 Skill执行追踪
-│  └─ v1_3_runtime/          # V1.3真实Tool调用的独立制品
+│  ├─ v1_3_runtime/          # V1.3真实Tool调用的独立制品
+│  ├─ v1_4_report/           # V1.4确定性Markdown报告样例
+│  └─ v1_5_mock/             # V1.5离线检索轨迹与证据链样例
 ├─ tests/
 │  ├─ integration/test_yiling_fundamentals.py
 │  ├─ integration/test_yiling_ownership.py
 │  ├─ integration/test_yiling_skill_runtime.py
 │  ├─ integration/test_yiling_agent_runtime.py
+│  ├─ integration/test_yiling_report.py
 │  ├─ test_company.py
 │  ├─ test_sources.py
 │  ├─ test_downloader.py
@@ -152,11 +181,18 @@ corporate-credit-research-agent/
 │  ├─ test_skill_runtime.py
 │  ├─ test_llm_config.py
 │  ├─ test_agent_runtime.py
+│  ├─ test_reporting.py
+│  ├─ test_search.py
+│  ├─ test_web_sources.py
+│  ├─ test_retrieval_runtime.py
+│  ├─ test_cli_v15.py
 │  └─ test_cli.py
 ├─ .env.example
 ├─ pyproject.toml
 ├─ SKILLS_SPEC.md
 ├─ V0_AUDIT.md
+├─ V1_4_STATUS.md
+├─ V1_5_STATUS.md
 └─ ROADMAP.md
 ```
 
@@ -256,6 +292,55 @@ python -m credit_research_agent "002603.SZ" --build-ownership S01 `
 ```
 
 `ownership.json` 保存未经聚合和裁剪的披露事实；`ownership_graph.json` 保存按展示规则生成的节点/边。SVG 同目录会生成同名 PNG 和 DOT。若系统安装了 Graphviz 且 `dot` 在 `PATH` 中，`render_engine` 为 `graphviz-dot`；否则输出 `internal-tree-fallback`，不会把降级渲染误报为 Graphviz。
+
+生成 V1.4 初版 Markdown 授信研究报告（默认不调用 LLM）：
+
+```powershell
+python -m credit_research_agent "002603.SZ" `
+  --build-report S01 `
+  --fundamentals-dir "examples/v1_4_report/research/fundamentals" `
+  --ownership-dir "examples/v1_4_report/research/ownership" `
+  --report-dir "examples/v1_4_report" `
+  --report-output "examples/v1_4_report/CN-A-SZSE-002603/credit_research_report.md"
+```
+
+该入口复用下载缓存和逐页解析，重新执行 V1.1/V1.2 的确定性构建器后再组装报告。股权图复制到报告目录的 `assets/`；若可选 LLM 分析未执行或未通过事实校验，基本报告仍正常生成，不会写入被拒绝的候选文字。
+
+运行 V1.5 完全离线 Mock 检索（不需要任何 API Key，不联网）：
+
+```powershell
+python -m credit_research_agent "002603.SZ" `
+  --run-web-research "请搜索以岭药业的官方网站及其他可信公开资料，补充其主营业务、主要产品和经营模式信息，并提供来源。" `
+  --llm-mode mock `
+  --search-mode mock `
+  --web-research-dir "data/web_research"
+```
+
+Mock fixture 仅验证`search_web → fetch_source → extract_evidence → Fact ID选择 → Python渲染`链路，所有内容都明确标注为测试数据，不是以岭药业的真实外部披露。
+
+配置真实百度搜索时，在已被 Git 忽略的`.env`中填写：
+
+```dotenv
+SEARCH_PROVIDER=baidu
+BAIDU_SEARCH_API_KEY=your_baidu_search_api_key_here
+BAIDU_SEARCH_BASE_URL=https://qianfan.baidubce.com/v2/ai_search/web_search
+BAIDU_SEARCH_AUTH_HEADER=Authorization
+```
+
+先省略`--confirm-search-live`检查脱敏配置并确认程序停止。首次受控 Live 验收同时使用 DeepSeek 和百度搜索，因此需两个独立确认参数：
+
+```powershell
+python -m credit_research_agent "002603.SZ" `
+  --run-web-research "请搜索以岭药业的官方网站及其他可信公开资料，补充其主营业务、主要产品和经营模式信息，并提供来源。" `
+  --llm-mode live --confirm-live `
+  --search-mode live --confirm-search-live `
+  --max-agent-turns 70 --max-tool-calls 60 `
+  --max-search-rounds 10 --max-search-calls 10 `
+  --max-search-requests 10 --max-search-results 5 `
+  --max-source-fetches 20 --max-extract-calls 20
+```
+
+官方页面的接口定义与curl示例对鉴权头的展示不一致：程序默认按接口定义使用`Authorization: Bearer ...`；只有当百度控制台/在线调试对当前应用明确给出`X-Appbuilder-Authorization`时，才修改`BAIDU_SEARCH_AUTH_HEADER`。程序每次只发送一个鉴权头，不会双发或自动放宽后重试。
 
 通过 V1.3 运行时执行同一项任务：
 
@@ -365,6 +450,10 @@ Skill 白名单和 Tool 权限属于应用安全边界，应当可测试、可�
 
 Agent Loop、参数校验、Skill加载和 Tool 结果回传都可以离线验证，不应以付费 API 可用性作为日常测试前提。Mock 使用 Agents SDK 自带的脚本模型，验证的仍是同一个 Runner 与 Function Tool 边界；Live 只替换模型实现。二者不能等同：DeepSeek 对 Tool Calling、`thinking` 关闭参数、Token usage 与错误响应的真实兼容性仍需创建密钥后做一次受控测试。
 
+### 为什么搜索、获取原文和登记证据要分成三个 Tool
+
+搜索API返回的标题和摘要只能用来发现候选来源，不能证明网页真正披露了某项企业事实。V1.5 因此要求模型先搜索，再由Python从已返回URL获取原文，最后按主体、来源层级和原文定位登记证据。若原文无法获取，摘要可作为`unverified`候选保留，但不得升级为Fact；只有一份可核对原文时可形成`single_source` Fact并带限制标识。这个分层让搜索服务可替换，同时保留V0已建立的来源和Fact ID契约。
+
 100%完整性同样按原始数据逐个被持股主体计算。只有同一基准日、同一股本口径且存在人工核验声明时，展示层才允许用差额生成“其他未单列股东”；否则分支保持 `incomplete`，正式绘图器拒绝输出。LLM 不参与比例加总。
 
 控制权不是持股比例的同义词。持股边、表决权边、控股股东、实际控制人、一致行动和最终控制方分别建模；只有正式披露支持的控制关系才会进入图数据。
@@ -455,7 +544,7 @@ Agent Loop、参数校验、Skill加载和 Tool 结果回传都可以离线验�
 - 默认模式：Mock，无密钥可运行，不创建DeepSeek/OpenAI网络客户端
 - Agent链路：模型选择 `run_ownership_research` → Registry/Loader加载 `ownership-structure` → V1.2 Tool构建与比例校验 → 统一事实目录与压缩契约返回模型 → 模型选择Fact/Missing ID并提交有依据Claim → Python渲染并做来源、主体、期间和比例语义校验
 - 真实S01缓存集成：成功生成SVG/PNG，最终说明包含31.53%及`[S01]`，Agent和Skill各自留下独立轨迹
-- Live：已真实验证DeepSeek连接、两轮响应、Function Calling、Skill加载、Python Tool、比例校验和Graphviz产物；最近一次5000输出Token复测使用4,086 Input、851 Output、4,937 Total Tokens，最终回答因Tool白名单中不存在的`5%`被拒绝，兼容性状态仍为“部分验证”
+- Live：已真实验证DeepSeek连接、两轮响应、Function Calling、Skill加载、Python Tool、比例校验和Graphviz产物；最近一次复测使用7,740 Input、971 Output、8,711 Total Tokens，最终A002分析Claim因缺少控制关系Fact ID `CR001`被拒绝，兼容性状态仍为“部分验证”
 
 ## 数据与合规边界
 
@@ -475,12 +564,15 @@ V1.3A注册/选择/加载/运行时/CLI：10项
 V1.3A真实S01运行时集成：1项（本机运行产物不存在时明确跳过）
 V1.3B配置/密钥/Mock Agent/限制/证据/CLI、Runtime来源绑定、Brotli传输预检、5000 Token边界、统一事实目录及Fact-Grounded契约：50项
 V1.3B真实S01 Mock Agent集成：1项（本机运行产物不存在时明确跳过）
-本次本机目标合计：134项（最终结果以 `V1_3B_STATUS.md` 的实测记录为准）
+V1.4报告组装/降级/来源与主体校验/CLI及可信度分层：11项
+V1.4真实S01报告集成：1项（仓库内已核验研究产物不存在时明确跳过）
+V1.5百度Provider/缓存/预算、HTML/PDF获取、来源证据、部分成功、Mock Agent/Tool/CLI与安全边界：50项
+本次本机合计：196项（最终结果以 `V1_5_STATUS.md` 的实测记录为准）
 ```
 
-网络请求使用离线假响应测试，因此日常 `pytest` 不依赖巨潮资讯是否可访问。
+网络请求使用离线假响应测试，因此日常 `pytest` 不依赖巨潮资讯、百度搜索或 DeepSeek 是否可访问。
 
 ## 下一阶段
 
-V1.3B已完成ownership场景的Fact-Grounded及Runtime来源绑定修复：模型只填写ticker，Python绑定来源；模型再选择Fact/Missing ID并提交逐条绑定依据的分析Claim，Python渲染具体事实与引用。全量离线测试134项通过。最新Live的来源绑定和完整Tool链路成功，但A002控制关系表述缺少控制关系Fact ID，被`ANALYSIS-CONTROL-001`正确拒绝；本次971个输出Token远低于5000上限，不是Token问题。V1.3B仍未完整验收，不能启动V1.4。详见 `ROADMAP.md`。
+V1.5 已通过196项离线回归，其中50项直接覆盖检索、原文获取、同义段落召回、验证码排除、证据链、可信度分层、部分成功、分项/总Tool预算和确定性Markdown兜底。保存的Live正文已离线重放：S05、S06各形成5条`single_source`事实，S07只保留`unverified`候选。下一步仅在用户重新授权后进行一次受控Live复测。V1.3B的A002/`CR001`问题继续列为技术债；本阶段不开放`financial-analysis` Skill。
 

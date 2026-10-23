@@ -30,6 +30,30 @@ from credit_research_agent.ownership import (
     build_ownership_graph,
     validate_ownership_facts,
 )
+from credit_research_agent.reporting import (
+    AnalysisValidationStatus,
+    MarkdownReportBuilder,
+    ReportArtifacts,
+    ValidatedAgentAnalysis,
+    assemble_report_artifacts,
+    build_report_artifacts,
+)
+from credit_research_agent.retrieval_runtime import (
+    InformationRetrievalRuntime,
+    RetrievalExecutionTrace,
+    RetrievalRunResult,
+)
+from credit_research_agent.search import (
+    BaiduSearchConfig,
+    BaiduSearchProvider,
+    SearchBudget,
+    SearchMode,
+    SearchProvider,
+    SearchQuery,
+    SearchRecency,
+    SearchResponse,
+    SearchResult,
+)
 from credit_research_agent.sources import SourceCatalog
 from credit_research_agent.skill_runtime import (
     SkillExecutionTrace,
@@ -41,6 +65,7 @@ __all__ = [
     "CompanyIdentity",
     "CompanyResolver",
     "CitableFact",
+    "AnalysisValidationStatus",
     "EvidenceBuilder",
     "EvidenceBundle",
     "EvidenceRecord",
@@ -48,14 +73,28 @@ __all__ = [
     "FactGroundingCatalog",
     "FundamentalResearchBundle",
     "FundamentalsBuilder",
+    "InformationRetrievalRuntime",
     "GroundedAnalysisClaim",
     "GroundedMissingInformation",
     "MissingInformation",
     "ModelInference",
+    "MarkdownReportBuilder",
     "OwnershipBuilder",
     "OwnershipDataset",
     "OwnershipGraph",
     "ResearchModule",
+    "ReportArtifacts",
+    "RetrievalExecutionTrace",
+    "RetrievalRunResult",
+    "BaiduSearchConfig",
+    "BaiduSearchProvider",
+    "SearchBudget",
+    "SearchMode",
+    "SearchProvider",
+    "SearchQuery",
+    "SearchRecency",
+    "SearchResponse",
+    "SearchResult",
     "SkillExecutionTrace",
     "SkillLoader",
     "SkillRegistry",
@@ -64,11 +103,14 @@ __all__ = [
     "SourceCatalog",
     "SourceRecord",
     "StatementType",
+    "ValidatedAgentAnalysis",
+    "assemble_report_artifacts",
+    "build_report_artifacts",
     "build_ownership_graph",
     "build_evidence_bundle_grounding_catalog",
     "build_ownership_grounding_catalog",
     "validate_ownership_facts",
 ]
 
-__version__ = "1.3.5"
+__version__ = "1.5.0"
 

@@ -23,7 +23,20 @@ from credit_research_agent.ownership import (
     build_ownership_artifacts,
 )
 from credit_research_agent.pdf_parser import PdfExtractionError, extract_to_artifacts
+from credit_research_agent.reporting import ReportBuildError, build_report_artifacts
 from credit_research_agent.llm_config import AgentMode, LLMConfigError, load_deepseek_config
+from credit_research_agent.retrieval_runtime import (
+    InformationRetrievalRuntime,
+    RetrievalRuntimeError,
+    build_mock_retrieval_dependencies,
+    load_search_fixture,
+)
+from credit_research_agent.search import (
+    SearchBudget,
+    SearchError,
+    SearchMode,
+    load_baidu_search_config,
+)
 from credit_research_agent.skill_runtime import SkillRuntime, SkillRuntimeError
 from credit_research_agent.sources import SourceCatalog, SourceNotFoundError
 
@@ -66,7 +79,7 @@ def _find_project_root() -> Path:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="credit-research-agent",
-        description="企业授信研究Agent V1.3B：确定性Skill Runtime与受控DeepSeek Agent Loop。",
+        description="企业授信研究Agent V1.5：结构化研究、受控Agent与可追溯公开资料检索。",
     )
     parser.add_argument("company", help="上市公司名称、证券代码或带交易所后缀的代码")
     parser.add_argument(
@@ -101,6 +114,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="执行下载、解析，并生成V1.2股权数据、展示图JSON、DOT和SVG",
     )
     action_group.add_argument(
+        "--build-report",
+        metavar="SOURCE_ID",
+        help="执行下载、解析及V1.1/V1.2研究，并生成V1.4 Markdown报告",
+    )
+    action_group.add_argument(
         "--run-skill",
         metavar="TASK",
         help="按任务选择并运行白名单 Skill；V1.3 当前可执行股权结构任务",
@@ -109,6 +127,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--run-agent",
         metavar="TASK",
         help="运行V1.3B主Agent；默认Mock，仅开放ownership-structure",
+    )
+    action_group.add_argument(
+        "--run-web-research",
+        metavar="TASK",
+        help="运行V1.5基础信息检索Agent；默认LLM与百度搜索均为Mock",
     )
     parser.add_argument(
         "--skill-source",
@@ -136,6 +159,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="确认发送一次受限的真实DeepSeek请求；没有此参数绝不调用Live模型",
     )
     parser.add_argument(
+        "--search-mode",
+        choices=[item.value for item in SearchMode],
+        default=SearchMode.MOCK.value,
+        help="百度搜索运行模式，默认mock；live可能消耗免费额度或产生费用",
+    )
+    parser.add_argument(
+        "--confirm-search-live",
+        action="store_true",
+        help="确认发送受限的真实百度搜索请求；没有此参数绝不调用百度API",
+    )
+    parser.add_argument(
+        "--search-fixture",
+        help="可选的V1.5离线Mock fixture JSON；默认使用包内明确标记的测试夹具",
+    )
+    parser.add_argument(
         "--env-file",
         help="可选的本地.env路径；默认读取项目根目录/.env",
     )
@@ -146,20 +184,70 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--max-agent-turns",
         type=int,
-        default=4,
-        help="Agent最大模型轮次，默认4，允许2—8",
+        default=None,
+        help="显式限制Agent最大模型轮次，允许2—70；V1.3默认4，V1.5默认70",
     )
     parser.add_argument(
         "--max-tool-calls",
         type=int,
-        default=1,
-        help="单次Agent运行最大Tool调用次数，默认1，允许1—3",
+        default=None,
+        help="显式限制全部Function Tool总调用次数，允许1—60；V1.3默认1，V1.5默认60",
     )
     parser.add_argument(
         "--max-output-tokens",
         type=int,
         default=800,
         help="单次模型响应最大输出Token，默认800、上限5000；不是Agent总Token预算",
+    )
+    parser.add_argument(
+        "--max-search-rounds",
+        type=int,
+        default=10,
+        help="V1.5最多检索轮次；同一模型响应内并行搜索计一轮，默认10",
+    )
+    parser.add_argument(
+        "--max-search-calls",
+        type=int,
+        default=10,
+        help="V1.5最多search_web Function Tool调用次数，默认10",
+    )
+    parser.add_argument(
+        "--max-search-requests",
+        type=int,
+        default=10,
+        help="单次任务最多真实百度搜索API请求数，默认10；缓存命中不计费请求",
+    )
+    parser.add_argument(
+        "--max-search-results",
+        type=int,
+        default=5,
+        help="每次搜索最多结果数，默认5",
+    )
+    parser.add_argument(
+        "--max-source-fetches",
+        "--max-fetch-calls",
+        dest="max_source_fetches",
+        type=int,
+        default=20,
+        help="单次任务最多调用fetch_source次数，默认20",
+    )
+    parser.add_argument(
+        "--max-extract-calls",
+        type=int,
+        default=20,
+        help="单次任务最多调用extract_evidence次数，默认20",
+    )
+    parser.add_argument(
+        "--max-total-tool-calls",
+        type=int,
+        default=60,
+        help="V1.5全部Function Tool总预算，默认60；显式--max-tool-calls优先",
+    )
+    parser.add_argument(
+        "--max-supplemental-searches",
+        type=int,
+        default=None,
+        help="兼容参数：显式设置首轮后最多补充搜索调用数；建议改用--max-search-rounds",
     )
     parser.add_argument(
         "--cache-dir",
@@ -235,6 +323,24 @@ def build_parser() -> argparse.ArgumentParser:
         "--ownership-questions-output",
         help="可选的股权结构待核查事项 Markdown 输出路径",
     )
+    parser.add_argument(
+        "--report-dir",
+        default="data/reports",
+        help="Markdown报告运行产物目录，默认 data/reports",
+    )
+    parser.add_argument(
+        "--report-output",
+        help="可选的Markdown报告输出路径",
+    )
+    parser.add_argument(
+        "--web-research-dir",
+        default="data/web_research",
+        help="V1.5搜索缓存、网页原文、来源和证据产物目录",
+    )
+    parser.add_argument(
+        "--retrieval-trace-output",
+        help="可选的V1.5 RetrievalExecutionTrace JSON输出路径",
+    )
     return parser
 
 
@@ -284,7 +390,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 9
 
     project_root: Optional[Path] = None
-    if args.run_skill or args.run_agent:
+    if args.run_skill or args.run_agent or args.run_web_research:
         try:
             project_root = _find_project_root()
         except RuntimeError as exc:
@@ -295,15 +401,15 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(json.dumps(output, ensure_ascii=False, indent=2))
             return 9
     llm_config = None
-    if args.run_agent:
+    if args.run_agent or args.run_web_research:
         assert project_root is not None
         try:
             llm_config = load_deepseek_config(
                 project_root,
                 mode=args.llm_mode,
                 env_file=Path(args.env_file) if args.env_file else None,
-                max_turns=args.max_agent_turns,
-                max_tool_calls=args.max_tool_calls,
+                max_turns=args.max_agent_turns or 4,
+                max_tool_calls=args.max_tool_calls or 1,
                 max_output_tokens=args.max_output_tokens,
             )
             output["agent_config"] = llm_config.sanitized_summary()
@@ -328,6 +434,39 @@ def main(argv: Optional[List[str]] = None) -> int:
                 }
                 print(json.dumps(output, ensure_ascii=False, indent=2))
                 return 9
+    search_config = None
+    if args.run_web_research:
+        assert project_root is not None
+        try:
+            search_config = load_baidu_search_config(
+                project_root,
+                mode=args.search_mode,
+                env_file=Path(args.env_file) if args.env_file else None,
+            )
+            output["search_config"] = search_config.sanitized_summary()
+        except SearchError as exc:
+            output["retrieval_error"] = {"code": exc.code, "message": str(exc)}
+            print(json.dumps(output, ensure_ascii=False, indent=2))
+            return 11
+        if search_config.mode is SearchMode.LIVE:
+            print(
+                json.dumps(
+                    {"live_search_preview": search_config.sanitized_summary()},
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                file=sys.stderr,
+            )
+            if not args.confirm_search_live:
+                output["retrieval_error"] = {
+                    "code": "live_search_confirmation_required",
+                    "message": (
+                        "百度搜索Live配置已显示；如确认消耗额度，请重新执行并加入"
+                        " --confirm-search-live"
+                    ),
+                }
+                print(json.dumps(output, ensure_ascii=False, indent=2))
+                return 11
     requested_source_id = (
         (args.skill_source if args.run_skill else args.agent_source)
         if (args.run_skill or args.run_agent)
@@ -337,6 +476,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             or args.build_evidence
             or args.build_fundamentals
             or args.build_ownership
+            or args.build_report
         )
     )
     if args.sources or requested_source_id:
@@ -375,6 +515,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             or args.build_evidence
             or args.build_fundamentals
             or args.build_ownership
+            or args.build_report
             or args.run_skill
             or args.run_agent
         ):
@@ -509,6 +650,30 @@ def main(argv: Optional[List[str]] = None) -> int:
                 }
                 print(json.dumps(output, ensure_ascii=False, indent=2))
                 return 7
+
+        if args.build_report:
+            try:
+                report_artifacts = build_report_artifacts(
+                    identity=company,
+                    source=source,
+                    download=result,
+                    summary_path=artifacts.summary_path,
+                    pages_path=artifacts.pages_path,
+                    fundamentals_dir=Path(args.fundamentals_dir),
+                    ownership_dir=Path(args.ownership_dir),
+                    report_dir=Path(args.report_dir),
+                    report_output=(
+                        Path(args.report_output) if args.report_output else None
+                    ),
+                )
+                output["report"] = _as_dict(report_artifacts)
+            except (EvidenceBuildError, OwnershipBuildError, ReportBuildError) as exc:
+                output["report_error"] = {
+                    "code": getattr(exc, "code", "report_build_failed"),
+                    "message": str(exc),
+                }
+                print(json.dumps(output, ensure_ascii=False, indent=2))
+                return 10
 
         if args.run_skill:
             trace_output = (
@@ -664,6 +829,96 @@ def main(argv: Optional[List[str]] = None) -> int:
                 }
                 print(json.dumps(output, ensure_ascii=False, indent=2))
                 return 9
+
+    if args.run_web_research:
+        assert project_root is not None and llm_config is not None and search_config is not None
+        retrieval_dir = Path(args.web_research_dir) / company.entity_id
+        trace_output = (
+            Path(args.retrieval_trace_output)
+            if args.retrieval_trace_output
+            else retrieval_dir / "retrieval_execution_trace.json"
+        )
+        provider_override = None
+        fetcher_override = None
+        if search_config.mode is SearchMode.MOCK:
+            try:
+                fixture = load_search_fixture(
+                    Path(args.search_fixture) if args.search_fixture else None
+                )
+                provider_override, fetcher_override = build_mock_retrieval_dependencies(
+                    fixture
+                )
+            except (OSError, ValueError, json.JSONDecodeError) as exc:
+                output["retrieval_error"] = {
+                    "code": "invalid_search_fixture",
+                    "message": str(exc),
+                }
+                print(json.dumps(output, ensure_ascii=False, indent=2))
+                return 11
+        used_fact_ids: List[str] = []
+        used_evidence_ids: List[str] = []
+        fundamentals_path = (
+            Path(args.fundamentals_dir) / company.entity_id / "fundamentals.json"
+        )
+        if fundamentals_path.is_file():
+            try:
+                fundamentals = json.loads(fundamentals_path.read_text(encoding="utf-8"))
+                used_fact_ids = [
+                    str(item["fact_id"])
+                    for item in fundamentals.get("facts", [])
+                    if item.get("fact_id")
+                ]
+                used_evidence_ids = [
+                    str(item["evidence_id"])
+                    for item in fundamentals.get("evidence", [])
+                    if item.get("evidence_id")
+                ]
+            except (OSError, ValueError, json.JSONDecodeError):
+                # 既有产物损坏时不静默复用；由Runtime使用独立ID空间继续并在输出说明。
+                output["retrieval_warning"] = "既有fundamentals.json无法读取，未复用其ID"
+        try:
+            budget = SearchBudget(
+                max_search_rounds=args.max_search_rounds,
+                max_search_calls=args.max_search_calls,
+                max_search_requests=args.max_search_requests,
+                max_results_per_request=args.max_search_results,
+                max_fetches=args.max_source_fetches,
+                max_extractions=args.max_extract_calls,
+                max_total_tool_calls=(
+                    args.max_tool_calls
+                    if args.max_tool_calls is not None
+                    else args.max_total_tool_calls
+                ),
+                max_agent_turns=args.max_agent_turns or 70,
+                max_supplemental_rounds=args.max_supplemental_searches,
+            )
+            runtime = InformationRetrievalRuntime(
+                project_root,
+                llm_config,
+                search_config,
+                search_provider_override=provider_override,
+                source_fetcher_override=fetcher_override,
+            )
+            retrieval_result = runtime.run_sync(
+                task=args.run_web_research,
+                identity=company,
+                output_dir=retrieval_dir,
+                trace_output=trace_output,
+                confirmed_llm_live=args.confirm_live,
+                confirmed_search_live=args.confirm_search_live,
+                budget=budget,
+                used_fact_ids=used_fact_ids,
+                used_evidence_ids=used_evidence_ids,
+            )
+            output["web_research"] = _as_dict(retrieval_result)
+        except (RetrievalRuntimeError, SearchError) as exc:
+            output["retrieval_error"] = {
+                "code": getattr(exc, "code", "retrieval_failed"),
+                "message": str(exc),
+                "trace_path": str(getattr(exc, "trace_path", "") or "") or None,
+            }
+            print(json.dumps(output, ensure_ascii=False, indent=2))
+            return 11
 
     print(json.dumps(output, ensure_ascii=False, indent=2))
     return 0

@@ -66,6 +66,8 @@
 8. 默认使用不会联网的Mock模型；Live DeepSeek必须显式选择、存在`DEEPSEEK_API_KEY`并再次确认。`financial-analysis`在V2完成前不得注册为LLM Tool。
 9. Tool返回模型的内容应压缩为核实关系、控制关系、比例校验、来源、缺失信息和产物，不重复发送完整PDF文本。Python通过统一事实适配层复用现有`FactRecord`、`EvidenceRecord`、`SourceRecord`及股权边/控制关系ID，构造`response_contract`；企业披露事实、Python计算值、资料缺口、完整性校验规则和Skill展示阈值必须分型，阈值不得冒充企业持股事实。
 10. 模型最终响应选择Tool返回的Fact ID与Missing ID，并可提交逐条绑定支持ID的分析判断；不得直接填写企业比例、年份、来源编号、链接或新的主体事实。Python验证ID、核验事实的主体/期间/来源/状态，再确定性渲染具体事实与引用。支持性判断和风险信号必须引用可交付事实，尽调问题必须关联资料缺口；未核实网页候选不能作为确定性事实。原始模型候选响应、摘要、Tool参数、返回/选择的Fact ID与Missing ID、分析Claim ID、用量、可获得的`finish_reason`、拒绝句和规则编号写入脱敏本地轨迹。
+11. V1.5检索能力是Skill共享基础设施，而不是新的领域Skill。模型可调用`search_web`、`fetch_source`、`extract_evidence`，但只能读取当次搜索返回的URL，不能填写`source_id`或任意路径。Python生成`source_handle`和`Sxx`，经原文获取、主体/来源层级/定位校验后才将事实放入统一引用目录。
+12. `ownership-structure`可以用V1.5发现上层股东资料，但新来源只先进入证据/候选层；未通过股权主体、关系、基准日和100%完整性校验时，不自动并入正式股权图。`financial-analysis`仍保持`spec_only`。
 
 ## 5. 状态与开发安排
 
@@ -75,7 +77,9 @@
 - **V1.2：已核验完成并完成绘图/比例校验优化**。已复用 V1.1 的主体、来源、证据和缺失信息接口，新增股权节点/边/控制关系模型，以及结构校验、逐分支100%校验、聚合、图构建、DOT/Graphviz优先SVG+PNG渲染 Tools；本机无 `dot` 时显式使用内部树状SVG/PNG降级。
 - **V1.3A：已核验完成**。白名单注册、确定性任务选择、只读加载、Tool 白名单及执行追踪已实现；真实S01集成运行证明 `ownership-structure` 被选择、加载并调用现有 `build_ownership_artifacts`，10个制品均经运行时检查。
 - **V1.3B：Fact-Grounded与来源绑定离线修复完成，Live部分验证**。DeepSeek配置、SDK Agent/Runner、Function Tool、Mock/Live隔离、轮次/Tool限制、Token使用、Agent轨迹及统一事实契约已建立；ownership场景已支持 Fact ID / Missing ID / 有证据分析 Claim。最新真实调用已验证模型只提交ticker、Runtime绑定来源和完整Tool链路，但分析Claim的控制关系引用仍被严格校验拒绝，不能声称完整端到端成功。
-- **下一个动作：受控Live最终复测**。再次取得用户明确授权后，以非思考模式执行一次测试；通过事实契约校验后再启动V1.4报告初稿。`financial-analysis`继续保持`spec_only`。
+- **V1.4：已完成**。确定性Markdown报告不依赖LLM成功也能交付基础章节。
+- **V1.5：离线实现完成，Live待验证**。已接入百度搜索Provider、通用检索Tools、来源/证据链、缓存和预算限制；尚未配置或调用真实百度搜索。首次Live只能在用户配置`BAIDU_SEARCH_API_KEY`并显式授权后进行；如同时使用DeepSeek，还需独立的`--confirm-live`。
+- **下一个动作**：受控验证百度搜索鉴权头、实际`references`字段和官网原文获取；通过后再评估是否将已核验外部事实汇入V1.4报告。`financial-analysis`继续保持`spec_only`。
 - 后续依次：财务三表与财务计算内核 → 财务 Skill → 双 Skill 集成 → 行业政策/报告界面与导出。
 - 每个阶段结束更新 `ROADMAP.md` 的开发日志和实测结果，简历只写已实现能力。
 
