@@ -1,0 +1,284 @@
+{
+  "schema_version": "2.5.0",
+  "identity": {
+    "entity_id": "CN-A-SZSE-002603",
+    "legal_name": "石家庄以岭药业股份有限公司",
+    "english_name": "Shijiazhuang Yiling Pharmaceutical Co., Ltd.",
+    "short_name": "以岭药业",
+    "ticker": "002603.SZ",
+    "security_code": "002603",
+    "exchange": "深圳证券交易所",
+    "country_of_incorporation": "中国",
+    "entity_scope": "consolidated",
+    "evidence_ids": []
+  },
+  "official_sources": [
+    {
+      "source_id": "S01",
+      "entity_id": "CN-A-SZSE-002603",
+      "title": "石家庄以岭药业股份有限公司2025年年度报告",
+      "source_type": "annual_report",
+      "publisher": "巨潮资讯网（上市公司公告）",
+      "url": "https://static.cninfo.com.cn/finalpage/2026-04-28/1225205683.PDF",
+      "published_at": "2026-04-28",
+      "report_period": "FY2025",
+      "trusted_tier": 1,
+      "status": "registered",
+      "accessed_at": null,
+      "local_path": null,
+      "page_or_section": null,
+      "notes": "人工核实的官方披露种子；静态目录不代表每台运行环境都已下载或解析，实际状态以本地清单为准。",
+      "runtime_status": "parsed",
+      "download": {
+        "file_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\data\\cache\\S01.pdf",
+        "manifest_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\data\\cache\\S01.metadata.json",
+        "final_url": "https://static.cninfo.com.cn/finalpage/2026-04-28/1225205683.PDF",
+        "accessed_at": "2026-10-21T07:15:24.742995+00:00",
+        "content_type": "application/pdf",
+        "bytes_written": 1561343,
+        "sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+        "from_cache": true
+      },
+      "extraction": {
+        "summary_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\data\\parsed\\S01\\summary.json",
+        "pages_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\data\\parsed\\S01\\pages.jsonl"
+      }
+    },
+    {
+      "source_id": "S10",
+      "entity_id": "CN-A-SZSE-002603",
+      "title": "石家庄以岭药业股份有限公司2024年年度报告",
+      "source_type": "annual_report",
+      "publisher": "巨潮资讯网（上市公司公告）",
+      "url": "https://static.cninfo.com.cn/finalpage/2025-04-29/1223376453.PDF",
+      "published_at": "2025-04-29",
+      "report_period": "FY2024",
+      "trusted_tier": 1,
+      "status": "registered",
+      "accessed_at": null,
+      "local_path": null,
+      "page_or_section": null,
+      "notes": "V2.1通过巨潮资讯官方检索真实发现的2024年年度报告全文；本记录不等于已下载或完成财务结构化。",
+      "runtime_status": "parsed",
+      "download": {
+        "file_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\data\\cache\\S10.pdf",
+        "manifest_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\data\\cache\\S10.metadata.json",
+        "final_url": "https://static.cninfo.com.cn/finalpage/2025-04-29/1223376453.PDF",
+        "accessed_at": "2026-10-23T04:54:56.309255+00:00",
+        "content_type": "application/pdf",
+        "bytes_written": 4931259,
+        "sha256": "74965f8ce5a493ae687d9353a1e0be510c528d26b4ef75f8f9c718f477e9d752",
+        "from_cache": true
+      },
+      "extraction": {
+        "summary_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\data\\parsed\\S10\\summary.json",
+        "pages_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\data\\parsed\\S10\\pages.jsonl"
+      }
+    }
+  ],
+  "web_sources": [
+    {
+      "source_id": "S05",
+      "entity_id": "CN-A-SZSE-002603",
+      "title": "以岭药业V2.4离线Mock业务资料",
+      "source_type": "company_website",
+      "publisher": "石家庄以岭药业股份有限公司",
+      "url": "https://www.yiling.cn/v2-4-industry-mock",
+      "published_at": "2026-10-01",
+      "report_period": null,
+      "trusted_tier": 1,
+      "status": "parsed",
+      "accessed_at": "2026-10-23 13:16:39.475222+00:00",
+      "local_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\sources\\S05\\source.html",
+      "page_or_section": "网页段落Pxxx",
+      "notes": "由V1.5百度搜索发现；搜索摘要不作为已验证事实。"
+    },
+    {
+      "source_id": "S06",
+      "entity_id": "CN-A-SZSE-002603",
+      "title": "中医药行业政策V2.4离线Mock原文",
+      "source_type": "government_website",
+      "publisher": "www.gov.cn",
+      "url": "https://www.gov.cn/zhengce/v2-4-policy-mock",
+      "published_at": "2026-09-20",
+      "report_period": null,
+      "trusted_tier": 1,
+      "status": "parsed",
+      "accessed_at": "2026-10-23 13:16:39.485315+00:00",
+      "local_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\sources\\S06\\source.html",
+      "page_or_section": "网页段落Pxxx",
+      "notes": "由V1.5百度搜索发现；搜索摘要不作为已验证事实。"
+    },
+    {
+      "source_id": "S07",
+      "entity_id": "CN-A-SZSE-002603",
+      "title": "中药行业趋势V2.4离线Mock资料",
+      "source_type": "web_page",
+      "publisher": "industry.example.org.cn",
+      "url": "https://industry.example.org.cn/v2-4-trend-mock",
+      "published_at": "2026-09-15",
+      "report_period": null,
+      "trusted_tier": 3,
+      "status": "parsed",
+      "accessed_at": "2026-10-23 13:16:39.497163+00:00",
+      "local_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\sources\\S07\\source.html",
+      "page_or_section": "网页段落Pxxx",
+      "notes": "由V1.5百度搜索发现；搜索摘要不作为已验证事实。"
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "E801",
+      "source_id": "S05",
+      "source_sha256": "3f8fa97e42b9492c259eaa9dfbf71386fce0085f5713527de114c9f4b9cc21ba",
+      "page_number": 1,
+      "line_number": 1,
+      "page_or_section": "网页段落P001",
+      "quote": "【离线Mock夹具】石家庄以岭药业股份有限公司主营业务涉及创新中药研发、生产和销售，仅用于验证业务与行业映射。",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E802",
+      "source_id": "S06",
+      "source_sha256": "a524eb6602dcb9e8f99300a4cd194851b854b408b131926e24f0e6310f25cead",
+      "page_number": 1,
+      "line_number": 1,
+      "page_or_section": "网页段落P001",
+      "quote": "【离线Mock夹具】本政策测试文本用于验证中医药政策、药品质量监管、实施时间和适用范围的原文提取，不代表任何真实现行政策。",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E803",
+      "source_id": "S06",
+      "source_sha256": "a524eb6602dcb9e8f99300a4cd194851b854b408b131926e24f0e6310f25cead",
+      "page_number": 1,
+      "line_number": 2,
+      "page_or_section": "网页段落P002",
+      "quote": "【离线Mock夹具】一般行业政策不能直接认定已经对某一家企业造成收入或利润影响。",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E804",
+      "source_id": "S07",
+      "source_sha256": "9a270d656ce2b8ed549113b1e5c1f5e6e277b7b131e97c1f050544e7c88e8e92",
+      "page_number": 1,
+      "line_number": 1,
+      "page_or_section": "网页段落P001",
+      "quote": "【离线Mock夹具】中药行业需求、竞争格局和发展趋势存在多种驱动因素，本段只验证行业资料召回。",
+      "status": "single_source",
+      "verification_method": "exact_text_match"
+    }
+  ],
+  "facts": [
+    {
+      "fact_id": "F801",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": "以岭药业V2.4离线Mock业务资料",
+      "category": "industry",
+      "research_module": "industry_research",
+      "statement_type": "disclosed_fact",
+      "field_name": "web_industry_research_0312c9671ae2",
+      "value": "【离线Mock夹具】石家庄以岭药业股份有限公司主营业务涉及创新中药研发、生产和销售，仅用于验证业务与行业映射。",
+      "claim": "【离线Mock夹具】石家庄以岭药业股份有限公司主营业务涉及创新中药研发、生产和销售，仅用于验证业务与行业映射。",
+      "entity_scope": "consolidated",
+      "period": null,
+      "evidence_ids": [
+        "E801"
+      ]
+    },
+    {
+      "fact_id": "F802",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": "中医药行业政策V2.4离线Mock原文",
+      "category": "industry",
+      "research_module": "policy_regulation",
+      "statement_type": "disclosed_fact",
+      "field_name": "web_policy_regulation_8f17e9c8f2c2",
+      "value": "【离线Mock夹具】本政策测试文本用于验证中医药政策、药品质量监管、实施时间和适用范围的原文提取，不代表任何真实现行政策。",
+      "claim": "【离线Mock夹具】本政策测试文本用于验证中医药政策、药品质量监管、实施时间和适用范围的原文提取，不代表任何真实现行政策。",
+      "entity_scope": "consolidated",
+      "period": null,
+      "evidence_ids": [
+        "E802"
+      ]
+    },
+    {
+      "fact_id": "F803",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": "中医药行业政策V2.4离线Mock原文",
+      "category": "industry",
+      "research_module": "policy_regulation",
+      "statement_type": "disclosed_fact",
+      "field_name": "web_policy_regulation_8f17e9c8f2c2",
+      "value": "【离线Mock夹具】一般行业政策不能直接认定已经对某一家企业造成收入或利润影响。",
+      "claim": "【离线Mock夹具】一般行业政策不能直接认定已经对某一家企业造成收入或利润影响。",
+      "entity_scope": "consolidated",
+      "period": null,
+      "evidence_ids": [
+        "E803"
+      ]
+    },
+    {
+      "fact_id": "F804",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": "中药行业趋势V2.4离线Mock资料",
+      "category": "industry",
+      "research_module": "industry_research",
+      "statement_type": "disclosed_fact",
+      "field_name": "web_industry_research_0312c9671ae2",
+      "value": "【离线Mock夹具】中药行业需求、竞争格局和发展趋势存在多种驱动因素，本段只验证行业资料召回。",
+      "claim": "【离线Mock夹具】中药行业需求、竞争格局和发展趋势存在多种驱动因素，本段只验证行业资料召回。",
+      "entity_scope": "consolidated",
+      "period": null,
+      "evidence_ids": [
+        "E804"
+      ]
+    }
+  ],
+  "candidates": [],
+  "conflicts": [],
+  "warnings": [
+    "来源S07为单一第三方来源，事实可交付但待交叉核实"
+  ],
+  "fetched_documents": [
+    {
+      "source_handle": "DOC001",
+      "source_id": "S05",
+      "title": "以岭药业V2.4离线Mock业务资料",
+      "original_url": "https://www.yiling.cn/v2-4-industry-mock",
+      "final_url": "https://www.yiling.cn/v2-4-industry-mock",
+      "content_type": "text/html; charset=utf-8",
+      "accessed_at": "2026-10-23 13:16:39.475222+00:00",
+      "cache_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\sources\\S05\\source.html",
+      "sha256": "3f8fa97e42b9492c259eaa9dfbf71386fce0085f5713527de114c9f4b9cc21ba",
+      "prompt_injection_detected": false
+    },
+    {
+      "source_handle": "DOC002",
+      "source_id": "S06",
+      "title": "中医药行业政策V2.4离线Mock原文",
+      "original_url": "https://www.gov.cn/zhengce/v2-4-policy-mock",
+      "final_url": "https://www.gov.cn/zhengce/v2-4-policy-mock",
+      "content_type": "text/html; charset=utf-8",
+      "accessed_at": "2026-10-23 13:16:39.485315+00:00",
+      "cache_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\sources\\S06\\source.html",
+      "sha256": "a524eb6602dcb9e8f99300a4cd194851b854b408b131926e24f0e6310f25cead",
+      "prompt_injection_detected": false
+    },
+    {
+      "source_handle": "DOC003",
+      "source_id": "S07",
+      "title": "中药行业趋势V2.4离线Mock资料",
+      "original_url": "https://industry.example.org.cn/v2-4-trend-mock",
+      "final_url": "https://industry.example.org.cn/v2-4-trend-mock",
+      "content_type": "text/html; charset=utf-8",
+      "accessed_at": "2026-10-23 13:16:39.497163+00:00",
+      "cache_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\sources\\S07\\source.html",
+      "sha256": "9a270d656ce2b8ed549113b1e5c1f5e6e277b7b131e97c1f050544e7c88e8e92",
+      "prompt_injection_detected": false
+    }
+  ]
+}

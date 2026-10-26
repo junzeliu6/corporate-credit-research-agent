@@ -80,6 +80,8 @@ def test_runtime_selects_loads_and_calls_actual_registered_callable(
     assert calls[0]["input_marker"] == "offline-test"
     assert result.selection.selected_skill == "ownership-structure"
     assert result.tool_name == "build_ownership_artifacts"
+    assert result.skill_instructions is not None
+    assert "股权比例100%完整性校验" in result.skill_instructions
     assert result.trace.status is SkillExecutionStatus.SUCCEEDED
     assert [event.stage for event in result.trace.events] == [
         SkillExecutionStage.ENTITY_RESOLVED,
@@ -135,6 +137,8 @@ def test_runtime_loads_and_executes_ready_financial_skill(
 
     assert len(calls) == 1
     assert result.tool_name == "build_financial_artifacts"
+    assert result.skill_instructions is not None
+    assert "银行授信财务分析的写作方法" in result.skill_instructions
     saved = json.loads(trace_path.read_text(encoding="utf-8"))
     assert saved["status"] == "succeeded"
     assert saved["selected_skill"] == "financial-analysis"
@@ -165,3 +169,88 @@ def test_runtime_rejects_mismatched_source_before_skill_selection(
         "entity_resolved",
         "failed",
     ]
+
+
+def test_runtime_explicit_binding_routes_ambiguous_task_to_each_skill(
+    tmp_path: Path,
+) -> None:
+    identity, source = _identity_and_source()
+    calls = []
+
+    def fake_tool(**kwargs):
+        calls.append(kwargs["marker"])
+        result_path = tmp_path / f"{kwargs['marker']}.json"
+        citations_path = tmp_path / f"{kwargs['marker']}_sources.json"
+        result_path.write_text("{}\n", encoding="utf-8")
+        citations_path.write_text("{}\n", encoding="utf-8")
+        return _FakeArtifacts(result_path=result_path, citations_path=citations_path)
+
+    runtime = SkillRuntime(
+        PROJECT_ROOT,
+        tools={
+            "ownership-structure": ToolRegistration(
+                name="build_ownership_artifacts",
+                skill_name="ownership-structure",
+                executor=fake_tool,
+            ),
+            "financial-analysis": ToolRegistration(
+                name="build_financial_artifacts",
+                skill_name="financial-analysis",
+                executor=fake_tool,
+            ),
+        },
+        clock=lambda: FIXED_TIME,
+        trace_id_factory=lambda: "TR-EXPLICIT",
+    )
+    task = "完整分析股权和财务"
+
+    ownership = runtime.execute(
+        task=task,
+        identity=identity,
+        source=source,
+        tool_arguments={"marker": "ownership"},
+        trace_output=tmp_path / "ownership_trace.json",
+        selected_skill="ownership-structure",
+    )
+    financial = runtime.execute(
+        task=task,
+        identity=identity,
+        source=source,
+        tool_arguments={"marker": "financial"},
+        trace_output=tmp_path / "financial_trace.json",
+        selected_skill="financial-analysis",
+    )
+
+    assert calls == ["ownership", "financial"]
+    assert ownership.selection.selected_skill == "ownership-structure"
+    assert ownership.tool_name == "build_ownership_artifacts"
+    assert financial.selection.selected_skill == "financial-analysis"
+    assert financial.tool_name == "build_financial_artifacts"
+    assert ownership.trace.events[2].details["selection_mode"] == "runtime_binding"
+    assert financial.trace.events[2].details["selection_mode"] == "runtime_binding"
+
+
+@pytest.mark.parametrize("selected_skill", ["not-approved", ""])
+def test_runtime_rejects_unapproved_explicit_skill_binding(
+    tmp_path: Path,
+    selected_skill: str,
+) -> None:
+    identity, source = _identity_and_source()
+    trace_path = tmp_path / f"invalid_{selected_skill or 'empty'}.json"
+    runtime = SkillRuntime(PROJECT_ROOT, clock=lambda: FIXED_TIME)
+
+    with pytest.raises(SkillRuntimeError) as error:
+        runtime.execute(
+            task="完整分析股权和财务",
+            identity=identity,
+            source=source,
+            tool_arguments={},
+            trace_output=trace_path,
+            selected_skill=selected_skill,
+        )
+
+    assert error.value.code == "skill_not_allowlisted"
+    saved = json.loads(trace_path.read_text(encoding="utf-8"))
+    assert saved["status"] == "failed"
+    assert saved["selected_skill"] is None
+    assert saved["tool_name"] is None

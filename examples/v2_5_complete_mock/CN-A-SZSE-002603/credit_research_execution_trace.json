@@ -1,0 +1,668 @@
+{
+  "schema_version": "2.5.0",
+  "trace_id": "CR-79980F41CB8E",
+  "task": "请研究以岭药业的企业背景、股权结构、经营情况、行业政策及财务状况，并从银行授信角度撰写完整研究报告。",
+  "workflow_name": "complete_credit_research_v2_5",
+  "status": "partial_success",
+  "entity_id": "CN-A-SZSE-002603",
+  "llm_config": {
+    "mode": "mock",
+    "provider": "deepseek",
+    "base_url": "https://api.deepseek.com",
+    "model": "deepseek-flash",
+    "api_key_env": "DEEPSEEK_API_KEY",
+    "api_key_configured": false,
+    "thinking": "disabled",
+    "max_turns": 70,
+    "max_tool_calls": 60,
+    "max_output_tokens": 16000,
+    "request_timeout_seconds": 30.0,
+    "max_retries": 1
+  },
+  "search_config": {
+    "mode": "mock",
+    "provider": "baidu",
+    "base_url": "https://qianfan.baidubce.com/v2/ai_search/web_search",
+    "api_key_env": "BAIDU_SEARCH_API_KEY",
+    "api_key_configured": false,
+    "auth_header": "Authorization",
+    "edition": "standard",
+    "request_timeout_seconds": 15.0
+  },
+  "budget_limits": {
+    "max_search_rounds": 10,
+    "max_search_calls": 10,
+    "max_search_requests": 10,
+    "max_results_per_request": 5,
+    "max_fetches": 20,
+    "max_extractions": 20,
+    "max_total_tool_calls": 60,
+    "max_agent_turns": 70
+  },
+  "llm_call_count": 10,
+  "tool_call_count": 9,
+  "tool_calls": [
+    {
+      "tool_name": "run_ownership_research",
+      "model_arguments": {
+        "ticker": "002603.SZ"
+      },
+      "runtime_bound": {
+        "source_id": "S01"
+      },
+      "status": "success"
+    },
+    {
+      "tool_name": "run_financial_research",
+      "model_arguments": {
+        "ticker": "002603.SZ"
+      },
+      "runtime_bound": {
+        "source_id": "S01",
+        "comparison_source_ids": [
+          "S10"
+        ]
+      },
+      "status": "success"
+    },
+    {
+      "tool_name": "search_web",
+      "arguments": {
+        "query": "以岭药业 中药行业 竞争格局 医保 集采 监管政策",
+        "max_results": 5,
+        "domain_filter": [],
+        "recency": null
+      },
+      "from_cache": true
+    },
+    {
+      "tool_name": "fetch_source",
+      "model_arguments": {
+        "url": "https://www.yiling.cn/v2-4-industry-mock"
+      },
+      "runtime_bound": {
+        "source_handle": "DOC001",
+        "source_id": "S05"
+      },
+      "from_cache": false
+    },
+    {
+      "tool_name": "extract_evidence",
+      "model_arguments": {
+        "source_handle": "DOC001",
+        "research_question": "以岭药业经营业务行业趋势竞争格局和授信风险"
+      },
+      "runtime_bound": {
+        "source_id": "S05"
+      }
+    },
+    {
+      "tool_name": "fetch_source",
+      "model_arguments": {
+        "url": "https://www.gov.cn/zhengce/v2-4-policy-mock"
+      },
+      "runtime_bound": {
+        "source_handle": "DOC002",
+        "source_id": "S06"
+      },
+      "from_cache": false
+    },
+    {
+      "tool_name": "extract_evidence",
+      "model_arguments": {
+        "source_handle": "DOC002",
+        "research_question": "医药中药行业政策监管实施时间适用范围和企业潜在影响"
+      },
+      "runtime_bound": {
+        "source_id": "S06"
+      }
+    },
+    {
+      "tool_name": "fetch_source",
+      "model_arguments": {
+        "url": "https://industry.example.org.cn/v2-4-trend-mock"
+      },
+      "runtime_bound": {
+        "source_handle": "DOC003",
+        "source_id": "S07"
+      },
+      "from_cache": false
+    },
+    {
+      "tool_name": "extract_evidence",
+      "model_arguments": {
+        "source_handle": "DOC003",
+        "research_question": "以岭药业经营业务行业趋势竞争格局和授信风险"
+      },
+      "runtime_bound": {
+        "source_id": "S07"
+      }
+    }
+  ],
+  "search_queries": [
+    {
+      "query": "以岭药业 中药行业 竞争格局 医保 集采 监管政策",
+      "max_results": 5,
+      "domain_filter": [],
+      "recency": null
+    }
+  ],
+  "search_result_urls": [
+    "https://www.yiling.cn/v2-4-industry-mock",
+    "https://www.gov.cn/zhengce/v2-4-policy-mock",
+    "https://industry.example.org.cn/v2-4-trend-mock"
+  ],
+  "fetched_source_handles": [
+    "DOC001",
+    "DOC002",
+    "DOC003"
+  ],
+  "bound_source_ids": [
+    "S05",
+    "S06",
+    "S07"
+  ],
+  "returned_fact_ids": [
+    "F801",
+    "F802",
+    "F803",
+    "F804"
+  ],
+  "selected_fact_ids": [],
+  "returned_candidate_ids": [],
+  "selected_candidate_ids": [],
+  "prompt_injection_detected": false,
+  "search_api_requests": 0,
+  "estimated_search_cost_cny": 0.0,
+  "usage": {
+    "requests": 10,
+    "input_tokens": 1140,
+    "output_tokens": 780,
+    "total_tokens": 1920,
+    "estimated_cost": null,
+    "cost_note": "SDK未返回可作为账单依据的金额；实际费用以DeepSeek控制台账单为准。"
+  },
+  "model_candidate_output": "{\"report_title\": \"以岭药业企业授信研究（离线Mock）\", \"sections\": [{\"topic\": \"company_background_and_ownership\", \"heading\": \"企业基本情况\", \"analysis_markdown\": \"离线夹具已完成企业基本面读取、股权Skill加载、比例校验和图形生成；本段仅验证主Agent能够据此撰写章节，不代表Live研究结论。\"}, {\"topic\": \"operations_and_business_model\", \"heading\": \"经营情况分析\", \"analysis_markdown\": \"离线夹具能够读取年报结构化的主营业务、经营模式和主要产品。外部市场及上下游判断需在真实联网研究中核验。\"}, {\"topic\": \"industry_and_policy\", \"heading\": \"行业环境与政策分析\", \"analysis_markdown\": \"离线行业资料只用于验证搜索、原文获取和证据提取链路；政策效力、竞争格局及对企业的具体影响仍需Live研究确认。\"}, {\"topic\": \"financial_analysis\", \"heading\": \"财务分析\", \"analysis_markdown\": \"离线夹具已调用财务Skill并取得Python计算的跨期指标。本段验证数据能够交由同一主Agent分析，不将缺失的短期借款数据解释为零。\"}, {\"topic\": \"integrated_credit_risk\", \"heading\": \"综合授信风险分析\", \"analysis_markdown\": \"离线夹具验证主Agent能够把经营、治理、行业和财务维度放在同一章节综合考虑；具体风险强度和因果关系仍需基于真实DeepSeek与百度资料复核。\"}, {\"topic\": \"due_diligence_and_missing_information\", \"heading\": \"待补充资料及尽调问题\", \"analysis_markdown\": \"现阶段应优先补充关键财务科目明细、最新融资台账以及核心产品适用政策，以核验结构化数据之外的经营与偿债信息。\"}], \"due_diligence_questions\": [{\"question\": \"请提供最新银行借款、授信额度及到期安排，核验年报未披露的短期借款情况。\"}, {\"question\": \"请说明核心产品适用的医保、集采及价格政策，并提供当前执行口径。\"}], \"limitations\": [\"离线Mock只验证V2.5系统编排，不代表真实研究结论。\"]}",
+  "model_candidate_output_sha256": "1c279297082acc094c2808e5711b8e798abae3afb3c49a7df1a16826c3c6cebb",
+  "finish_reasons": [],
+  "artifact_paths": [
+    "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\credit_research_report.md",
+    "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\credit_research_context.json",
+    "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\credit_research_sources.json",
+    "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\credit_research_execution_trace.json",
+    "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\credit_research_llm_draft.json",
+    "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\credit_research_delivery.json",
+    "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\assets\\ownership_structure.svg",
+    "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\assets\\ownership_structure.png"
+  ],
+  "degraded_reasons": [
+    "离线Mock只验证V2.5系统编排，不代表真实研究结论。"
+  ],
+  "events": [
+    {
+      "sequence": 1,
+      "occurred_at": "2026-10-23T13:16:37.254746Z",
+      "stage": "run_started",
+      "message": "V2.5完整企业授信研究单Agent运行开始",
+      "details": {
+        "planned_skills": [
+          "ownership-structure",
+          "financial-analysis"
+        ]
+      }
+    },
+    {
+      "sequence": 2,
+      "occurred_at": "2026-10-23T13:16:38.079307Z",
+      "stage": "llm_call_started",
+      "message": "开始一次模型调用",
+      "details": {
+        "llm_call_number": 1
+      }
+    },
+    {
+      "sequence": 3,
+      "occurred_at": "2026-10-23T13:16:38.080557Z",
+      "stage": "llm_call_completed",
+      "message": "模型调用完成",
+      "details": {
+        "total_tokens": 140
+      }
+    },
+    {
+      "sequence": 4,
+      "occurred_at": "2026-10-23T13:16:38.081560Z",
+      "stage": "tool_selected",
+      "message": "LLM决定调用白名单检索Tool",
+      "details": {
+        "tool_name": "run_ownership_research"
+      }
+    },
+    {
+      "sequence": 5,
+      "occurred_at": "2026-10-23T13:16:39.364015Z",
+      "stage": "llm_call_started",
+      "message": "开始一次模型调用",
+      "details": {
+        "llm_call_number": 2
+      }
+    },
+    {
+      "sequence": 6,
+      "occurred_at": "2026-10-23T13:16:39.364015Z",
+      "stage": "llm_call_completed",
+      "message": "模型调用完成",
+      "details": {
+        "total_tokens": 140
+      }
+    },
+    {
+      "sequence": 7,
+      "occurred_at": "2026-10-23T13:16:39.364015Z",
+      "stage": "tool_selected",
+      "message": "LLM决定调用白名单检索Tool",
+      "details": {
+        "tool_name": "run_financial_research"
+      }
+    },
+    {
+      "sequence": 8,
+      "occurred_at": "2026-10-23T13:16:39.460837Z",
+      "stage": "llm_call_started",
+      "message": "开始一次模型调用",
+      "details": {
+        "llm_call_number": 3
+      }
+    },
+    {
+      "sequence": 9,
+      "occurred_at": "2026-10-23T13:16:39.460837Z",
+      "stage": "llm_call_completed",
+      "message": "模型调用完成",
+      "details": {
+        "total_tokens": 140
+      }
+    },
+    {
+      "sequence": 10,
+      "occurred_at": "2026-10-23T13:16:39.460837Z",
+      "stage": "tool_selected",
+      "message": "LLM决定调用白名单检索Tool",
+      "details": {
+        "tool_name": "search_web"
+      }
+    },
+    {
+      "sequence": 11,
+      "occurred_at": "2026-10-23T13:16:39.460837Z",
+      "stage": "search_completed",
+      "message": "百度搜索Tool返回候选来源；摘要保持未核实",
+      "details": {
+        "query": "以岭药业 中药行业 竞争格局 医保 集采 监管政策",
+        "result_count": 3,
+        "from_cache": true,
+        "api_request_count": 0
+      }
+    },
+    {
+      "sequence": 12,
+      "occurred_at": "2026-10-23T13:16:39.460837Z",
+      "stage": "llm_call_started",
+      "message": "开始一次模型调用",
+      "details": {
+        "llm_call_number": 4
+      }
+    },
+    {
+      "sequence": 13,
+      "occurred_at": "2026-10-23T13:16:39.472916Z",
+      "stage": "llm_call_completed",
+      "message": "模型调用完成",
+      "details": {
+        "total_tokens": 140
+      }
+    },
+    {
+      "sequence": 14,
+      "occurred_at": "2026-10-23T13:16:39.472916Z",
+      "stage": "tool_selected",
+      "message": "LLM决定调用白名单检索Tool",
+      "details": {
+        "tool_name": "fetch_source"
+      }
+    },
+    {
+      "sequence": 15,
+      "occurred_at": "2026-10-23T13:16:39.477720Z",
+      "stage": "source_fetched",
+      "message": "Python已获取原文、登记来源并生成受控source_handle",
+      "details": {
+        "source_handle": "DOC001",
+        "source_id": "S05",
+        "content_type": "text/html; charset=utf-8",
+        "segment_count": 2,
+        "prompt_injection_detected": false
+      }
+    },
+    {
+      "sequence": 16,
+      "occurred_at": "2026-10-23T13:16:39.479276Z",
+      "stage": "llm_call_started",
+      "message": "开始一次模型调用",
+      "details": {
+        "llm_call_number": 5
+      }
+    },
+    {
+      "sequence": 17,
+      "occurred_at": "2026-10-23T13:16:39.480280Z",
+      "stage": "llm_call_completed",
+      "message": "模型调用完成",
+      "details": {
+        "total_tokens": 140
+      }
+    },
+    {
+      "sequence": 18,
+      "occurred_at": "2026-10-23T13:16:39.480280Z",
+      "stage": "tool_selected",
+      "message": "LLM决定调用白名单检索Tool",
+      "details": {
+        "tool_name": "extract_evidence"
+      }
+    },
+    {
+      "sequence": 19,
+      "occurred_at": "2026-10-23T13:16:39.483301Z",
+      "stage": "evidence_extracted",
+      "message": "原文证据已按主体、来源层级和定位信息分型登记",
+      "details": {
+        "source_id": "S05",
+        "new_fact_count": 1,
+        "new_candidate_count": 0,
+        "new_conflict_count": 0
+      }
+    },
+    {
+      "sequence": 20,
+      "occurred_at": "2026-10-23T13:16:39.483301Z",
+      "stage": "llm_call_started",
+      "message": "开始一次模型调用",
+      "details": {
+        "llm_call_number": 6
+      }
+    },
+    {
+      "sequence": 21,
+      "occurred_at": "2026-10-23T13:16:39.484307Z",
+      "stage": "llm_call_completed",
+      "message": "模型调用完成",
+      "details": {
+        "total_tokens": 140
+      }
+    },
+    {
+      "sequence": 22,
+      "occurred_at": "2026-10-23T13:16:39.485315Z",
+      "stage": "tool_selected",
+      "message": "LLM决定调用白名单检索Tool",
+      "details": {
+        "tool_name": "fetch_source"
+      }
+    },
+    {
+      "sequence": 23,
+      "occurred_at": "2026-10-23T13:16:39.485315Z",
+      "stage": "source_fetched",
+      "message": "Python已获取原文、登记来源并生成受控source_handle",
+      "details": {
+        "source_handle": "DOC002",
+        "source_id": "S06",
+        "content_type": "text/html; charset=utf-8",
+        "segment_count": 2,
+        "prompt_injection_detected": false
+      }
+    },
+    {
+      "sequence": 24,
+      "occurred_at": "2026-10-23T13:16:39.485315Z",
+      "stage": "llm_call_started",
+      "message": "开始一次模型调用",
+      "details": {
+        "llm_call_number": 7
+      }
+    },
+    {
+      "sequence": 25,
+      "occurred_at": "2026-10-23T13:16:39.485315Z",
+      "stage": "llm_call_completed",
+      "message": "模型调用完成",
+      "details": {
+        "total_tokens": 140
+      }
+    },
+    {
+      "sequence": 26,
+      "occurred_at": "2026-10-23T13:16:39.485315Z",
+      "stage": "tool_selected",
+      "message": "LLM决定调用白名单检索Tool",
+      "details": {
+        "tool_name": "extract_evidence"
+      }
+    },
+    {
+      "sequence": 27,
+      "occurred_at": "2026-10-23T13:16:39.485315Z",
+      "stage": "evidence_extracted",
+      "message": "原文证据已按主体、来源层级和定位信息分型登记",
+      "details": {
+        "source_id": "S06",
+        "new_fact_count": 2,
+        "new_candidate_count": 0,
+        "new_conflict_count": 0
+      }
+    },
+    {
+      "sequence": 28,
+      "occurred_at": "2026-10-23T13:16:39.485315Z",
+      "stage": "llm_call_started",
+      "message": "开始一次模型调用",
+      "details": {
+        "llm_call_number": 8
+      }
+    },
+    {
+      "sequence": 29,
+      "occurred_at": "2026-10-23T13:16:39.485315Z",
+      "stage": "llm_call_completed",
+      "message": "模型调用完成",
+      "details": {
+        "total_tokens": 140
+      }
+    },
+    {
+      "sequence": 30,
+      "occurred_at": "2026-10-23T13:16:39.485315Z",
+      "stage": "tool_selected",
+      "message": "LLM决定调用白名单检索Tool",
+      "details": {
+        "tool_name": "fetch_source"
+      }
+    },
+    {
+      "sequence": 31,
+      "occurred_at": "2026-10-23T13:16:39.497163Z",
+      "stage": "source_fetched",
+      "message": "Python已获取原文、登记来源并生成受控source_handle",
+      "details": {
+        "source_handle": "DOC003",
+        "source_id": "S07",
+        "content_type": "text/html; charset=utf-8",
+        "segment_count": 2,
+        "prompt_injection_detected": false
+      }
+    },
+    {
+      "sequence": 32,
+      "occurred_at": "2026-10-23T13:16:39.497163Z",
+      "stage": "llm_call_started",
+      "message": "开始一次模型调用",
+      "details": {
+        "llm_call_number": 9
+      }
+    },
+    {
+      "sequence": 33,
+      "occurred_at": "2026-10-23T13:16:39.503324Z",
+      "stage": "llm_call_completed",
+      "message": "模型调用完成",
+      "details": {
+        "total_tokens": 140
+      }
+    },
+    {
+      "sequence": 34,
+      "occurred_at": "2026-10-23T13:16:39.503324Z",
+      "stage": "tool_selected",
+      "message": "LLM决定调用白名单检索Tool",
+      "details": {
+        "tool_name": "extract_evidence"
+      }
+    },
+    {
+      "sequence": 35,
+      "occurred_at": "2026-10-23T13:16:39.505355Z",
+      "stage": "evidence_extracted",
+      "message": "原文证据已按主体、来源层级和定位信息分型登记",
+      "details": {
+        "source_id": "S07",
+        "new_fact_count": 1,
+        "new_candidate_count": 0,
+        "new_conflict_count": 0
+      }
+    },
+    {
+      "sequence": 36,
+      "occurred_at": "2026-10-23T13:16:39.506360Z",
+      "stage": "llm_call_started",
+      "message": "开始一次模型调用",
+      "details": {
+        "llm_call_number": 10
+      }
+    },
+    {
+      "sequence": 37,
+      "occurred_at": "2026-10-23T13:16:39.509681Z",
+      "stage": "llm_call_completed",
+      "message": "模型调用完成",
+      "details": {
+        "total_tokens": 660
+      }
+    },
+    {
+      "sequence": 38,
+      "occurred_at": "2026-10-23T13:16:39.528002Z",
+      "stage": "run_completed",
+      "message": "V2.5离线或部分研究已交付",
+      "details": {
+        "status": "partial_success",
+        "delivered_topics": [
+          "company_background_and_ownership",
+          "operations_and_business_model",
+          "industry_and_policy",
+          "financial_analysis",
+          "integrated_credit_risk",
+          "due_diligence_and_missing_information"
+        ],
+        "missing_topics": []
+      }
+    }
+  ],
+  "error_code": null,
+  "error_message": null,
+  "planned_skills": [
+    "ownership-structure",
+    "financial-analysis"
+  ],
+  "executed_skills": [
+    "ownership-structure",
+    "financial-analysis"
+  ],
+  "skill_calls": [
+    {
+      "module": "ownership",
+      "selected_skill": "ownership-structure",
+      "loaded_skill_path": ".agents/skills/ownership-structure/SKILL.md",
+      "skill_version": "1.3.2",
+      "skill_sha256": "68e080797e6b48572cb4e7570041c158cde39e695f1d3446395f205414311247",
+      "python_tool": "build_ownership_artifacts",
+      "skill_trace_path": "examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\traces\\ownership_skill_trace.json",
+      "status": "success"
+    },
+    {
+      "module": "financial",
+      "selected_skill": "financial-analysis",
+      "loaded_skill_path": ".agents/skills/financial-analysis/SKILL.md",
+      "skill_version": "2.3.0",
+      "skill_sha256": "ff0d10ca2db48c75e658d577ab01d56dc685da6b2fa4b55b6fa6750970369867",
+      "python_tool": "build_financial_artifacts",
+      "skill_trace_path": "examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\traces\\financial_skill_trace.json",
+      "status": "success"
+    }
+  ],
+  "module_status": {
+    "ownership": "success",
+    "financial": "success"
+  },
+  "module_artifacts": {
+    "ownership": {
+      "entity_id": "CN-A-SZSE-002603",
+      "dataset_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\modules\\ownership\\CN-A-SZSE-002603\\ownership.json",
+      "graph_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\modules\\ownership\\CN-A-SZSE-002603\\ownership_graph.json",
+      "svg_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\modules\\ownership\\CN-A-SZSE-002603\\ownership_structure.svg",
+      "png_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\modules\\ownership\\CN-A-SZSE-002603\\ownership_structure.png",
+      "dot_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\modules\\ownership\\CN-A-SZSE-002603\\ownership_structure.dot",
+      "citations_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\modules\\ownership\\CN-A-SZSE-002603\\citations.md",
+      "summary_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\modules\\ownership\\CN-A-SZSE-002603\\ownership_summary.md",
+      "validation_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\modules\\ownership\\CN-A-SZSE-002603\\ownership_validation.json",
+      "sources_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\modules\\ownership\\CN-A-SZSE-002603\\ownership_sources.json",
+      "questions_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\modules\\ownership\\CN-A-SZSE-002603\\ownership_questions.md",
+      "render_engine": "graphviz-dot",
+      "node_count": 6,
+      "edge_count": 5,
+      "control_relationship_count": 4,
+      "missing_information_count": 2
+    },
+    "financial": {
+      "entity_id": "CN-A-SZSE-002603",
+      "facts_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\modules\\financial\\CN-A-SZSE-002603\\financial_facts.json",
+      "metrics_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\modules\\financial\\CN-A-SZSE-002603\\financial_metrics.json",
+      "analysis_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\modules\\financial\\CN-A-SZSE-002603\\financial_analysis.md",
+      "data_appendix_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\modules\\financial\\CN-A-SZSE-002603\\financial_data_appendix.md",
+      "risk_flags_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\modules\\financial\\CN-A-SZSE-002603\\financial_risk_flags.json",
+      "sources_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\modules\\financial\\CN-A-SZSE-002603\\financial_sources.json",
+      "questions_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\modules\\financial\\CN-A-SZSE-002603\\financial_questions.md",
+      "validation_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\modules\\financial\\CN-A-SZSE-002603\\financial_validation.json",
+      "explanations_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\modules\\financial\\CN-A-SZSE-002603\\financial_explanations.json",
+      "reasonableness_path": "E:\\企业授信研究Agent开发\\企业授信研究Agent_Codex启动包_以岭药业_v3\\corporate-credit-research-agent\\examples\\v2_5_complete_mock\\CN-A-SZSE-002603\\modules\\financial\\CN-A-SZSE-002603\\financial_reasonableness.json",
+      "fact_count": 46,
+      "metric_count": 30,
+      "ratio_count": 12,
+      "risk_flag_count": 8,
+      "material_change_count": 18,
+      "explanation_count": 3,
+      "hypothesis_count": 4,
+      "assessment_count": 7
+    }
+  },
+  "module_errors": {},
+  "delivered_topics": [
+    "company_background_and_ownership",
+    "operations_and_business_model",
+    "industry_and_policy",
+    "financial_analysis",
+    "integrated_credit_risk",
+    "due_diligence_and_missing_information"
+  ],
+  "missing_topics": []
+}

@@ -30,6 +30,8 @@ data/ownership/
 data/parsed/
 data/reports/
 data/web_research/
+data/complete_research*/
+data/.pytest-tmp*/
 *.pdf
 
 # Editors and operating systems

@@ -1,6 +1,6 @@
 # 企业授信研究Agent — 上市公司公开信息驱动的企业授信研究 Agent
 
-> 版本：2026-10-23 / v5 需求基线 + V2.4 行业与政策研究。状态：**V0.1—V1.5与V2.1—V2.3既有能力保留；V2.4离线实现与验证已完成：复用V1.5检索/原文工具和V2.3财务上下文建立了DeepSeek行业研究与写作流程，新增定向测试14项、全量回归237项通过。V2.4不是第三个Skill；DeepSeek负责研究分析与正文，Python只负责数据工具、来源/预算、最小结构解析和Markdown组装。真实DeepSeek+百度Live仍待用户单独授权，不得视为V2.4最终验收完成**。
+> 版本：2026-10-23 / v5 需求基线 + V2.5 完整集成。状态：**V0.1—V1.5与V2.1—V2.3既有能力保留；V2.4离线实现与验证已完成。V2.5采用一个DeepSeek主Agent，显式调用`ownership-structure`和`financial-analysis`两个既有Skill，并复用V1.5行业检索能力；行业研究不是第三个Skill。Python只负责数据、确定性计算、图表、来源/预算、最小结构解析和Markdown组装，全部专业分析正文由DeepSeek撰写。首次完整DeepSeek+百度Live已执行并为`PARTIAL_SUCCESS`：双Skill与六章正文成功，外部原文证据链未完成；相关预算、候选降级和分析边界已离线修复，最新全量回归275项通过，仍需新的用户授权Live完成最终验收**。
 > 本版本替代此前“从用户上传 Excel 开始”的旧版范围定义。
 
 ## 项目命名约定
@@ -75,6 +75,11 @@
 - V1.5将百度智能云官方“百度搜索”封装为通用`SearchProvider`。LLM只决定搜索主题和选择白名单Tool；Python负责搜索请求、URL安全、原文获取、缓存及必要的内部来源登记。既有细粒度状态可继续用于运行时诊断，但正式报告只显示“已核验/未核验”：可靠原始披露和确定性计算属于已核验，单一来源、未确认候选或分析假设属于未核验；完全无依据的内容不得作为企业事实输出。网页文字不是Agent指令，真实搜索和模型仍需分别显式开启并确认。
 - V2.4在单Agent内新增独立的轻量行业研究Instructions，不创建第三个Skill。模型围绕行业趋势、竞争格局、监管政策、企业影响及授信关注点自主制定检索方向，复用`search_web`、`fetch_source`、`extract_evidence`取得原文，并读取V2.3确定性财务数据/既有业务资料形成跨模块分析。一般行业政策不得直接写成目标企业已发生的具体影响；未经确认的因果关系须用“可能/需进一步核实”等措辞。
 - V2.4预期独立保存`industry_analysis.md`、`industry_research_context.json`、`industry_sources.json`和`industry_execution_trace.json`。正式Markdown不展示Fact/Metric等技术ID；来源URL、网页原文、检索轨迹、失败原因与预算计数保存在后台研究依据产物中。DeepSeek整体失败时只保留数据/来源/轨迹并标记报告未完成，不生成Python固定模板行业正文。
+- V2.5在同一主Agent运行中先规划并调用两个既有Skill，再按需使用`search_web`、`fetch_source`和`extract_evidence`，最终由DeepSeek撰写企业背景与股权、经营、行业政策、财务、综合授信风险及尽调问题六章正文。运行时统一绑定上市主体、官方来源、财务期间和输出目录，模型不能填写或覆盖`source_id`、本地路径、Skill名称或任意工具权限。
+- V2.5的`SkillRuntime`返回实际加载的`SKILL.md` instructions，高层Tool从中投影紧凑`skill_method`给DeepSeek，证明专业方法真正进入应用运行上下文。模型上下文不包含股权图本地绝对路径；S01/S10下载与解析路径只在后台来源中保存，并记录`runtime_status=parsed`。
+- V2.5不把各模块旧Markdown机械拼接为正式报告。Python可以插入经过校验的股权图和财务数据表，但不得改写DeepSeek章节或在失败时用固定模板补齐。单个Skill或检索来源失败时保留其他成果并标记`PARTIAL_SUCCESS`；模型整体失败时交付数据、图表、来源、轨迹和“报告未完成”说明。
+- 搜索超时、鉴权或参数错误必须转换为结构化Tool失败并允许继续部分报告；单个格式错误章节只跳过该章，不丢弃已通过解析的其他模型章节。真实`SUCCESS`除两个Skill和六章外，还必须存在证据提取事件及至少一项事实或候选。
+- V2.5正式产物包括`credit_research_report.md`、`credit_research_context.json`、`credit_research_sources.json`、`credit_research_execution_trace.json`、模型原始草稿/交付状态以及股权图。首次完整Live为部分成功；后续复测仍必须同时获得DeepSeek与百度搜索两项新的显式确认，并输出到新目录。
 - Tool返回LLM前由Python把现有 Fact/Evidence/Source 与股权、财务结果整理为紧凑、可读的分析上下文。DeepSeek直接提交完整自然语言分析，不再承担Fact/Metric/Source ID回填任务；Python不使用百分比白名单、正则或逐句来源匹配来拒绝正文，只负责数据与来源的内部保存、最小结构解析、图表和Markdown组装。模型整体调用或结构解析失败时标记报告未完成，不用固定模板冒充模型研究成果。
 - RAG/MCP 按需要引入，不为堆栈而堆栈。
 - 第一轮使用 CLI 即可，Streamlit 和 Word 导出留至主要功能跑通以后。
@@ -83,11 +88,12 @@
 ## 7. 成功标准
 - 对 `以岭药业` / `002603.SZ` 可以稳定识别研究主体、整理真实来源清单，并处理可公开获取的至少一份年报。
 - 七个模块有清晰结构，信息缺失时透明留空；财务指标可复算，主体/货币/期间无混淆。
-- 两个 Skill 均具有 `SKILL.md` 与明确触发条件/工作流程；`ownership-structure` 和 `financial-analysis` 均具备确定性工具、Skill Runtime调用和各自受控的LLM Function Tool。一次任务同时编排两个Skill仍属于V2.5。
+- 两个 Skill 均具有 `SKILL.md` 与明确触发条件/工作流程；`ownership-structure` 和 `financial-analysis` 均具备确定性工具、Skill Runtime调用和受控的LLM Function Tool。V2.5离线Mock及首次完整Live均已在同一主Agent任务中调用两个Skill，根执行轨迹记录了Skill选择、加载、Tool调用和各模块状态；修复后的完整Live仍须重新授权验证。
 - 报告所用重要数据在内部研究依据中可回溯到原文链接；正式报告默认不展示技术来源编号，用户需要时可另行导出研究依据文件。
 - 有独立的待补充资料与尽调问题清单。
 - 正式财务报告正文可证明来自DeepSeek实际生成；Python只提供数据、最小结构解析与组装，模型失败时明确报告未完成，不以模板文字伪装完成。
 - 正式行业报告正文可证明来自DeepSeek实际生成；模型能够自主调用V1.5检索Tools、读取至少一份有效原文，并把行业/政策资料与企业业务及V2.3财务表现结合。单一来源失败不丢弃其他研究成果，政策发布日期、状态、适用范围和企业影响的不确定性在内部上下文或正文中得到保留。
+- 正式完整报告正文可证明来自同一DeepSeek主Agent的综合生成，而不是Python模板或各模块Markdown的机械拼接；第五章至少关联经营、治理/股权、行业政策和财务中的两个维度，且不给出具有审批效力的额度或结论。
 - 具有自动化测试和可复现演示；简历只描述已实现、已验证的功能。
 
 ## 8. 两个 Skill 的专项需求（v5 正式整合）

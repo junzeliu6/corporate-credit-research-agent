@@ -636,6 +636,145 @@ def build_ownership_response_contract(
     )
 
 
+def build_ownership_snapshot_from_artifacts(
+    artifacts: Mapping[str, Any],
+) -> Dict[str, Any]:
+    """构造供跨模块研究使用的轻量股权上下文。
+
+    ``ownership.json`` 和 ``ownership_graph.json`` 继续完整保存 Fact、Evidence、
+    Source 及图节点/边 ID；本函数只把模型撰写报告实际需要的业务语义暴露给
+    V2.5 主 Agent，避免把内部技术编号和旧版 ``response_contract`` 带入正文。
+    表决权关系也不会混入持股比例关系。
+    """
+
+    graph_path = artifacts.get("graph_path")
+    validation_path = artifacts.get("validation_path")
+    if not graph_path or not validation_path:
+        raise AgentRuntimeError(
+            "missing_ownership_artifact",
+            "构造股权快照需要 graph_path 和 validation_path",
+        )
+
+    graph = _json_load(Path(graph_path))
+    validation = _json_load(Path(validation_path))
+    nodes = {
+        str(item["node_id"]): item
+        for item in graph.get("nodes", [])
+        if item.get("node_id") and item.get("name")
+    }
+
+    def node_name(node_id: Any) -> str:
+        node = nodes.get(str(node_id))
+        if node is None:
+            raise AgentRuntimeError(
+                "invalid_ownership_artifact",
+                "股权制品中的关系引用了不存在的主体",
+            )
+        return str(node["name"])
+
+    ownership_relations: List[Dict[str, Any]] = []
+    for edge in graph.get("edges", []):
+        if edge.get("relation_type", "equity_ownership") != "equity_ownership":
+            continue
+        ownership_relations.append(
+            {
+                "holder": node_name(edge.get("source_node_id")),
+                "held_entity": node_name(edge.get("target_node_id")),
+                "percentage": edge.get("percentage"),
+                "percentage_origin": edge.get("percentage_origin"),
+                "synthetic": bool(edge.get("synthetic", False)),
+                "capital_scope": edge.get("capital_scope"),
+                "as_of_date": edge.get("as_of_date") or graph.get("as_of_date"),
+                "verification_status": edge.get("status"),
+            }
+        )
+
+    control_relationships: List[Dict[str, Any]] = []
+    for relationship in graph.get("control_relationships", []):
+        control_relationships.append(
+            {
+                "subjects": [
+                    node_name(item)
+                    for item in relationship.get("subject_node_ids", [])
+                ],
+                "controlled_entity": node_name(
+                    relationship.get("controlled_node_id")
+                ),
+                "relation_type": relationship.get("relation_type"),
+                "as_of_date": relationship.get("as_of_date")
+                or graph.get("as_of_date"),
+                "verification_status": relationship.get("status"),
+                "note": relationship.get("note"),
+            }
+        )
+
+    complete_statuses = {"complete", "complete_with_calculated_residual"}
+    branches: List[Dict[str, Any]] = []
+    for branch in validation.get("branches", []):
+        status = branch.get("status")
+        branches.append(
+            {
+                "held_entity": node_name(branch.get("target_node_id")),
+                "capital_scope": branch.get("capital_scope"),
+                "known_total": branch.get("known_total"),
+                "calculated_residual": branch.get("calculated_residual"),
+                "residual_label": branch.get("residual_label"),
+                "tolerance": branch.get("tolerance", validation.get("tolerance")),
+                "status": status,
+                "is_complete": status in complete_statuses,
+            }
+        )
+
+    missing_information = [
+        {
+            "topic": item.get("topic"),
+            "description": item.get("description"),
+            "reason": item.get("reason"),
+        }
+        for item in graph.get("missing_information", [])
+    ]
+
+    limitations: List[str] = []
+    dataset_path = artifacts.get("dataset_path")
+    if dataset_path:
+        try:
+            dataset = _json_load(Path(dataset_path))
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            dataset = {}
+        if isinstance(dataset, Mapping):
+            limitations.extend(str(item) for item in dataset.get("limitations", []))
+    limitations.extend(str(item) for item in graph.get("warnings", []))
+    # 同一限制可能同时来自原始数据集和展示图；保持原顺序去重。
+    limitations = list(dict.fromkeys(limitations))
+
+    identity = graph.get("identity", {})
+    return {
+        "subject": {
+            "legal_name": identity.get("legal_name"),
+            "short_name": identity.get("short_name"),
+            "ticker": identity.get("ticker"),
+        },
+        "as_of_date": graph.get("as_of_date"),
+        "formal_ready": bool(graph.get("formal_ready")),
+        "ownership_relations": ownership_relations,
+        "control_relationships": control_relationships,
+        "percentage_validation": {
+            "tolerance": validation.get("tolerance"),
+            "all_complete": bool(branches)
+            and all(item["is_complete"] for item in branches),
+            "branches": branches,
+        },
+        "missing_information": missing_information,
+        "limitations": limitations,
+        "render_engine": artifacts.get("render_engine"),
+        "graph_paths": {
+            "svg": str(artifacts["svg_path"]) if artifacts.get("svg_path") else None,
+            "png": str(artifacts["png_path"]) if artifacts.get("png_path") else None,
+            "dot": str(artifacts["dot_path"]) if artifacts.get("dot_path") else None,
+        },
+    }
+
+
 def _build_compact_tool_result(result: SkillExecutionResult) -> Dict[str, Any]:
     """把股权制品压缩为模型所需事实，避免发送完整PDF或大JSON。"""
 

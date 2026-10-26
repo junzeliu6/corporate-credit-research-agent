@@ -286,6 +286,55 @@ class SkillSelector:
             ),
         )
 
+    def select_many(self, task: str) -> List[SkillSelection]:
+        """为完整研究任务生成多 Skill 计划，同时保留 ``select`` 的旧语义。
+
+        V1.3 的 ``select`` 故意把同时命中多个 Skill 视为歧义；V2.5 需要在
+        同一任务中使用两个已批准 Skill，因此新增独立入口，避免改变已有单
+        Skill 调用方。包含“完整/全面/综合授信研究”的任务会选择全部 READY
+        Skill；其他任务则返回所有实际命中的 Skill，顺序与白名单注册顺序一致。
+        """
+
+        normalized = " ".join(task.casefold().split())
+        if not normalized:
+            raise SkillSelectionError("empty_task", "任务描述不能为空")
+
+        comprehensive_markers = ("完整", "全面", "综合")
+        credit_research_markers = ("授信", "企业研究", "credit research")
+        comprehensive = any(
+            marker in normalized for marker in comprehensive_markers
+        ) and any(marker in normalized for marker in credit_research_markers)
+
+        selections: List[SkillSelection] = []
+        for name, keywords in self._keywords.items():
+            registration = self._registry.get(name)
+            matched = [
+                keyword for keyword in keywords if keyword.casefold() in normalized
+            ]
+            if not matched and not comprehensive:
+                continue
+            if registration.runtime_status is not SkillRuntimeStatus.READY:
+                continue
+            rationale = (
+                f"完整授信研究任务纳入已就绪 Skill {name}。"
+                if comprehensive and not matched
+                else f"任务命中 {name} 的触发词：" + "、".join(matched)
+            )
+            selections.append(
+                SkillSelection(
+                    task=task,
+                    selected_skill=name,
+                    matched_keywords=matched,
+                    rationale=rationale,
+                )
+            )
+
+        if not selections:
+            raise SkillSelectionError(
+                "skill_not_selected", "任务未命中任何已批准 Skill 的触发条件"
+            )
+        return selections
+
 
 class SkillLoader:
     """只读加载注册时的同一份文件，并校验目录和 SHA-256。"""

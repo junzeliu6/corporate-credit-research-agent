@@ -1,0 +1,782 @@
+{
+  "schema_version": "2.5.0",
+  "research_task": "请研究以岭药业的企业背景、股权结构、经营情况、行业政策及财务状况，并从银行授信角度撰写完整研究报告。",
+  "company": {
+    "legal_name": "石家庄以岭药业股份有限公司",
+    "short_name": "以岭药业",
+    "ticker": "002603.SZ",
+    "exchange": "深圳证券交易所",
+    "entity_scope": "consolidated"
+  },
+  "fundamentals": {
+    "available": true,
+    "period": "FY2025",
+    "statement_scope": "consolidated",
+    "facts": [
+      {
+        "research_module": "development_history",
+        "field_name": "corporate_conversion",
+        "value": "2001 年由石家庄以岭药业有限公司整体变更设立",
+        "claim": "公司披露其于2001年由石家庄以岭药业有限公司整体变更设立。",
+        "period": "FY2025",
+        "entity_scope": "listed_company"
+      },
+      {
+        "research_module": "development_history",
+        "field_name": "listing_date",
+        "value": "2011 年 7 月 28 日",
+        "claim": "公司股票于2011年7月28日在深圳证券交易所上市交易。",
+        "period": "FY2025",
+        "entity_scope": "listed_company"
+      },
+      {
+        "research_module": "development_history",
+        "field_name": "main_business_change_since_listing",
+        "value": "公司上市以来主营业务的变化情况（如有） 无变更",
+        "claim": "2025年年报披露，公司上市以来主营业务无变更。",
+        "period": "FY2025",
+        "entity_scope": "listed_company"
+      },
+      {
+        "research_module": "main_business",
+        "field_name": "core_business",
+        "value": "专利创新中药的研发、生产和销售",
+        "claim": "公司的主营业务是专利创新中药的研发、生产和销售。",
+        "period": "FY2025",
+        "entity_scope": "consolidated"
+      },
+      {
+        "research_module": "main_business",
+        "field_name": "business_segments",
+        "value": "专利中药、化生药、健康产业",
+        "claim": "公司披露已构建专利中药、化生药和健康产业协同发展的业务格局。",
+        "period": "FY2025",
+        "entity_scope": "consolidated"
+      },
+      {
+        "research_module": "operating_model",
+        "field_name": "procurement_mode",
+        "value": "招标采购",
+        "claim": "公司披露招标采购为采购模式之一。",
+        "period": "FY2025",
+        "entity_scope": "consolidated"
+      },
+      {
+        "research_module": "operating_model",
+        "field_name": "procurement_mode",
+        "value": "集中采购",
+        "claim": "公司披露集中采购为采购模式之一。",
+        "period": "FY2025",
+        "entity_scope": "consolidated"
+      },
+      {
+        "research_module": "operating_model",
+        "field_name": "procurement_mode",
+        "value": "产地采购",
+        "claim": "公司披露产地采购为采购模式之一。",
+        "period": "FY2025",
+        "entity_scope": "consolidated"
+      },
+      {
+        "research_module": "operating_model",
+        "field_name": "procurement_mode",
+        "value": "议价采购",
+        "claim": "公司披露议价采购为采购模式之一。",
+        "period": "FY2025",
+        "entity_scope": "consolidated"
+      },
+      {
+        "research_module": "operating_model",
+        "field_name": "production_mode",
+        "value": "按照药品生产质量管理规范组织生产",
+        "claim": "公司按照药品生产质量管理规范组织生产，并以市场和客户需求作为制定生产计划的依据之一。",
+        "period": "FY2025",
+        "entity_scope": "consolidated"
+      },
+      {
+        "research_module": "operating_model",
+        "field_name": "sales_promotion_mode",
+        "value": "络病理论指导下的专业化推广模式",
+        "claim": "公司披露其销售模式的核心竞争优势在于络病理论指导下的专业化推广模式。",
+        "period": "FY2025",
+        "entity_scope": "consolidated"
+      },
+      {
+        "research_module": "operating_model",
+        "field_name": "sales_distribution_mode",
+        "value": "合作的医药流通企业",
+        "claim": "公司产品主要通过合作的医药流通企业对外配送销售。",
+        "period": "FY2025",
+        "entity_scope": "consolidated"
+      },
+      {
+        "research_module": "operating_model",
+        "field_name": "research_and_development_mode",
+        "value": "自主研发和合作研发两种模式",
+        "claim": "公司的研发模式主要包括自主研发和合作研发两种模式。",
+        "period": "FY2025",
+        "entity_scope": "consolidated"
+      },
+      {
+        "research_module": "main_products",
+        "field_name": "major_product",
+        "value": "通心络胶囊",
+        "claim": "年报将通心络胶囊列为公司主要产品。",
+        "period": "FY2025",
+        "entity_scope": "consolidated"
+      },
+      {
+        "research_module": "main_products",
+        "field_name": "major_product",
+        "value": "参松养心胶囊",
+        "claim": "年报将参松养心胶囊列为公司主要产品。",
+        "period": "FY2025",
+        "entity_scope": "consolidated"
+      },
+      {
+        "research_module": "main_products",
+        "field_name": "major_product",
+        "value": "连花清瘟胶囊",
+        "claim": "年报将连花清瘟胶囊列为公司主要产品。",
+        "period": "FY2025",
+        "entity_scope": "consolidated"
+      },
+      {
+        "research_module": "main_products",
+        "field_name": "major_product",
+        "value": "芪苈强心胶囊",
+        "claim": "年报将芪苈强心胶囊列为公司主要产品。",
+        "period": "FY2025",
+        "entity_scope": "consolidated"
+      }
+    ],
+    "missing_information": [
+      {
+        "research_module": "development_history",
+        "topic": "前身企业早期沿革",
+        "description": "本阶段证据可确认2001年整体变更设立和2011年上市，但未确认前身企业最初设立日期及2001年前的完整沿革。",
+        "reason": "当前经核验的年报原文锚点未提供完整早期时间线，不能根据公司名称或第三方材料补造。"
+      },
+      {
+        "research_module": "operating_model",
+        "topic": "统一盈利模式",
+        "description": "本阶段已核实采购、生产、销售和研发模式，但尚未取得足以定义统一盈利模式的直接披露证据。",
+        "reason": "不能仅凭业务板块或销售方式推断利润形成机制、定价方式和利润来源。"
+      },
+      {
+        "research_module": "main_products",
+        "topic": "单品收入与占比",
+        "description": "本阶段已核实主要产品名称，但尚未从V1.1证据中确认各单品收入、收入占比和盈利贡献。",
+        "reason": "产品名称披露不能替代财务分部或单品收入数据；相关金额应在后续有来源的数据结构化后单独核验。"
+      }
+    ],
+    "reason": null
+  },
+  "skill_plan": [
+    "ownership-structure",
+    "financial-analysis"
+  ],
+  "period_alignment": {
+    "fundamentals": "FY2025",
+    "ownership": "2025-12-31",
+    "financial_comparison": [
+      "FY2024",
+      "FY2025"
+    ],
+    "financial_scope": "consolidated"
+  },
+  "required_topics": [
+    "company_background_and_ownership",
+    "operations_and_business_model",
+    "industry_and_policy",
+    "financial_analysis",
+    "integrated_credit_risk",
+    "due_diligence_and_missing_information"
+  ],
+  "tool_policy": {
+    "skill_tools_required": [
+      "ownership-structure",
+      "financial-analysis"
+    ],
+    "industry_search_required": true,
+    "raw_pdf_or_full_web_text_in_context": false,
+    "python_generates_analysis_prose": false
+  },
+  "context_stats": {
+    "initial_context_characters": 4465,
+    "contains_raw_documents": false,
+    "final_context_characters": 27197
+  },
+  "module_results": {
+    "ownership": {
+      "subject": {
+        "legal_name": "石家庄以岭药业股份有限公司",
+        "short_name": "以岭药业",
+        "ticker": "002603.SZ"
+      },
+      "as_of_date": "2025-12-31",
+      "formal_ready": true,
+      "ownership_relations": [
+        {
+          "holder": "以岭医药科技有限公司",
+          "held_entity": "石家庄以岭药业股份有限公司",
+          "percentage": 31.53,
+          "percentage_origin": "disclosed",
+          "synthetic": false,
+          "capital_scope": "total_ordinary_share_capital",
+          "as_of_date": "2025-12-31",
+          "verification_status": "verified"
+        },
+        {
+          "holder": "吴相君",
+          "held_entity": "石家庄以岭药业股份有限公司",
+          "percentage": 20.81,
+          "percentage_origin": "disclosed",
+          "synthetic": false,
+          "capital_scope": "total_ordinary_share_capital",
+          "as_of_date": "2025-12-31",
+          "verification_status": "verified"
+        },
+        {
+          "holder": "吴瑞",
+          "held_entity": "石家庄以岭药业股份有限公司",
+          "percentage": 2.34,
+          "percentage_origin": "disclosed",
+          "synthetic": false,
+          "capital_scope": "total_ordinary_share_capital",
+          "as_of_date": "2025-12-31",
+          "verification_status": "verified"
+        },
+        {
+          "holder": "吴以岭",
+          "held_entity": "以岭医药科技有限公司",
+          "percentage": 100.0,
+          "percentage_origin": "disclosed",
+          "synthetic": false,
+          "capital_scope": "registered_capital",
+          "as_of_date": "2025-12-31",
+          "verification_status": "verified"
+        },
+        {
+          "holder": "其他未单列股东",
+          "held_entity": "石家庄以岭药业股份有限公司",
+          "percentage": 45.32,
+          "percentage_origin": "calculated_residual",
+          "synthetic": true,
+          "capital_scope": "total_ordinary_share_capital",
+          "as_of_date": "2025-12-31",
+          "verification_status": "verified"
+        }
+      ],
+      "control_relationships": [
+        {
+          "subjects": [
+            "以岭医药科技有限公司"
+          ],
+          "controlled_entity": "石家庄以岭药业股份有限公司",
+          "relation_type": "controlling_shareholder",
+          "as_of_date": "2025-12-31",
+          "verification_status": "verified",
+          "note": null
+        },
+        {
+          "subjects": [
+            "吴以岭",
+            "吴相君",
+            "吴瑞"
+          ],
+          "controlled_entity": "石家庄以岭药业股份有限公司",
+          "relation_type": "actual_controller",
+          "as_of_date": "2025-12-31",
+          "verification_status": "verified",
+          "note": null
+        },
+        {
+          "subjects": [
+            "吴以岭",
+            "吴相君",
+            "吴瑞"
+          ],
+          "controlled_entity": "石家庄以岭药业股份有限公司",
+          "relation_type": "acting_in_concert",
+          "as_of_date": "2025-12-31",
+          "verification_status": "verified",
+          "note": null
+        },
+        {
+          "subjects": [
+            "吴以岭"
+          ],
+          "controlled_entity": "石家庄以岭药业股份有限公司",
+          "relation_type": "ultimate_controller",
+          "as_of_date": "2025-12-31",
+          "verification_status": "verified",
+          "note": "财务报表附注明确披露本企业最终控制方为吴以岭。"
+        }
+      ],
+      "percentage_validation": {
+        "tolerance": 0.01,
+        "all_complete": true,
+        "branches": [
+          {
+            "held_entity": "石家庄以岭药业股份有限公司",
+            "capital_scope": "total_ordinary_share_capital",
+            "known_total": 54.68,
+            "calculated_residual": 45.32,
+            "residual_label": "其他未单列股东",
+            "tolerance": 0.01,
+            "status": "complete_with_calculated_residual",
+            "is_complete": true
+          },
+          {
+            "held_entity": "以岭医药科技有限公司",
+            "capital_scope": "registered_capital",
+            "known_total": 100.0,
+            "calculated_residual": null,
+            "residual_label": null,
+            "tolerance": 0.01,
+            "status": "complete",
+            "is_complete": true
+          }
+        ]
+      },
+      "missing_information": [
+        {
+          "topic": "完整股东名册",
+          "description": "当前公开证据仅核实控制链、主要直接持股及其他未单列股东的合计比例，未形成覆盖全部股东身份的完整股东名册。",
+          "reason": "年报披露的是持股5%以上股东或前10名股东；差额只代表其他未单列股东合计，不能据此推断其具体身份或各自比例。"
+        },
+        {
+          "topic": "产权及控制关系方框图的图像文本",
+          "description": "PDF文本层未提取出年报方框图内部文字，本阶段以同份年报股东表和财务报表附注交叉核实控制链。",
+          "reason": "该页方框图为图像对象，当前V0 PDF文本接口未提供图像OCR。"
+        }
+      ],
+      "limitations": [
+        "本图是截至2025年12月31日、基于S01年报同口径数据形成的股权穿透图，不是完整股东名册。",
+        "目标公司未逐项列示部分以‘其他未单列股东’展示，其比例为100%减去已核实主要股东比例的确定性计算值；该节点不代表某一具体股东。",
+        "持股关系、实际控制人、一致行动关系和最终控制方分别建模，不以比例自动推断控制权。",
+        "本结果仅基于公开信息，未经企业尽调确认，不构成授信审批结论。"
+      ],
+      "render_engine": "graphviz-dot",
+      "skill_method": {
+        "skill": "ownership-structure",
+        "available": true,
+        "instructions_markdown": "## 3. 核心业务规则\n\n### 3.1 先核实主体与披露口径\n\n1. 记录公司全称、曾用名（如适用）、证券代码、交易所、报告期、资料发布日期。\n2. 区分**上市公司股东结构**（谁持有上市公司股份）与**集团对子公司的出资结构**（集团持有哪些子公司）：两类关系不能混在同一条未经说明的穿透链上。\n3. 年报“前十大股东”不是完整股东名册；不得据此推定未列示股东的姓名、身份或数量。\n4. 股权关系与表决权/一致行动/协议控制可能不同；分别记录，禁止直接等同。\n\n### 3.2 穿透方式及终止条件\n\n1. **在数据层面从目标企业出发，沿“被投资企业 → 其股东”向上追溯**，对影响控制关系的重要股东继续穿透。\n2. **在图上按用户示例布局**：目标企业位于最上方，第2层为直接股东，第3层为直接股东的上层股东，依次向下展开；同层尽量横向对齐，同一分支保持在直接持股对象下方。股权语义始终是“下方股东持有上方企业股份”，因此箭头必须从下方股东指向上方被持股企业。\n3. 默认**最多展示5层（包含目标企业）**，不是5次穿透外再加目标企业。穿透超过限制时，在图外说明和 JSON 中标注“超过展示层级”及未穿透原因；必要时可在数据层继续核查，但不得暗示图已完整。\n4. 穿透到**自然人**、**依法明确的最终国资监管/政府主体**，或已有权威披露明确的最终控制主体时，可以停止该路径。\n5. “国资平台”“国有企业”“基金”“合伙企业”本身**不必然是终点**。如上层所有者未查明，应继续核实或标注“待穿透/资料不足”，不得仅凭名称认定为国资实际控制。\n6. 遇到循环持股、重复节点或多条控制链时，用唯一实体 ID 去重并检测环路；允许一名股东连接多家主体，不能把相同主体错误复制成互不相关的公司。\n\n### 3.3 股东展示和合并\n\n以**每一个被持股企业为独立分组单位**处理股东；不同企业的股东不能跨节点汇总。\n\n- **优先单列**：已披露控股股东、实际控制人、一致行动人、可能影响控制权的重要股东，以及监管披露要求特别关注的主体，**无论持股比例是否超过阈值**。\n- **自然人股东**：单个持股比例**严格超过25%**时单列；其余自然人**可**合并显示为“其他未超过25%的自然人股东”。恰好25%的股东原则上属于候选合并组，但如涉及控制关系必须单列。**25%仅是可视化阈值，不是认定实际控制人的法律标准。**\n- **一般机构/其他股东**：单个持股比例**低于5%**且不影响控制关系时，可合并为“其他未超过5%的股东”；恰好5%原则上单列。需要保留年报披露的前十大股东以及重大股东的信息时，不应为凑阈值而隐藏。\n- **合并只影响展示层**：只能合并同一被持股主体的股东；聚合比例由原始已核实比例确定性相加。被合并节点和边继续保留在 `ownership.json`，不得为了简图删除证据事实。\n- **阈值不是企业事实**：`5%`、`25%`只能作为展示/聚合规则元数据，不能被 Agent 写成目标企业或任何股东的实际持股比例。运行时最终说明只允许引用 Tool 返回的企业事实 Fact ID 或经 Python 验证的计算 Fact ID；报告通常不主动解释这些内部阈值。\n- 对“其他股东”节点应在图外说明其构成（例如自然人/机构/未明确），不把无法识别的股东擅自归为自然人。\n- 若多个自然人为一致行动人或共同控制人，应保留控制关系，不能简单合并后掩盖关键事实。\n\n### 3.4 股权比例100%完整性校验\n\n1. 校验单位是**单个被展开的被持股主体**，不是视觉同一横排。该主体的全部可比直接股东持股比例应合计100%，默认允许 `±0.01` 个百分点，容差可配置。\n2. 必须由确定性 Python 函数计算；LLM 不负责加总或决定是否通过。不同基准日、不同股份类别、不同股本口径及重复关系不得混合。\n3. 超过100%且超出容差时返回 `percentage_total_exceeds_100`，检查重复股东、资料口径、披露日期和解析错误，不得出正式图。\n4. 不足100%时先查遗漏。仅当同一时点、同一股本口径的证据明确支持剩余股份由未单列股东持有时，才可用 `100% - 已知合计` 生成“其他未单列股东”；比例标为 `calculated_residual`，并保留声明来源。\n5. 无法确认缺口原因时标记 `incomplete` 并写入待核查事项；不得强行补足，也不得生成看似完整的正式图。\n6. 所有已展开节点均通过校验后，`formal_ready` 才能为真，绘图器才可生成正式 SVG/PNG。\n\n### 3.5 控制权和国资背景\n\n1. **直接持股比例 ≠ 实际控制比例 ≠ 表决权比例**。控股股东、实际控制人、最终国资主体的结论优先引用公司正式披露及其他可靠公开证据。\n2. 对国资背景至少区分“国有股东参股”“国有控股”“国有实际控制”三个不同层次；不得仅因链条中存在国企即断言最终为国资控股。\n3. 有协议控制、表决权委托、一致行动安排或无实际控制人的披露时，在数据与文字中单独说明。\n4. 无证据时输出“尚无法依据当前公开资料确认”，而非猜测个人姓名、持股比例或国资性质。\n\n### 3.6 事实驱动的分析文字\n\n1. 报告生成阶段复用股权边、控制关系、来源与证据编号，转换为只读的可引用事实目录；不得另建一套脱离 `ownership.json` 的事实数据。\n2. 披露事实、Python 计算结果、Skill 业务规则、资料缺口和模型分析必须分型保存。`5%`、`25%`等展示阈值只属于业务规则，不得作为企业事实 Fact ID 提供给模型。\n3. LLM 可以撰写有依据的结构特征、风险关注与尽调问题，但每条分析必须绑定已核实 Fact ID 或 Missing ID。支持性判断不得绑定未核实或冲突事实。\n4. 模型提交的分析正文不得自行填写企业名称、比例、年份、来源编号或链接；Python 根据 Fact ID 渲染具体事实、日期和来源。无法通过校验的分析文字不得进入正式说明，但已生成并通过确定性校验的图、JSON和验证结果应继续保留。\n5. 控股股东、实际控制人、一致行动关系等确定性结论必须引用对应控制关系 Fact ID；证据不足时只能形成待核查事项或明确标注的未核实假设。\n\n## 4. 数据来源与核验\n\n**来源优先级**：交易所/巨潮资讯等官方披露文件（年报、权益变动、控制权公告）→ 公司投资者关系及法定公开资料 → 国家企业信用信息公示系统等依法可查登记资料 → 其他可追溯公开来源。第三方商业资料只能作为线索或补充，不直接替代关键控制关系的核验。\n\nV1.5宿主可以通过`search_web`发现候选来源，再使用`fetch_source`取得HTML/PDF原文，并通过`extract_evidence`生成运行时绑定的来源与证据。搜索摘要、第三方转述或没有取得原文的结果只能作为候选线索。新证据未通过主体、基准日、持股口径、关系和完整性校验时，不得自动加入正式股权图。\n\n对每条用于绘图的股权连线保存：来源名称、原始 URL、披露日期、报告期/基准日、PDF 页码或定位信息、原文片段（可选）、核验状态。**图中的比例不能脱离证据单独存在。**\n\n核验规则：\n- 优先同一时点比较；若股东关系发生变化，应注明采用哪一期披露。\n- 同一股东持股比例存在冲突时，优先比较基准日期与更正公告，未解决前标记 `conflicted`，不得挑选数字静默覆盖。\n- 若百分比无法确定，不得臆算；所有比例必须带单位 `%`，并检验 `0 <= pct <= 100`。\n- 对每个展开主体执行100%完整性校验；低于100%且无可核验差额声明时属于信息不完整，不能生成正式图。\n- 每个实际输出的节点、连线与结论至少指向一个来源 ID；聚合节点则指向其可验证的构成及计算来源。\n\n## 5. 标准工作流\n\n1. **识别企业**：确认唯一上市主体、证券代码和研究基准日。\n2. **检索披露**：优先读取最新可用年报及其后的控制权/权益变动公告，必要时追溯上层股东公开资料。\n3. **提取事实**：将股东名称、统一实体标识、持股比例、股权/表决权关系、时点、来源整理为结构化候选关系。\n4. **事实核验**：核对冲突、名称重名、数据单位和日期；不能确认的关系保持空值并加入待核实清单。\n5. **逐层穿透**：优先重大/控制性股东，按第3节终止和层级规则构建关系图。\n6. **合并小股东**：仅对不影响控制权判断且合计可解释的同层股东进行可视化聚合；保留底层原始记录，不因合并删除数据。\n7. **比例校验**：逐个被展开主体校验直接股东合计、日期和股本口径；只在具备证据声明时生成计算差额节点。\n8. **绘制股权图**：调用 Python + Graphviz 工具，只接收 `formal_ready=true` 的展示图；目标企业在图顶端，股东按分支向下展开。节点仅显示完整名称和其对直接持股对象的比例，箭头由股东指向被持股企业。\n9. **生成说明**：形成股权背景、控股股东、实际控制人、国资性质、结构特点和信息限制的中文报告段落。\n10. **输出待核查问题**：列出未披露、冲突或超过显示层级的关键关系，说明需要补充哪些公开资料。\n11. **执行校验**：确保图中所有关系与 JSON 相符，来源可追溯，文件可打开，不能把缺失数据伪装成已穿透。"
+      }
+    },
+    "financial": {
+      "company": {
+        "legal_name": "石家庄以岭药业股份有限公司",
+        "short_name": "以岭药业",
+        "ticker": "002603.SZ",
+        "exchange": "深圳证券交易所",
+        "entity_scope": "consolidated"
+      },
+      "scope": {
+        "periods": [
+          "FY2024",
+          "FY2025"
+        ],
+        "currency": "CNY",
+        "amount_unit": "yuan",
+        "statement_scope": "consolidated"
+      },
+      "verified_financial_metrics": [
+        {
+          "item": "accounts_payable",
+          "item_label": "应付账款",
+          "prior_period": "FY2024",
+          "current_period": "FY2025",
+          "prior_value": "1846575493.59",
+          "current_value": "1468269274.13",
+          "absolute_change": "-378306219.46",
+          "yoy_percent": "-20.49",
+          "change_kind": "comparable",
+          "requires_deep_analysis": true,
+          "trigger_reasons": [
+            "同比绝对变动达到20.00%阈值"
+          ],
+          "change_display": "-20.49%"
+        },
+        {
+          "item": "accounts_receivable",
+          "item_label": "应收账款",
+          "prior_period": "FY2024",
+          "current_period": "FY2025",
+          "prior_value": "1225430236.42",
+          "current_value": "1228805576.37",
+          "absolute_change": "3375339.95",
+          "yoy_percent": "0.28",
+          "change_kind": "comparable",
+          "requires_deep_analysis": false,
+          "trigger_reasons": [],
+          "change_display": "0.28%"
+        },
+        {
+          "item": "current_assets",
+          "item_label": "流动资产合计",
+          "prior_period": "FY2024",
+          "current_period": "FY2025",
+          "prior_value": "4334951809.12",
+          "current_value": "5206141683.31",
+          "absolute_change": "871189874.19",
+          "yoy_percent": "20.10",
+          "change_kind": "comparable",
+          "requires_deep_analysis": true,
+          "trigger_reasons": [
+            "同比绝对变动达到20.00%阈值"
+          ],
+          "change_display": "20.10%"
+        },
+        {
+          "item": "inventory",
+          "item_label": "存货",
+          "prior_period": "FY2024",
+          "current_period": "FY2025",
+          "prior_value": "1746380345.14",
+          "current_value": "1488559131.89",
+          "absolute_change": "-257821213.25",
+          "yoy_percent": "-14.76",
+          "change_kind": "comparable",
+          "requires_deep_analysis": false,
+          "trigger_reasons": [],
+          "change_display": "-14.76%"
+        },
+        {
+          "item": "monetary_funds",
+          "item_label": "货币资金",
+          "prior_period": "FY2024",
+          "current_period": "FY2025",
+          "prior_value": "853034839.38",
+          "current_value": "1104952885.33",
+          "absolute_change": "251918045.95",
+          "yoy_percent": "29.53",
+          "change_kind": "comparable",
+          "requires_deep_analysis": true,
+          "trigger_reasons": [
+            "同比绝对变动达到20.00%阈值"
+          ],
+          "change_display": "29.53%"
+        },
+        {
+          "item": "net_profit",
+          "item_label": "净利润",
+          "prior_period": "FY2024",
+          "current_period": "FY2025",
+          "prior_value": "-734183532.26",
+          "current_value": "1281729907.88",
+          "absolute_change": "2015913440.14",
+          "yoy_percent": null,
+          "change_kind": "sign_change",
+          "requires_deep_analysis": true,
+          "trigger_reasons": [
+            "同比绝对变动达到20.00%阈值",
+            "数值发生正负号切换"
+          ],
+          "change_display": "不适用（跨符号或基期不可比）"
+        },
+        {
+          "item": "operating_cash_flow",
+          "item_label": "经营活动产生的现金流量净额",
+          "prior_period": "FY2024",
+          "current_period": "FY2025",
+          "prior_value": "611013171.11",
+          "current_value": "1776508378.47",
+          "absolute_change": "1165495207.36",
+          "yoy_percent": "190.75",
+          "change_kind": "comparable",
+          "requires_deep_analysis": true,
+          "trigger_reasons": [
+            "同比绝对变动达到20.00%阈值"
+          ],
+          "change_display": "190.75%"
+        },
+        {
+          "item": "operating_revenue",
+          "item_label": "营业收入",
+          "prior_period": "FY2024",
+          "current_period": "FY2025",
+          "prior_value": "6512734471.77",
+          "current_value": "7830737438.74",
+          "absolute_change": "1318002966.97",
+          "yoy_percent": "20.24",
+          "change_kind": "comparable",
+          "requires_deep_analysis": true,
+          "trigger_reasons": [
+            "同比绝对变动达到20.00%阈值"
+          ],
+          "change_display": "20.24%"
+        },
+        {
+          "item": "prepayments",
+          "item_label": "预付款项",
+          "prior_period": "FY2024",
+          "current_period": "FY2025",
+          "prior_value": "52771323.79",
+          "current_value": "70825121.85",
+          "absolute_change": "18053798.06",
+          "yoy_percent": "34.21",
+          "change_kind": "comparable",
+          "requires_deep_analysis": true,
+          "trigger_reasons": [
+            "同比绝对变动达到20.00%阈值"
+          ],
+          "change_display": "34.21%"
+        }
+      ],
+      "verified_ratios": [
+        {
+          "name": "资产负债率",
+          "period": "FY2024",
+          "value_percent": "23.40",
+          "formula": "负债合计/资产总计*100%"
+        },
+        {
+          "name": "流动比率",
+          "period": "FY2024",
+          "value_percent": "166.30",
+          "formula": "流动资产合计/流动负债合计*100%"
+        },
+        {
+          "name": "毛利率",
+          "period": "FY2024",
+          "value_percent": "50.19",
+          "formula": "(营业收入-营业成本)/营业收入*100%"
+        },
+        {
+          "name": "销售收现比",
+          "period": "FY2024",
+          "value_percent": "113.23",
+          "formula": "销售商品、提供劳务收到的现金/营业收入*100%"
+        },
+        {
+          "name": "资产负债率",
+          "period": "FY2025",
+          "value_percent": "19.69",
+          "formula": "负债合计/资产总计*100%"
+        },
+        {
+          "name": "流动比率",
+          "period": "FY2025",
+          "value_percent": "235.76",
+          "formula": "流动资产合计/流动负债合计*100%"
+        },
+        {
+          "name": "毛利率",
+          "period": "FY2025",
+          "value_percent": "64.28",
+          "formula": "(营业收入-营业成本)/营业收入*100%"
+        },
+        {
+          "name": "销售收现比",
+          "period": "FY2025",
+          "value_percent": "108.44",
+          "formula": "销售商品、提供劳务收到的现金/营业收入*100%"
+        }
+      ],
+      "disclosed_reasons": [
+        {
+          "financial_item": "operating_cash_flow",
+          "item_label": "经营活动产生的现金流量净额",
+          "kind": "disclosed_reason",
+          "statement": "公司披露经营活动产生的现金流量净额增长主要因报告期内销售回款较同期增加。",
+          "limitation": null
+        }
+      ],
+      "supported_inferences": [
+        {
+          "financial_item": "operating_revenue",
+          "item_label": "营业收入",
+          "kind": "supported_inference",
+          "statement": "呼吸系统类产品收入和销量增长与营业收入增长方向一致，可能构成收入增长的重要贡献因素；年报未将其表述为营业收入整体增长的唯一直接原因。",
+          "limitation": "方向性证据支持，但年报未将其表述为该总量变化的唯一直接原因。"
+        },
+        {
+          "financial_item": "net_profit",
+          "item_label": "净利润",
+          "kind": "supported_inference",
+          "statement": "营业收入同比20.24%、营业成本同比-13.77%，毛利率由50.19%升至64.28%，与净利润由负转正方向一致；该组合仅构成支持性推断，并非公司披露的完整利润变动原因。",
+          "limitation": "不是年报直接归因，不能据此排除其他利润影响因素。"
+        }
+      ],
+      "supporting_disclosures": [
+        {
+          "field_name": "operating_revenue",
+          "period": "FY2025",
+          "claim": "FY2025合并口径营业收入为7,830,737,438.74元",
+          "value": "7,830,737,438.74"
+        },
+        {
+          "field_name": "operating_revenue",
+          "period": "FY2024",
+          "claim": "FY2024合并口径营业收入为6,512,734,471.77元",
+          "value": "6,512,734,471.77"
+        },
+        {
+          "field_name": "operating_cost",
+          "period": "FY2025",
+          "claim": "FY2025合并口径营业成本为2,797,410,173.75元",
+          "value": "2,797,410,173.75"
+        },
+        {
+          "field_name": "operating_cost",
+          "period": "FY2024",
+          "claim": "FY2024合并口径营业成本为3,244,208,648.07元",
+          "value": "3,244,208,648.07"
+        },
+        {
+          "field_name": "net_profit",
+          "period": "FY2025",
+          "claim": "FY2025合并口径净利润为1,281,729,907.88元",
+          "value": "1,281,729,907.88"
+        },
+        {
+          "field_name": "net_profit",
+          "period": "FY2024",
+          "claim": "FY2024合并口径净利润为-734,183,532.26元",
+          "value": "-734,183,532.26"
+        },
+        {
+          "field_name": "operating_revenue",
+          "period": "FY2024",
+          "claim": "FY2024合并口径营业收入为6,512,734,471.77元",
+          "value": "6,512,734,471.77"
+        },
+        {
+          "field_name": "operating_cost",
+          "period": "FY2024",
+          "claim": "FY2024合并口径营业成本为3,244,208,648.07元",
+          "value": "3,244,208,648.07"
+        },
+        {
+          "field_name": "net_profit",
+          "period": "FY2024",
+          "claim": "FY2024合并口径净利润为-734,183,532.26元",
+          "value": "-734,183,532.26"
+        },
+        {
+          "field_name": "operating_cash_flow_change_reason",
+          "period": "FY2025",
+          "claim": "公司披露2025年度经营活动产生的现金流量净额同比增长，主要因销售回款较同期增加。",
+          "value": "主要是报告期内销售回款较同期增加所致。"
+        },
+        {
+          "field_name": "respiratory_product_revenue_change",
+          "period": "FY2025",
+          "claim": "年报营业收入构成表披露，2025年呼吸系统类产品收入为2,017,355,686.48元，占比25.76%，同比增长153.71%。",
+          "value": "2,017,355,686.48 25.76% 795,134,832.89 12.21% 153.71%"
+        },
+        {
+          "field_name": "respiratory_sales_volume_change_reason",
+          "period": "FY2025",
+          "claim": "公司披露相关实物销售数据同比变动超过30%，主要因呼吸系统类产品销量增加。",
+          "value": "主要是呼吸系统类产品销量增加所致。"
+        }
+      ],
+      "analysis_hypotheses": [
+        {
+          "kind": "unverified_hypothesis",
+          "statement": "当前证据未形成预付款项变动的直接原因；任何经营成因均为待核实假设，不能作为确定性结论。",
+          "verification_status": "unverified",
+          "required_evidence": [
+            "主要预付对象",
+            "采购合同",
+            "履约进度",
+            "账龄"
+          ]
+        },
+        {
+          "kind": "unverified_hypothesis",
+          "statement": "当前证据未形成货币资金变动的直接原因；任何经营成因均为待核实假设，不能作为确定性结论。",
+          "verification_status": "unverified",
+          "required_evidence": [
+            "受限资金明细",
+            "主要银行账户余额",
+            "资金变动构成"
+          ]
+        },
+        {
+          "kind": "unverified_hypothesis",
+          "statement": "当前证据未形成应付账款变动的直接原因；任何经营成因均为待核实假设，不能作为确定性结论。",
+          "verification_status": "unverified",
+          "required_evidence": [
+            "主要供应商",
+            "采购背景",
+            "合同账期",
+            "逾期情况"
+          ]
+        },
+        {
+          "kind": "unverified_hypothesis",
+          "statement": "当前证据未形成流动资产合计变动的直接原因；任何经营成因均为待核实假设，不能作为确定性结论。",
+          "verification_status": "unverified",
+          "required_evidence": [
+            "流动资产构成变动",
+            "受限及变现能力说明"
+          ]
+        }
+      ],
+      "missing_information": [
+        {
+          "topic": "FY2024及FY2025短期借款主表可比值",
+          "description": "已核对报表行未形成FY2024和FY2025短期借款数值事实；不能把空白单元格直接解释为零。",
+          "reason": "需要结合报表列结构、借款附注和银行授信资料进一步确认。"
+        },
+        {
+          "topic": "重大变动原因",
+          "description": "V2.3已核对经营现金流等部分重大变动原因，但尚未覆盖每个重点科目的全部附注和管理层解释。",
+          "reason": "未取得直接原因证据的科目继续保留为待核实假设，不能由模型补造。"
+        }
+      ],
+      "usage_note": "金额、比率和同比变化由Python基于V2.3结构化产物提供；disclosed_reasons仅包含公司明确披露原因；supported_inferences与analysis_hypotheses均不是企业披露，使用时必须保留推断或待核实措辞。",
+      "skill_method": {
+        "skill": "financial-analysis",
+        "available": true,
+        "instructions_markdown": "## 3. 银行授信财务分析的写作方法（必须执行）\n\n每个重点科目按以下顺序输出：\n\n1. **金额**：列出上一年度、本年度余额/发生额，明确单位、期间及合并口径。\n2. **变化**：列出增减金额、同比变化率（或增长率）、变化方向。\n3. **原因**：查找年报/附注/公告已披露的原因；不存在直接证据时仅提出合理假设，不得断言。\n4. **合理性**：结合主营业务、收入、上下游结构、账期、周转率、利润、现金流和行业特点做交叉验证；分别说明“支持该解释的证据”“与该解释相矛盾的现象”“仍缺少的证据”。\n5. **授信关注点**：说明可能对流动性、债务偿付、回款和资金占用产生的影响，必要时给出待核查材料/问题。\n6. **证据**：每条重要金额与已披露原因在内部数据中需要来源定位；正式报告默认不展示技术ID。未证实的具体原因或分析假设使用“可能”“需进一步核实”等措辞，不冒充已披露事实。\n\n**示例（完全虚构，不得作为以岭药业事实）**：\n\n> 公司2024年末应收账款为1,000万元，2025年末为1,200万元，增加200万元，同比增长20.00%，达到重点分析阈值。若公司同期销售扩大、赊销比例上升或结算账期较长，应收账款增加可能有经营层面的解释，但这些原因**尚未得到资料证实**。需核对营业收入增长幅度、应收账款周转天数、主要欠款客户、账龄和期后回款，以判断资金占用增加是否合理。`[模拟案例，无真实来源]`\n\n> **不能直接写成**：“主要由于公司扩大销售规模，行业普遍押账，因此应收账款增长20%。”除非企业年报或其他可核实资料确实支持相应原因，且已注明来源。\n\n### 3.1 变化幅度与重要性规则\n\n- 当科目 `|同比变化率| >= 20%`，**必须重点分析**：查阅相关附注、形成原因判断并给出风险关注点/核查问题；恰好 **20.00% 算触发**。\n- 低于20%也不能完全忽视：**绝对金额重大**、由正转负、扭亏为盈、利润与现金流背离、期末货币资金明显受限、即将到期的短期债务、重要减值或关联交易等，都应优先分析。\n- 以 20% 作为**研究触发阈值**，不是银行统一的风险认定标准，更不能等同于“超过20%就是不合理”。\n- 基期为0、接近0、缺失或指标发生正负切换时，不输出误导性百分比；标为“新增/消失/由正转负/不可比”，优先检查金额与原因。\n- 对金额很小而变化率很高的项目，标注金额的重要性，不夸大风险；对金额重大但增幅小的项目仍分析其占比与资金占用。\n- 重大变化分析优先级：`必须核查的异常/数据矛盾 > 关键科目>=20% > 其他重大风险信号 > 普通稳定科目`。\n\n### 3.2 同比变化率的统一算法\n\n对于两期可比金额（同主体、同范围、同币种及单位）：\n\n```text\n变化额 = 本期金额 - 上期金额\n变化率(%) = (本期金额 - 上期金额) / |上期金额| × 100%\n```\n\n- 对上期金额 > 0 的余额或收入类科目，可以称“同比增长/下降”；\n- 对上期金额 < 0 的项目，应写“亏损扩大/收窄”等方向性表述，不机械使用“增长”；\n- 上期金额为0或无法确认时，变化率为 `null`，并说明不能计算；\n- 负值、重分类、追溯调整、停业或合并范围变化时，应单独标注“可比性限制”；\n- 资产负债率、毛利率、净利率等**比率本身变化**用“百分点”描述，不将同比增幅与百分点混淆；\n- 精度与舍入规则由 Python Tools 统一实现，先用未舍入值计算，再在报告中按约定显示两位小数。\n\n## 4. 必须覆盖的重点财务科目\n\n> 下表是“检查清单”，不意味着公开年报必然披露所有明细。无法获得的资料必须明确“公开资料未披露/尚无法核实”，并进入待补充清单。\n\n| 模块 | 必须分析的内容 | 重点核查逻辑及缺失资料 |\n| --- | --- | --- |\n| **货币资金** | 两期金额、占总资产比例、受限资金、币种（如披露）、存放银行（如有可靠来源） | 是经营积累、融资流入还是出售资产形成？与短期借款、经营现金流是否匹配？**公开年报通常不能完整列出存款所在银行及账户余额**，不得凭推断填写；需补充开户行、账户余额明细和银行对账单 |\n| **应收账款** | 两期金额、收入与应收账款增速对比、余额来源/主要客户、赊销模式、信用账期、账龄/逾期、坏账准备、周转情况 | 是否收入增长导致、客户回款放缓、结算政策变化或大客户集中？核查前五大欠款方、账龄、期后回款和减值政策；账期不可用行业经验代替企业合同约定 |\n| **预付款项** | 变动金额与比例、主要预付对象、预付采购或项目背景、账龄与长期未结算情况 | 预付锁定原材料、订单优惠或产能只是**可能解释**；须核对采购合同、履约进度、价格及是否关联方；检查长期挂账 |\n| **固定资产** | 余额、主要类别（房屋建筑物、机器设备等）、新增/处置/折旧/减值、在建工程转固 | 是否有真实产能建设、设备更新或并购变化？与资本开支、销售扩张和产能利用情况是否一致；不要把未披露的具体设备名称写成事实 |\n| **短期借款** | 两期金额、借款类型、主要贷款银行/机构（披露时）、利率/到期日/担保及质押（披露时） | 资金用途是什么？新增借款是否支撑生产经营或填补现金缺口？与可动用货币资金、经营现金流和短期偿债压力是否匹配；**未披露债权银行不得臆造** |\n| **应付账款** | 两期余额、主要来源（原材料/商品/设备采购等）、供应商集中度、账期和逾期情况（如披露） | 是否采购规模扩大或付款账期拉长？与存货、采购成本及经营现金流是否匹配；需防范拖欠供应商导致的流动性压力 |\n| **主营业务收入** | 营业收入总额、分产品/业务收入及占比、同比增减、毛利率、主要收入来源 | 核查销量、价格、产品结构、新业务、并表变化及一次性因素；区分营业收入与主营业务收入以及不同披露口径；关注收入与应收、现金流的匹配 |\n| **经营活动现金流** | 现金流净额、经营流入流出、收现与利润匹配情况 | 收入利润增加但现金流下降时，优先检查应收、预付款、存货、应付及税费变化；不能用账面现金余额替代经营现金流 |\n| **存货（建议重点覆盖）** | 两期余额、原材料/在产品/库存商品构成、跌价准备及周转 | 库存增加是否与生产销售匹配？是否存在积压、减值或生产周期变化；医药企业需关注批次、有效期等经营风险（如有披露） |\n| **银行流水核查（第二阶段可选）** | 在获得合法授权的原始流水后，统计主要交易对手、前五大客户回款和采购付款、期间规模和异常往来 | 第一版公开资料不做此项；流水中的入账/出账**不必然等于销售收入/采购成本**，需剔除借款、往来款、内部划转、税费等非经营收付并与账簿核对 |\n\n### 4.1 应收账款的专项分析逻辑\n\n除20%触发规则外，如出现“应收账款增速高于营业收入增速”“应收周转率下降”“坏账准备明显变化”“大额应收账款长期未收回”任一信号，也应列为重点。按顺序核查：\n\n1. **规模变化**：应收余额变化额、变化率，收入变化额、变化率，计算应收账款/营业收入的粗略比例（注明仅为期末余额对全年收入，**不是周转率**）。\n2. **客户来源**：已披露前五大欠款单位或客户集中度；未披露时不得臆造名单。\n3. **形成机制**：销售赊销、结算方式和合同账期；先找证据，再分析是否符合行业业务模式。\n4. **账龄与减值**：应收账款账龄、按组合计提的坏账准备、单项减值、期后回款（如披露）；区分“账龄”和“合同约定到期后的逾期天数”。\n5. **现金流匹配**：销售商品、提供劳务收到的现金和营业收入的差异（注意含税、预收及非现金因素）；不得把差异直接等同造假。\n6. **授信结论**：将已核实的资金占用变化与仍需核实的客户集中、账期延长、坏账风险分别表述。\n\n### 4.2 货币资金与短债联合核查\n\n- 先列出货币资金总额、受限金额（如披露）、可动用金额（只有具备可靠数据时计算），再列短期借款及一年内到期债务；\n- 分析现金是否主要来自融资而非经营，关注短期债务集中到期和现金受限；\n- 若没有债务期限和受限资金完整信息，不可直接下“流动性充足”的确定结论；\n- “存在哪些银行”“贷款来自哪些银行”属于**应核查的明细**，只在存在明确证据时展示具体机构名称。\n\n## 5. 必须分析的财务比率（可得时）\n\n计算必须由 Python Tool 完成，并保存公式、输入数据及单位：\n\n| 分析方向 | 推荐指标 | 计算或说明 |\n| --- | --- | --- |\n| 偿债能力 | 资产负债率 | 总负债/总资产；同口径比较 |\n| 偿债能力 | 流动比率 | 流动资产/流动负债 |\n| 偿债能力 | 速动比率 | （流动资产－存货－预付款项等非速动项目）/流动负债；明确采用的口径 |\n| 盈利能力 | 毛利率、净利率 | 毛利润/营业收入；净利润/营业收入（需说明净利润口径） |\n| 盈利能力 | 营业收入、营业利润、归母净利润增长率 | 三者分开，不混写利润表科目 |\n| 营运能力 | 应收账款周转率与天数 | 营业收入/平均应收账款（或按规范选含票据口径）；必须有两端可比余额，披露分母定义与天数口径 |\n| 营运能力 | 存货周转率与天数 | 营业成本/平均存货；必须有两端余额 |\n| 现金流 | 经营现金流/净利润 | 观察利润现金含量；分母为0、负值时特别处理 |\n| 现金流 | 销售收现指标 | 根据可比收入与销售收现额计算；披露含税及业务口径差异 |\n\n可根据证据进一步分析：有息负债、利息保障倍数、现金短债比、资本开支等。避免在关键数据缺失时强行计算。\n\n## 6. 资料来源、证据分级与原因合理性评价\n\n### 6.1 来源优先级\n\n1. 证券交易所/巨潮资讯的正式年度报告、审计报告、财务附注、公告及更正公告；\n2. 公司投资者关系披露、官方经营资料；\n3. 政府/监管部门公开数据和行业资料（只能辅助解释行业环境，不可直接替代企业特定数据）；\n4. 可追溯的其他公开来源，仅作为线索并标明可靠性限制。\n\n每个原始数据点至少在Python内部保留 `source_id`、`title`、`url`、`published_at`、`fiscal_period`、`statement_scope`、`original_unit`、`page_or_section`、`extraction_status`。这些字段用于数据关联、复核和按需生成研究依据文件，不是LLM正文输出契约。中文 PDF 与 PDF 物理页码差异应予记录或转换，不得生成未验证的页码。\n\n### 6.2 报告只区分两种可信度\n\n| 等级 | 可用措辞 | 要求 |\n| --- | --- | --- |\n| `verified` 已核验 | “2025年末应收账款为……”“年报披露……主要由于……” | 直接来自可核对的可靠披露，或由Python根据已核验输入确定性计算 |\n| `unverified` 未核验 | “可能与……有关，需进一步核实” | 单一来源、尚未确认的外部信息或模型分析假设；不得写成企业已披露的确定事实 |\n\n既有`disclosed_reason`、`supported_inference`等字段可以继续作为内部资料来源类型，便于向模型提供上下文，但不再形成用户可见的多级可信度评级。完全没有依据的具体金额、比例或经营事件不得进入报告。\n\n### 6.3 判断原因是否合理\n\n对每项重点变化至少问：\n\n1. 公司是否在年报/附注**直接解释**了变化？该解释是否与金额、期间和业务口径一致？\n2. 若原因是“业务规模扩大”，收入、主营产品、存货、应收账款和销售现金回款是否支持？\n3. 若原因是“集中采购/锁价预付”，预付款、原材料采购、存货和采购承诺是否相符？\n4. 若原因是“购置固定资产”，固定资产增加、在建工程转固和投资现金流是否一致？\n5. 若原因是“增加短期借款”，借款余额、现金流入、财务费用和用途披露是否互相印证？\n6. 是否存在其他解释，如并购并表、会计政策变更、重分类、季节性、减值计提或一次性事项？\n7. 是否存在反面证据、信息缺口或存在较大不确定性？如果有，应列出补充核查事项。\n\n结论使用：`合理且有披露支持`、`具有一定合理性但证据不足`、`存在不匹配需重点核查`、`无法判断`。**这些是研究判断，不是统一的授信审批评级。**\n\n## 7. 标准工作流程\n\n1. **主体与报告期确认**：确认公司全称、证券代码、研究基准日、分析年度和合并/母公司口径。\n2. **官方资料获取**：优先最新完整年报及可比年度年报，检查更正公告、审计意见和重大会计调整。\n3. **科目抽取**：解析三大报表及附注，把数值、原始科目名、单位、币种、页码、来源写入结构化数据。\n4. **数据校验**：识别空缺与重复；校验资产=负债+权益、同一期间和合并范围、单位换算、利润表/现金流量表的期间属性；允许公开报告合理舍入差异但要记录。\n5. **确定性计算**：调用 Python 工具计算变化额、变化率、指标和必要的交叉校验；禁止 LLM 徒手计算关键数值。\n6. **重点科目排序**：执行 `>=20%` 规则及重大金额/正负切换等覆盖规则，形成需深入查附注的科目列表。\n7. **原因检索**：从相应财务附注、经营讨论、产品/客户披露中查找具体原因，给证据分级。\n8. **合理性验证**：对高优先级变动进行业务和现金流交叉验证，区分有证据事实和待核实假设。\n9. **DeepSeek 撰写授信分析文字**：把必要的结构化财务数据、指标、附注资料、缺失信息和来源概况交给模型，由模型按“金额→变动金额及比例→原因及证据→合理性→授信风险及待核查问题”生成自然语言分析。模型不需要在正文中回填Fact/Metric/Source ID。\n10. **生成待补充清单**：公开信息缺少的开户行及账户、账龄明细、客户合同账期、前五大销售/采购流水、贷款明细等，归类为后续尽调问题。\n11. **最小结构解析与机械组装**：Python确认模型响应可解析且包含报告章节/尽调问题，把模型原文、确定性财务数据表、图表和首页免责声明组装进Markdown。Python不逐句判断分析推断是否合理，不通过正则或技术ID拒绝章节；模型调用或结构解析整体失败时明确标记报告未完成，且不能触发固定模板替写。\n\n## 9. DeepSeek 报告结构与写作要求\n\n### 9.1 财务报表摘要\n\n| 科目 | 2024年 | 2025年 | 变化金额 | 同比变化率 | 是否重点 |\n| --- | ---: | ---: | ---: | ---: | --- |\n| 应收账款（万元） | 1,000 | 1,200 | +200 | +20.00% | 是 |\n\n### 9.2 重点科目分析\n\nDeepSeek 应逐项形成完整自然语言段落，而不是返回技术ID或风险标签。每段至少包含上期/本期金额、变化额与比例、已披露原因或明确标记为“未核验”的推断、跨指标合理性判断、授信关注及尽调问题。模型不需要输出Fact/Metric/Source ID；Python不得把模型文字重新渲染成预设分析模板。\n\n### 9.3 专项结论\n\n至少覆盖：盈利与收入质量、营运资金占用、短期偿债与现金流、重大财务异常、公开信息局限。不得在证据不足时笼统写“总体风险可控”或“授信条件良好”。\n\n### 9.4 尽调问题示例\n\n- **货币资金**：是否可以提供主要存款银行及期末余额、受限存款明细？\n- **应收账款**：能否提供前五大欠款方、账期/账龄、逾期余额和期后回款？\n- **预付款项**：大额预付款是否对应具体合同、锁价安排或供应商优惠？履约进展如何？\n- **短期借款**：主要借款银行、余额、到期安排、抵质押及实际用途分别是什么？\n- **应付账款**：主要供应商、采购背景、账期及是否存在逾期付款？\n- **流水核查（未来授权版本）**：能否提供指定期间银行流水并核实前五大销售回款/采购付款交易对手，区分经营收付与其他往来？"
+      }
+    }
+  },
+  "external_research": {
+    "facts": [
+      {
+        "subject": "以岭药业V2.4离线Mock业务资料",
+        "metric": "web_industry_research_0312c9671ae2",
+        "value": "【离线Mock夹具】石家庄以岭药业股份有限公司主营业务涉及创新中药研发、生产和销售，仅用于验证业务与行业映射。",
+        "period": null,
+        "verification_status": "verified"
+      },
+      {
+        "subject": "中医药行业政策V2.4离线Mock原文",
+        "metric": "web_policy_regulation_8f17e9c8f2c2",
+        "value": "【离线Mock夹具】本政策测试文本用于验证中医药政策、药品质量监管、实施时间和适用范围的原文提取，不代表任何真实现行政策。",
+        "period": null,
+        "verification_status": "verified"
+      },
+      {
+        "subject": "中医药行业政策V2.4离线Mock原文",
+        "metric": "web_policy_regulation_8f17e9c8f2c2",
+        "value": "【离线Mock夹具】一般行业政策不能直接认定已经对某一家企业造成收入或利润影响。",
+        "period": null,
+        "verification_status": "verified"
+      },
+      {
+        "subject": "中药行业趋势V2.4离线Mock资料",
+        "metric": "web_industry_research_0312c9671ae2",
+        "value": "【离线Mock夹具】中药行业需求、竞争格局和发展趋势存在多种驱动因素，本段只验证行业资料召回。",
+        "period": null,
+        "verification_status": "verified"
+      }
+    ],
+    "candidates": [],
+    "conflicts": [],
+    "warnings": [
+      "来源S07为单一第三方来源，事实可交付但待交叉核实"
+    ],
+    "raw_web_text_in_context": false
+  },
+  "module_status": {
+    "ownership": "success",
+    "financial": "success"
+  }
+}

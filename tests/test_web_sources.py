@@ -213,6 +213,7 @@ def test_fetch_refuses_redirect_to_private_network(tmp_path: Path) -> None:
 def test_fetch_access_failure_and_empty_content_are_explicit(tmp_path: Path) -> None:
     for response, expected in (
         (FakeResponse(status_code=403), "access_restricted"),
+        (FakeResponse(status_code=412), "access_restricted"),
         (FakeResponse(body=b"", status_code=200), "empty_source"),
     ):
         fetcher = WebSourceFetcher(

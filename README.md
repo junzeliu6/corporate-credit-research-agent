@@ -2,7 +2,7 @@
 
 企业授信研究Agent（Corporate Credit Research Agent）是一个面向银行对公场景的学习型项目：从上市公司公开披露出发，逐步构建可追溯的企业研究辅助 Agent。
 
-当前代码版本正在推进 **V2.4：DeepSeek 行业与政策研究能力**；需求基线为 **v5**。V2.1—V2.3已保留以岭药业FY2023—FY2025可比财务事实、Python确定性计算和DeepSeek财务正文；V2.4复用V1.5百度搜索/原文工具及V2.3财务上下文，由DeepSeek自主研究行业、竞争和政策并撰写Markdown，Python只负责工具、安全/预算、来源保存、最小结构解析与文件组装。V2.4的**离线实现与验证已完成**：定向测试`14 passed in 4.73s`、全量回归`237 passed in 12.63s`；本阶段真实DeepSeek+百度Live尚未执行，仍待用户单独授权。本项目不是授信审批系统，不给出授信额度、贷款定价或具有审批效力的结论。
+当前代码版本已完成 **V2.5：完整企业授信研究集成**；需求基线为 **v5**。V2.5使用一个DeepSeek主Agent，显式调用`ownership-structure`和`financial-analysis`两个既有Skill，并复用V1.5行业检索工具；行业研究不是第三个Skill。DeepSeek撰写全部专业正文，Python只负责数据、计算、图表、来源/预算、最小结构解析和Markdown组装。2026-10-26第二次受控DeepSeek+百度Live已真实完成双Skill、5份政府网页原文读取、20条事实提取和六章正文写作；原始一次性交付仅因模型JSON中的一处未转义引号失败，现已用保守解析器从同一份保存草稿离线恢复完整Markdown，未重写模型正文或再次付费调用。V2.5核心链路已验证，但仍未把这次“离线恢复后成功”描述成单次运行无故障完成。本项目不是授信审批系统，不给出授信额度、贷款定价或具有审批效力的结论。
 
 ## V0.1—V0.4 已实现
 
@@ -121,7 +121,7 @@
 - Mock Agent命令：`.venv\Scripts\python.exe -m credit_research_agent.cli 002603.SZ --run-agent "分析财务报表、现金流和重大同比变动" --agent-source S01 --financial-comparison-source S10 --llm-mode mock --financial-dir data/financial`。
 - 示例产物：`examples/v2_financial/CN-A-SZSE-002603/`。最新受控Live已验证模型调用Tool并完整撰写9章正文和9项尽调问题；120秒超时和0次自动重试配置有效。本轮直接使用已保存草稿离线恢复最终报告，不重新调用DeepSeek。
 
-当前仍未实现全部附注原因的自动覆盖、完整审计意见分析、V2.5同一任务双Skill编排、RAG、MCP或Streamlit。V2.4只新增行业研究运行时，不重构V2.3财务内核。
+当前仍未实现全部附注原因的自动覆盖、完整审计意见分析、RAG、MCP或Streamlit。V2.5只做单主Agent双Skill与行业检索的最小集成，不重构V1.5检索、V2.3财务内核或V1.2股权绘图。
 
 ## V2.4 离线实现已验证：DeepSeek 行业与政策研究（Live待授权）
 
@@ -132,6 +132,18 @@
 - 正式Markdown不展示Fact/Metric/Source技术编号；后台独立保存`industry_research_context.json`、`industry_sources.json`和`industry_execution_trace.json`，原始模型结果另行保存以便诊断。单个网页失败时允许继续使用其他成功来源；模型整体失败时标记报告未完成，不以Python模板替代。
 - 默认Mock不创建外部网络请求。真实运行同时跨越DeepSeek和百度搜索两个外部边界，必须分别配置密钥、选择Live模式并显式确认；V2.4离线Mock与全量回归已通过，但受控Live仍需用户单独授权。
 - 已验证离线交付：`industry_analysis.md`、`industry_research_context.json`、`industry_sources.json`、`industry_execution_trace.json`，以及原始草稿/交付状态诊断文件。V2.4给模型的Tool结果会隐藏后台Fact/Source等追踪ID，搜索结果日期只保留为来源元数据，不自动升级为已核验政策日期。定向测试`14 passed in 4.73s`，全量回归`237 passed in 12.63s`；结果详见`V2_4_STATUS.md`。Mock测试成功不等同于真实行业研究Live验收完成。
+
+## V2.5 单主Agent完整企业授信研究（核心Live链路已验证）
+
+- V2.5不新增Agent角色或第三个Skill。完整/综合授信任务通过多Skill计划同时选择`ownership-structure`和`financial-analysis`，行业研究继续由同一主Agent调用V1.5的`search_web`、`fetch_source`和`extract_evidence`。
+- 两个Skill高层Tool只允许模型提交已解析ticker；主年报、比较年报、PDF/JSON路径、Skill名称和输出目录由Python Runtime绑定。所有模块共享同一上市主体，财务比较保持FY2024/FY2025合并口径，股权数据保留实际披露基准日。
+- `SkillRuntime`返回实际加载的`SKILL.md` instructions，高层Tool向模型投影紧凑`skill_method`；这使专业方法真正进入运行上下文，同时避免发送整份Skill文本。股权图本地绝对路径不发送模型，S01/S10下载与解析路径只在后台来源文件中以`runtime_status=parsed`保留。
+- DeepSeek负责企业背景与股权、经营、行业政策、财务、综合授信风险和尽调问题六章正文。第五章必须关联至少两个研究维度；Python只插入股权图和确定性财务表格，不改写模型章节，也不拼接旧模板报告。
+- 单个Skill、网页或章节失败时保留其他成功成果并返回`PARTIAL_SUCCESS`；搜索超时、鉴权和参数错误转换为结构化失败，单个格式错误章节被跳过而不丢弃有效章节。模型整体失败时保留结构化数据、图表、来源和轨迹并明确报告未完成，不用Python模板补写专业分析。
+- 核心产物为`credit_research_report.md`、`credit_research_context.json`、`credit_research_sources.json`、`credit_research_execution_trace.json`、模型草稿/交付状态和股权SVG/PNG。正式Markdown不显示Fact/Metric/Source/Evidence等技术ID，后台产物仍可审计。
+- Live只有在两个Skill和六章均完成、并且至少发生一次证据提取且得到事实或候选时才可标记`SUCCESS`。V2.5定向测试`69 passed in 5.62s`、全量回归`263 passed in 15.08s`；离线Mock在同一根轨迹中完成2次Skill调用、9次Tool调用和10次Mock模型请求，真实外部搜索请求为0。2026-10-23完整Live完成6次DeepSeek请求、10次Tool调用和6次百度真实搜索，并交付六章正文；但唯一网页读取返回HTTP 412，未取得外部原文或形成外部Fact，因此结果为`PARTIAL_SUCCESS`。详细结果见`V2_5_LIVE_TEST_STATUS.md`。
+- Live后已离线修复关键失败路径：局部搜索预算耗尽不再禁止读取/提取已有候选，已有候选优先于新增付费搜索，单页403/404/412后返回剩余候选；Tool结果新增股权、单品、两期趋势、流动资产归因和营运资金边界，Markdown不再显示内部错误码。修复后专项回归`105 passed in 6.79s`、全量回归`275 passed in 15.78s`，本轮未调用真实API。
+- 2026-10-26第二次完整Live中，DeepSeek请求28次、Function Tool调用29次、百度实际搜索6次；两个Skill均成功，5份政府网页原文形成20条事实和44条证据，模型生成6章及18个尽调问题。严格JSON解析因`"十五五"`内部双引号未转义而失败；解析器现仅对此类可确定内部引号作保守修复，截断或其他结构错误仍拒绝。保存草稿已离线恢复为`credit_research_report_recovered.md`，恢复过程网络请求为0；详细记录见`V2_5_LIVE_TEST_STATUS.md`。
 
 ## v5 文档与 Skill 规范
 
@@ -174,6 +186,7 @@ corporate-credit-research-agent/
 │  ├─ web_sources.py         # V1.5安全HTML/PDF获取、运行时来源与证据登记
 │  ├─ retrieval_runtime.py   # V1.5 Agent检索Tools、事实选择和执行轨迹
 │  ├─ industry_agent_runtime.py # V2.4行业研究Instructions、检索编排、LLM正文和Markdown组装
+│  ├─ integrated_agent_runtime.py # V2.5单主Agent、双Skill、行业检索及完整报告组装
 │  ├─ pdf_parser.py          # 逐页提取、质量摘要和章节定位
 │  └─ cli.py                 # 企业识别、来源处理和Skill运行入口
 ├─ examples/
@@ -220,6 +233,8 @@ corporate-credit-research-agent/
 │  ├─ test_cli_v15.py
 │  ├─ test_industry_agent_runtime.py
 │  ├─ test_cli_v24.py
+│  ├─ test_integrated_agent_runtime.py # V2.5完整编排、容错、作者边界与双Live确认
+│  ├─ test_cli_v25.py        # V2.5完整研究CLI离线边界
 │  └─ test_cli.py
 ├─ .env.example
 ├─ pyproject.toml
@@ -228,6 +243,7 @@ corporate-credit-research-agent/
 ├─ V1_4_STATUS.md
 ├─ V1_5_STATUS.md
 ├─ V2_4_STATUS.md
+├─ V2_5_STATUS.md
 └─ ROADMAP.md
 ```
 
@@ -413,6 +429,42 @@ python -m credit_research_agent "002603.SZ" `
 ```
 
 这条命令是后续受控验收建议，不代表已经执行。首次Live前应先省略两个确认参数检查脱敏配置与路径；只有同时加入`--confirm-live`和`--confirm-search-live`才允许模型与搜索发出真实请求。运行预算是本地保护机制，不等于供应商账单硬上限，不得自动扩大后重试。
+
+运行 V2.5 完全离线 Mock 完整研究（不会调用真实DeepSeek或百度API）：
+
+```powershell
+python -m credit_research_agent "002603.SZ" `
+  --run-complete-research "请对以岭药业（002603.SZ）进行完整的企业授信研究。" `
+  --complete-source S01 `
+  --financial-comparison-source S10 `
+  --llm-mode mock `
+  --search-mode mock `
+  --complete-dir "examples/v2_5_complete_mock" `
+  --complete-trace-output "examples/v2_5_complete_mock/CN-A-SZSE-002603/credit_research_execution_trace.json"
+```
+
+该入口在同一主Agent运行中调用两个Skill高层Tool及行业检索Tools，生成六章模型草稿，再由Python插入股权图和财务表格。离线产物已生成在`examples/v2_5_complete_mock/CN-A-SZSE-002603/`：两个Skill均完成计划与执行，Tool响应包含由实际`SKILL.md`加载并压缩的专业方法；记录2次Skill调用、9次Tool调用、10次Mock模型请求、1920个Mock Token、1次搜索、3次抓取和3次提取，真实外部搜索请求为0；六章、股权SVG/PNG及财务表均已交付，正式Markdown未显示技术ID。顶层来源文件记录S01/S10解析状态和后台路径，模型上下文不含股权图本地绝对路径。状态按规则为`PARTIAL_SUCCESS`，Mock正文仅用于证明编排、容错和文件交付，不代表真实DeepSeek研究质量，也不能替代Live验收。
+
+V2.5完整受控Live必须同时确认DeepSeek和百度搜索。下列为通用参考命令；2026-10-23首次实测采用了更保守的30轮、40次总Tool、6次搜索请求和16,000单次输出Token预算，完整实测命令见`V2_5_LIVE_TEST_STATUS.md`：
+
+```powershell
+python -m credit_research_agent "002603.SZ" `
+  --run-complete-research "请研究以岭药业的企业背景、股权结构、经营情况、行业政策及财务状况，并从银行授信角度撰写完整研究报告。" `
+  --complete-source S01 `
+  --financial-comparison-source S10 `
+  --llm-mode live --confirm-live `
+  --search-mode live --confirm-search-live `
+  --complete-dir "data/complete_research/live_yiling" `
+  --max-agent-turns 70 --max-tool-calls 60 `
+  --max-search-rounds 10 --max-search-calls 10 `
+  --max-search-requests 10 --max-search-results 5 `
+  --max-source-fetches 20 --max-extract-calls 20 `
+  --max-output-tokens 50000 `
+  --request-timeout-seconds 120 `
+  --max-model-retries 0
+```
+
+首次完整Live已经在用户明确授权下执行一次，结果为`PARTIAL_SUCCESS`：双Skill、六章DeepSeek正文、股权图与财务数据成功；6次百度真实搜索后未能取得外部原文，行业政策证据链未完成。`--confirm-live`授权的是一次受控Agent任务，不代表只发生一次模型请求：本次Agent Loop实际请求DeepSeek 6次。新的Live仍需用户逐次授权，失败后不得自动扩大预算或重复付费调用。
 
 通过 V1.3 运行时执行同一项任务：
 
@@ -644,11 +696,13 @@ V1.5百度Provider/缓存/预算、HTML/PDF获取、来源证据、部分成功�
 V2.1—V2.3财务模型、原因资料、CLI、真实年报、Skill Runtime、LLM正文直出、最小结构解析与无模板回退：测试数量以当前pytest实测为准
 V2.4行业Instructions、检索Tool编排、V2.3财务上下文复用、来源/轨迹产物、部分成功、双Live确认、技术ID投影、政策日期边界与无模板回退：14项
 V2.4定向测试：14 passed in 4.73s；完整离线回归：237 passed in 12.63s。所有Mock测试禁止真实DeepSeek、百度或其他外部网络请求
+V2.5多Skill计划、同一Agent双Skill调用、Skill方法投影、检索错误降级、Live证据门槛、统一主体/期间、部分成功、上下文压缩、章节容错、无Python模板、完整Markdown及双Live确认：定向测试69 passed in 5.62s
+V2.5初始完整离线回归：263 passed in 15.08s；首次Live后稳定性修复专项回归：105 passed in 6.79s；最新全量回归：275 passed in 15.78s；`compileall`与`git diff --check`通过（仅CRLF提示）
 ```
 
 网络请求使用离线假响应测试，因此日常 `pytest` 不依赖巨潮资讯、百度搜索或 DeepSeek 是否可访问。
 
 ## 下一阶段
 
-V2.4离线行业研究运行时已完成验证：复用V1.5检索工具和预算边界、V2.3结构化财务上下文及既有来源记录，Mock模型实际完成搜索、原文获取、证据提取和自然语言Markdown组装，四项核心产物及无网络边界均已核查。下一步仅在用户单独授权下，以DeepSeek与百度搜索双确认执行一次受控Live，重点核对真实政策原文、企业适用性、行业—财务联动、Token/费用和最终报告质量。Live通过前不标记V2.4最终完成，也不启动V2.5。
+V2.5离线Mock、回归和两次完整Live均已执行。第二次Live已验证一个主Agent真实调用两个Skill、读取外部政府原文、提取证据并由DeepSeek生成六章完整报告；同一份模型草稿已在不重新调用API的情况下恢复为Markdown。下一步优先降低28轮Agent Loop造成的重复上下文与716,154总Token消耗，并让保守JSON恢复路径在下一次正常任务中自然生效；未经授权不自动再次调用或重试付费服务。
 

@@ -30,6 +30,12 @@ from credit_research_agent.grounding import (
     build_evidence_bundle_grounding_catalog,
     build_ownership_grounding_catalog,
 )
+from credit_research_agent.integrated_agent_runtime import (
+    CompleteExecutionTrace,
+    CompleteResearchResult,
+    IntegratedCreditResearchAgentRuntime,
+    restore_complete_report_from_saved_draft,
+)
 from credit_research_agent.models import (
     CompanyIdentity,
     EvidenceBundle,
@@ -100,6 +106,10 @@ __all__ = [
     "InformationRetrievalRuntime",
     "GroundedAnalysisClaim",
     "GroundedMissingInformation",
+    "CompleteExecutionTrace",
+    "CompleteResearchResult",
+    "IntegratedCreditResearchAgentRuntime",
+    "restore_complete_report_from_saved_draft",
     "MissingInformation",
     "ModelInference",
     "MarkdownReportBuilder",
@@ -146,5 +156,5 @@ __all__ = [
     "validate_financial_facts",
 ]
 
-__version__ = "2.3.0"
+__version__ = "2.5.0"
 

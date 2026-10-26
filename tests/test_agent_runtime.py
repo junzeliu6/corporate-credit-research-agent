@@ -18,6 +18,7 @@ from credit_research_agent.agent_runtime import (
     AgentRuntimeError,
     CreditResearchAgentRuntime,
     _build_compact_tool_result,
+    build_ownership_snapshot_from_artifacts,
     build_ownership_response_contract,
     create_ownership_function_tool,
     parse_ownership_fact_selection,
@@ -341,6 +342,111 @@ def _grounding_payload() -> Dict[str, Any]:
         payload
     ).model_dump(mode="json")
     return payload
+
+
+def _snapshot_artifacts(tmp_path: Path) -> Dict[str, Any]:
+    """复用现有假 Skill 产物，并补入快照边界测试所需关系。"""
+
+    prepared = _prepared_inputs(tmp_path)
+    result = _FakeSkillRuntime(PROJECT_ROOT).execute(
+        task=prepared["task"],
+        identity=prepared["identity"],
+        source=prepared["source"],
+        tool_arguments={"output_dir": tmp_path / "snapshot-output"},
+        trace_output=tmp_path / "snapshot-skill-trace.json",
+    )
+    artifacts = dict(result.artifacts)
+    graph_path = Path(artifacts["graph_path"])
+    graph = json.loads(graph_path.read_text(encoding="utf-8"))
+    graph["edges"][1]["synthetic"] = True
+    graph["edges"].append(
+        {
+            "edge_id": "OE-VOTING",
+            "source_node_id": "person",
+            "target_node_id": "target",
+            "relation_type": "voting_rights",
+            "percentage": 55.0,
+            "percentage_origin": "disclosed",
+            "as_of_date": "2025-12-31",
+            "capital_scope": "voting_rights",
+            "status": "verified",
+            "source_ids": ["S01"],
+            "evidence_ids": ["E099"],
+            "synthetic": False,
+        }
+    )
+    graph["warnings"] = ["股权图仅反映指定披露日的公开信息"]
+    graph_path.write_text(json.dumps(graph, ensure_ascii=False), encoding="utf-8")
+    Path(artifacts["dataset_path"]).write_text(
+        json.dumps(
+            {"limitations": ["未取得完整股东名册", "股权图仅反映指定披露日的公开信息"]},
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    return artifacts
+
+
+def _all_mapping_keys(value: Any) -> list[str]:
+    keys: list[str] = []
+    if isinstance(value, dict):
+        for key, item in value.items():
+            keys.append(str(key))
+            keys.extend(_all_mapping_keys(item))
+    elif isinstance(value, list):
+        for item in value:
+            keys.extend(_all_mapping_keys(item))
+    return keys
+
+
+def test_ownership_snapshot_hides_technical_ids_and_voting_rights(
+    tmp_path: Path,
+) -> None:
+    snapshot = build_ownership_snapshot_from_artifacts(_snapshot_artifacts(tmp_path))
+
+    assert [item["percentage"] for item in snapshot["ownership_relations"]] == [
+        31.53,
+        68.47,
+    ]
+    assert snapshot["ownership_relations"][1]["synthetic"] is True
+    assert "voting_rights" not in json.dumps(snapshot, ensure_ascii=False)
+    assert "response_contract" not in snapshot
+    assert not any(
+        key.endswith("_id") or key.endswith("_ids")
+        for key in _all_mapping_keys(snapshot)
+    )
+
+
+def test_ownership_snapshot_keeps_controls_validation_and_limitations(
+    tmp_path: Path,
+) -> None:
+    snapshot = build_ownership_snapshot_from_artifacts(_snapshot_artifacts(tmp_path))
+
+    assert snapshot["subject"] == {
+        "legal_name": "石家庄以岭药业股份有限公司",
+        "short_name": "以岭药业",
+        "ticker": "002603.SZ",
+    }
+    assert snapshot["control_relationships"] == [
+        {
+            "subjects": ["吴以岭"],
+            "controlled_entity": "石家庄以岭药业股份有限公司",
+            "relation_type": "ultimate_controller",
+            "as_of_date": "2025-12-31",
+            "verification_status": "verified",
+            "note": None,
+        }
+    ]
+    validation = snapshot["percentage_validation"]
+    assert validation["all_complete"] is True
+    assert validation["branches"][0]["held_entity"] == "石家庄以岭药业股份有限公司"
+    assert validation["branches"][0]["calculated_residual"] == 68.47
+    assert snapshot["limitations"] == [
+        "未取得完整股东名册",
+        "股权图仅反映指定披露日的公开信息",
+    ]
+    assert snapshot["render_engine"] == "test"
+    assert snapshot["graph_paths"]["svg"].endswith("svg.txt")
 
 
 def test_function_tool_is_only_high_level_ownership_tool() -> None:

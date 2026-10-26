@@ -80,6 +80,7 @@ class SkillExecutionResult(BaseModel):
     trace: SkillExecutionTrace
     selection: SkillSelection
     loaded_skill_path: str
+    skill_instructions: Optional[str] = None
     tool_name: str
     artifacts: Dict[str, Any]
 
@@ -165,6 +166,7 @@ class SkillRuntime:
         source: SourceRecord,
         tool_arguments: Mapping[str, Any],
         trace_output: Path,
+        selected_skill: Optional[str] = None,
     ) -> SkillExecutionResult:
         trace = SkillExecutionTrace(trace_id=self._trace_id_factory(), task=task)
         trace_path = Path(trace_output)
@@ -193,7 +195,24 @@ class SkillRuntime:
                 },
             )
 
-            selection = self.selector.select(task)
+            if selected_skill is None:
+                selection = self.selector.select(task)
+                selection_mode = "keyword_selector"
+            else:
+                # 多 Skill 任务中，具体 Tool 封装层已知道要执行哪一个
+                # Skill。运行时仍通过 Registry 校验白名单，不允许调用方
+                # 传入任意名称绕过加载与 Tool 绑定校验。
+                registration = self.registry.get(selected_skill)
+                selection = SkillSelection(
+                    task=task,
+                    selected_skill=registration.name,
+                    matched_keywords=[],
+                    rationale=(
+                        "Python 运行上下文显式绑定 Skill "
+                        f"{registration.name}；已通过运行时白名单校验。"
+                    ),
+                )
+                selection_mode = "runtime_binding"
             registration = self.registry.get(selection.selected_skill)
             trace.selected_skill = registration.name
             trace.skill_version = registration.version
@@ -202,7 +221,10 @@ class SkillRuntime:
                 trace,
                 SkillExecutionStage.SKILL_SELECTED,
                 f"已选择 Skill {registration.name}",
-                {"matched_keywords": selection.matched_keywords},
+                {
+                    "matched_keywords": selection.matched_keywords,
+                    "selection_mode": selection_mode,
+                },
             )
 
             loaded = self.loader.load(registration)
@@ -285,6 +307,7 @@ class SkillRuntime:
                 trace=trace,
                 selection=selection,
                 loaded_skill_path=registration.relative_path,
+                skill_instructions=loaded.instructions,
                 tool_name=tool.name,
                 artifacts=artifacts,
             )

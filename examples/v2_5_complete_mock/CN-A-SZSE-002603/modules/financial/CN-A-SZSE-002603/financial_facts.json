@@ -1,0 +1,3440 @@
+{
+  "schema_version": "2.3.0",
+  "identity": {
+    "entity_id": "CN-A-SZSE-002603",
+    "legal_name": "石家庄以岭药业股份有限公司",
+    "english_name": "Shijiazhuang Yiling Pharmaceutical Co., Ltd.",
+    "short_name": "以岭药业",
+    "ticker": "002603.SZ",
+    "security_code": "002603",
+    "exchange": "深圳证券交易所",
+    "country_of_incorporation": "中国",
+    "entity_scope": "consolidated",
+    "evidence_ids": []
+  },
+  "raw_facts": [
+    {
+      "fact_id": "F201",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "monetary_funds",
+      "value": "1,104,952,885.33",
+      "claim": "FY2025合并口径货币资金为1,104,952,885.33元",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E201"
+      ]
+    },
+    {
+      "fact_id": "F202",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "monetary_funds",
+      "value": "853,034,839.38",
+      "claim": "FY2024合并口径货币资金为853,034,839.38元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E201"
+      ]
+    },
+    {
+      "fact_id": "F203",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "accounts_receivable",
+      "value": "1,228,805,576.37",
+      "claim": "FY2025合并口径应收账款为1,228,805,576.37元",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E202"
+      ]
+    },
+    {
+      "fact_id": "F204",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "accounts_receivable",
+      "value": "1,225,430,236.42",
+      "claim": "FY2024合并口径应收账款为1,225,430,236.42元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E202"
+      ]
+    },
+    {
+      "fact_id": "F205",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "prepayments",
+      "value": "70,825,121.85",
+      "claim": "FY2025合并口径预付款项为70,825,121.85元",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E203"
+      ]
+    },
+    {
+      "fact_id": "F206",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "prepayments",
+      "value": "52,771,323.79",
+      "claim": "FY2024合并口径预付款项为52,771,323.79元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E203"
+      ]
+    },
+    {
+      "fact_id": "F207",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "inventory",
+      "value": "1,488,559,131.89",
+      "claim": "FY2025合并口径存货为1,488,559,131.89元",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E204"
+      ]
+    },
+    {
+      "fact_id": "F208",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "inventory",
+      "value": "1,746,380,345.14",
+      "claim": "FY2024合并口径存货为1,746,380,345.14元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E204"
+      ]
+    },
+    {
+      "fact_id": "F209",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "current_assets",
+      "value": "5,206,141,683.31",
+      "claim": "FY2025合并口径流动资产合计为5,206,141,683.31元",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E205"
+      ]
+    },
+    {
+      "fact_id": "F210",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "current_assets",
+      "value": "4,334,951,809.12",
+      "claim": "FY2024合并口径流动资产合计为4,334,951,809.12元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E205"
+      ]
+    },
+    {
+      "fact_id": "F211",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "fixed_assets",
+      "value": "6,016,119,428.08",
+      "claim": "FY2025合并口径固定资产为6,016,119,428.08元",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E206"
+      ]
+    },
+    {
+      "fact_id": "F212",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "fixed_assets",
+      "value": "6,011,503,000.70",
+      "claim": "FY2024合并口径固定资产为6,011,503,000.70元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E206"
+      ]
+    },
+    {
+      "fact_id": "F213",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "total_assets",
+      "value": "13,674,998,496.95",
+      "claim": "FY2025合并口径资产总计为13,674,998,496.95元",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E207"
+      ]
+    },
+    {
+      "fact_id": "F214",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "total_assets",
+      "value": "13,319,171,088.28",
+      "claim": "FY2024合并口径资产总计为13,319,171,088.28元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E207"
+      ]
+    },
+    {
+      "fact_id": "F215",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "accounts_payable",
+      "value": "1,468,269,274.13",
+      "claim": "FY2025合并口径应付账款为1,468,269,274.13元",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E208"
+      ]
+    },
+    {
+      "fact_id": "F216",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "accounts_payable",
+      "value": "1,846,575,493.59",
+      "claim": "FY2024合并口径应付账款为1,846,575,493.59元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E208"
+      ]
+    },
+    {
+      "fact_id": "F217",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "current_liabilities",
+      "value": "2,208,205,004.61",
+      "claim": "FY2025合并口径流动负债合计为2,208,205,004.61元",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E209"
+      ]
+    },
+    {
+      "fact_id": "F218",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "current_liabilities",
+      "value": "2,606,688,892.16",
+      "claim": "FY2024合并口径流动负债合计为2,606,688,892.16元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E209"
+      ]
+    },
+    {
+      "fact_id": "F219",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "total_liabilities",
+      "value": "2,693,101,474.16",
+      "claim": "FY2025合并口径负债合计为2,693,101,474.16元",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E210"
+      ]
+    },
+    {
+      "fact_id": "F220",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "total_liabilities",
+      "value": "3,117,078,422.57",
+      "claim": "FY2024合并口径负债合计为3,117,078,422.57元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E210"
+      ]
+    },
+    {
+      "fact_id": "F221",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "operating_revenue",
+      "value": "7,830,737,438.74",
+      "claim": "FY2025合并口径营业收入为7,830,737,438.74元",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E211"
+      ]
+    },
+    {
+      "fact_id": "F222",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "operating_revenue",
+      "value": "6,512,734,471.77",
+      "claim": "FY2024合并口径营业收入为6,512,734,471.77元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E211"
+      ]
+    },
+    {
+      "fact_id": "F223",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "operating_cost",
+      "value": "2,797,410,173.75",
+      "claim": "FY2025合并口径营业成本为2,797,410,173.75元",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E212"
+      ]
+    },
+    {
+      "fact_id": "F224",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "operating_cost",
+      "value": "3,244,208,648.07",
+      "claim": "FY2024合并口径营业成本为3,244,208,648.07元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E212"
+      ]
+    },
+    {
+      "fact_id": "F225",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "net_profit",
+      "value": "1,281,729,907.88",
+      "claim": "FY2025合并口径净利润为1,281,729,907.88元",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E213"
+      ]
+    },
+    {
+      "fact_id": "F226",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "net_profit",
+      "value": "-734,183,532.26",
+      "claim": "FY2024合并口径净利润为-734,183,532.26元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E213"
+      ]
+    },
+    {
+      "fact_id": "F227",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "cash_received_from_sales",
+      "value": "8,491,648,565.26",
+      "claim": "FY2025合并口径销售商品、提供劳务收到的现金为8,491,648,565.26元",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E214"
+      ]
+    },
+    {
+      "fact_id": "F228",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "cash_received_from_sales",
+      "value": "7,374,426,224.70",
+      "claim": "FY2024合并口径销售商品、提供劳务收到的现金为7,374,426,224.70元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E214"
+      ]
+    },
+    {
+      "fact_id": "F229",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "operating_cash_flow",
+      "value": "1,776,508,378.47",
+      "claim": "FY2025合并口径经营活动产生的现金流量净额为1,776,508,378.47元",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E215"
+      ]
+    },
+    {
+      "fact_id": "F230",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "operating_cash_flow",
+      "value": "611,013,171.11",
+      "claim": "FY2024合并口径经营活动产生的现金流量净额为611,013,171.11元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E215"
+      ]
+    },
+    {
+      "fact_id": "F231",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "monetary_funds",
+      "value": "853,034,839.38",
+      "claim": "FY2024合并口径货币资金为853,034,839.38元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E216"
+      ]
+    },
+    {
+      "fact_id": "F232",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "monetary_funds",
+      "value": "940,512,433.11",
+      "claim": "FY2023合并口径货币资金为940,512,433.11元",
+      "entity_scope": "consolidated",
+      "period": "FY2023",
+      "evidence_ids": [
+        "E216"
+      ]
+    },
+    {
+      "fact_id": "F233",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "accounts_receivable",
+      "value": "1,225,430,236.42",
+      "claim": "FY2024合并口径应收账款为1,225,430,236.42元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E217"
+      ]
+    },
+    {
+      "fact_id": "F234",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "accounts_receivable",
+      "value": "2,401,186,364.09",
+      "claim": "FY2023合并口径应收账款为2,401,186,364.09元",
+      "entity_scope": "consolidated",
+      "period": "FY2023",
+      "evidence_ids": [
+        "E217"
+      ]
+    },
+    {
+      "fact_id": "F235",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "prepayments",
+      "value": "52,771,323.79",
+      "claim": "FY2024合并口径预付款项为52,771,323.79元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E218"
+      ]
+    },
+    {
+      "fact_id": "F236",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "prepayments",
+      "value": "109,711,768.30",
+      "claim": "FY2023合并口径预付款项为109,711,768.30元",
+      "entity_scope": "consolidated",
+      "period": "FY2023",
+      "evidence_ids": [
+        "E218"
+      ]
+    },
+    {
+      "fact_id": "F237",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "inventory",
+      "value": "1,746,380,345.14",
+      "claim": "FY2024合并口径存货为1,746,380,345.14元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E219"
+      ]
+    },
+    {
+      "fact_id": "F238",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "inventory",
+      "value": "2,458,692,034.90",
+      "claim": "FY2023合并口径存货为2,458,692,034.90元",
+      "entity_scope": "consolidated",
+      "period": "FY2023",
+      "evidence_ids": [
+        "E219"
+      ]
+    },
+    {
+      "fact_id": "F239",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "current_assets",
+      "value": "4,334,951,809.12",
+      "claim": "FY2024合并口径流动资产合计为4,334,951,809.12元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E220"
+      ]
+    },
+    {
+      "fact_id": "F240",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "current_assets",
+      "value": "6,543,745,737.68",
+      "claim": "FY2023合并口径流动资产合计为6,543,745,737.68元",
+      "entity_scope": "consolidated",
+      "period": "FY2023",
+      "evidence_ids": [
+        "E220"
+      ]
+    },
+    {
+      "fact_id": "F241",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "fixed_assets",
+      "value": "6,011,503,000.70",
+      "claim": "FY2024合并口径固定资产为6,011,503,000.70元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E221"
+      ]
+    },
+    {
+      "fact_id": "F242",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "fixed_assets",
+      "value": "5,814,542,211.85",
+      "claim": "FY2023合并口径固定资产为5,814,542,211.85元",
+      "entity_scope": "consolidated",
+      "period": "FY2023",
+      "evidence_ids": [
+        "E221"
+      ]
+    },
+    {
+      "fact_id": "F243",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "total_assets",
+      "value": "13,319,171,088.28",
+      "claim": "FY2024合并口径资产总计为13,319,171,088.28元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E222"
+      ]
+    },
+    {
+      "fact_id": "F244",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "total_assets",
+      "value": "16,979,326,536.89",
+      "claim": "FY2023合并口径资产总计为16,979,326,536.89元",
+      "entity_scope": "consolidated",
+      "period": "FY2023",
+      "evidence_ids": [
+        "E222"
+      ]
+    },
+    {
+      "fact_id": "F245",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "short_term_borrowings",
+      "value": "600,348,611.09",
+      "claim": "FY2023合并口径短期借款为600,348,611.09元",
+      "entity_scope": "consolidated",
+      "period": "FY2023",
+      "evidence_ids": [
+        "E223"
+      ]
+    },
+    {
+      "fact_id": "F246",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "accounts_payable",
+      "value": "1,846,575,493.59",
+      "claim": "FY2024合并口径应付账款为1,846,575,493.59元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E224"
+      ]
+    },
+    {
+      "fact_id": "F247",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "accounts_payable",
+      "value": "2,123,755,217.82",
+      "claim": "FY2023合并口径应付账款为2,123,755,217.82元",
+      "entity_scope": "consolidated",
+      "period": "FY2023",
+      "evidence_ids": [
+        "E224"
+      ]
+    },
+    {
+      "fact_id": "F248",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "current_liabilities",
+      "value": "2,606,688,892.16",
+      "claim": "FY2024合并口径流动负债合计为2,606,688,892.16元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E225"
+      ]
+    },
+    {
+      "fact_id": "F249",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "current_liabilities",
+      "value": "4,446,701,155.56",
+      "claim": "FY2023合并口径流动负债合计为4,446,701,155.56元",
+      "entity_scope": "consolidated",
+      "period": "FY2023",
+      "evidence_ids": [
+        "E225"
+      ]
+    },
+    {
+      "fact_id": "F250",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "total_liabilities",
+      "value": "3,117,078,422.57",
+      "claim": "FY2024合并口径负债合计为3,117,078,422.57元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E226"
+      ]
+    },
+    {
+      "fact_id": "F251",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "total_liabilities",
+      "value": "5,541,331,336.92",
+      "claim": "FY2023合并口径负债合计为5,541,331,336.92元",
+      "entity_scope": "consolidated",
+      "period": "FY2023",
+      "evidence_ids": [
+        "E226"
+      ]
+    },
+    {
+      "fact_id": "F252",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "operating_revenue",
+      "value": "6,512,734,471.77",
+      "claim": "FY2024合并口径营业收入为6,512,734,471.77元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E227"
+      ]
+    },
+    {
+      "fact_id": "F253",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "operating_revenue",
+      "value": "10,318,312,851.48",
+      "claim": "FY2023合并口径营业收入为10,318,312,851.48元",
+      "entity_scope": "consolidated",
+      "period": "FY2023",
+      "evidence_ids": [
+        "E227"
+      ]
+    },
+    {
+      "fact_id": "F254",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "operating_cost",
+      "value": "3,244,208,648.07",
+      "claim": "FY2024合并口径营业成本为3,244,208,648.07元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E228"
+      ]
+    },
+    {
+      "fact_id": "F255",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "operating_cost",
+      "value": "4,407,809,142.42",
+      "claim": "FY2023合并口径营业成本为4,407,809,142.42元",
+      "entity_scope": "consolidated",
+      "period": "FY2023",
+      "evidence_ids": [
+        "E228"
+      ]
+    },
+    {
+      "fact_id": "F256",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "net_profit",
+      "value": "-734,183,532.26",
+      "claim": "FY2024合并口径净利润为-734,183,532.26元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E229"
+      ]
+    },
+    {
+      "fact_id": "F257",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "net_profit",
+      "value": "1,344,302,675.78",
+      "claim": "FY2023合并口径净利润为1,344,302,675.78元",
+      "entity_scope": "consolidated",
+      "period": "FY2023",
+      "evidence_ids": [
+        "E229"
+      ]
+    },
+    {
+      "fact_id": "F258",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "cash_received_from_sales",
+      "value": "7,374,426,224.70",
+      "claim": "FY2024合并口径销售商品、提供劳务收到的现金为7,374,426,224.70元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E230"
+      ]
+    },
+    {
+      "fact_id": "F259",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "cash_received_from_sales",
+      "value": "9,181,144,274.41",
+      "claim": "FY2023合并口径销售商品、提供劳务收到的现金为9,181,144,274.41元",
+      "entity_scope": "consolidated",
+      "period": "FY2023",
+      "evidence_ids": [
+        "E230"
+      ]
+    },
+    {
+      "fact_id": "F260",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "operating_cash_flow",
+      "value": "611,013,171.11",
+      "claim": "FY2024合并口径经营活动产生的现金流量净额为611,013,171.11元",
+      "entity_scope": "consolidated",
+      "period": "FY2024",
+      "evidence_ids": [
+        "E231"
+      ]
+    },
+    {
+      "fact_id": "F261",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "operating_cash_flow",
+      "value": "155,457,433.79",
+      "claim": "FY2023合并口径经营活动产生的现金流量净额为155,457,433.79元",
+      "entity_scope": "consolidated",
+      "period": "FY2023",
+      "evidence_ids": [
+        "E231"
+      ]
+    },
+    {
+      "fact_id": "F280",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "operating_cash_flow_change_reason",
+      "value": "主要是报告期内销售回款较同期增加所致。",
+      "claim": "公司披露2025年度经营活动产生的现金流量净额同比增长，主要因销售回款较同期增加。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E280"
+      ]
+    },
+    {
+      "fact_id": "F281",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "respiratory_product_revenue_change",
+      "value": "2,017,355,686.48 25.76% 795,134,832.89 12.21% 153.71%",
+      "claim": "年报营业收入构成表披露，2025年呼吸系统类产品收入为2,017,355,686.48元，占比25.76%，同比增长153.71%。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E281"
+      ]
+    },
+    {
+      "fact_id": "F282",
+      "entity_id": "CN-A-SZSE-002603",
+      "subject": null,
+      "category": "financial",
+      "research_module": "financial_analysis",
+      "statement_type": "disclosed_fact",
+      "field_name": "respiratory_sales_volume_change_reason",
+      "value": "主要是呼吸系统类产品销量增加所致。",
+      "claim": "公司披露相关实物销售数据同比变动超过30%，主要因呼吸系统类产品销量增加。",
+      "entity_scope": "consolidated",
+      "period": "FY2025",
+      "evidence_ids": [
+        "E282"
+      ]
+    }
+  ],
+  "financial_facts": [
+    {
+      "fact_id": "F201",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "monetary_funds",
+      "item_label": "货币资金",
+      "statement": "balance_sheet",
+      "period": "FY2025",
+      "value": "1104952885.33",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E201"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F202",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "monetary_funds",
+      "item_label": "货币资金",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "853034839.38",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E201"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F203",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "accounts_receivable",
+      "item_label": "应收账款",
+      "statement": "balance_sheet",
+      "period": "FY2025",
+      "value": "1228805576.37",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E202"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F204",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "accounts_receivable",
+      "item_label": "应收账款",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "1225430236.42",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E202"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F205",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "prepayments",
+      "item_label": "预付款项",
+      "statement": "balance_sheet",
+      "period": "FY2025",
+      "value": "70825121.85",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E203"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F206",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "prepayments",
+      "item_label": "预付款项",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "52771323.79",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E203"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F207",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "inventory",
+      "item_label": "存货",
+      "statement": "balance_sheet",
+      "period": "FY2025",
+      "value": "1488559131.89",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E204"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F208",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "inventory",
+      "item_label": "存货",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "1746380345.14",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E204"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F209",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "current_assets",
+      "item_label": "流动资产合计",
+      "statement": "balance_sheet",
+      "period": "FY2025",
+      "value": "5206141683.31",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E205"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F210",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "current_assets",
+      "item_label": "流动资产合计",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "4334951809.12",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E205"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F211",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "fixed_assets",
+      "item_label": "固定资产",
+      "statement": "balance_sheet",
+      "period": "FY2025",
+      "value": "6016119428.08",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E206"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F212",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "fixed_assets",
+      "item_label": "固定资产",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "6011503000.70",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E206"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F213",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "total_assets",
+      "item_label": "资产总计",
+      "statement": "balance_sheet",
+      "period": "FY2025",
+      "value": "13674998496.95",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E207"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F214",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "total_assets",
+      "item_label": "资产总计",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "13319171088.28",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E207"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F215",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "accounts_payable",
+      "item_label": "应付账款",
+      "statement": "balance_sheet",
+      "period": "FY2025",
+      "value": "1468269274.13",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E208"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F216",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "accounts_payable",
+      "item_label": "应付账款",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "1846575493.59",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E208"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F217",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "current_liabilities",
+      "item_label": "流动负债合计",
+      "statement": "balance_sheet",
+      "period": "FY2025",
+      "value": "2208205004.61",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E209"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F218",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "current_liabilities",
+      "item_label": "流动负债合计",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "2606688892.16",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E209"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F219",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "total_liabilities",
+      "item_label": "负债合计",
+      "statement": "balance_sheet",
+      "period": "FY2025",
+      "value": "2693101474.16",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E210"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F220",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "total_liabilities",
+      "item_label": "负债合计",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "3117078422.57",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E210"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F221",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_revenue",
+      "item_label": "营业收入",
+      "statement": "income_statement",
+      "period": "FY2025",
+      "value": "7830737438.74",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E211"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F222",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_revenue",
+      "item_label": "营业收入",
+      "statement": "income_statement",
+      "period": "FY2024",
+      "value": "6512734471.77",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E211"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F223",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_cost",
+      "item_label": "营业成本",
+      "statement": "income_statement",
+      "period": "FY2025",
+      "value": "2797410173.75",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E212"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F224",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_cost",
+      "item_label": "营业成本",
+      "statement": "income_statement",
+      "period": "FY2024",
+      "value": "3244208648.07",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E212"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F225",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "net_profit",
+      "item_label": "净利润",
+      "statement": "income_statement",
+      "period": "FY2025",
+      "value": "1281729907.88",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E213"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F226",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "net_profit",
+      "item_label": "净利润",
+      "statement": "income_statement",
+      "period": "FY2024",
+      "value": "-734183532.26",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E213"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F227",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "cash_received_from_sales",
+      "item_label": "销售商品、提供劳务收到的现金",
+      "statement": "cash_flow_statement",
+      "period": "FY2025",
+      "value": "8491648565.26",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E214"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F228",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "cash_received_from_sales",
+      "item_label": "销售商品、提供劳务收到的现金",
+      "statement": "cash_flow_statement",
+      "period": "FY2024",
+      "value": "7374426224.70",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E214"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F229",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_cash_flow",
+      "item_label": "经营活动产生的现金流量净额",
+      "statement": "cash_flow_statement",
+      "period": "FY2025",
+      "value": "1776508378.47",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E215"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F230",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_cash_flow",
+      "item_label": "经营活动产生的现金流量净额",
+      "statement": "cash_flow_statement",
+      "period": "FY2024",
+      "value": "611013171.11",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S01",
+      "evidence_ids": [
+        "E215"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F231",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "monetary_funds",
+      "item_label": "货币资金",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "853034839.38",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E216"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F232",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "monetary_funds",
+      "item_label": "货币资金",
+      "statement": "balance_sheet",
+      "period": "FY2023",
+      "value": "940512433.11",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E216"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F233",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "accounts_receivable",
+      "item_label": "应收账款",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "1225430236.42",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E217"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F234",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "accounts_receivable",
+      "item_label": "应收账款",
+      "statement": "balance_sheet",
+      "period": "FY2023",
+      "value": "2401186364.09",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E217"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F235",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "prepayments",
+      "item_label": "预付款项",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "52771323.79",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E218"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F236",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "prepayments",
+      "item_label": "预付款项",
+      "statement": "balance_sheet",
+      "period": "FY2023",
+      "value": "109711768.30",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E218"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F237",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "inventory",
+      "item_label": "存货",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "1746380345.14",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E219"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F238",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "inventory",
+      "item_label": "存货",
+      "statement": "balance_sheet",
+      "period": "FY2023",
+      "value": "2458692034.90",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E219"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F239",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "current_assets",
+      "item_label": "流动资产合计",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "4334951809.12",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E220"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F240",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "current_assets",
+      "item_label": "流动资产合计",
+      "statement": "balance_sheet",
+      "period": "FY2023",
+      "value": "6543745737.68",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E220"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F241",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "fixed_assets",
+      "item_label": "固定资产",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "6011503000.70",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E221"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F242",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "fixed_assets",
+      "item_label": "固定资产",
+      "statement": "balance_sheet",
+      "period": "FY2023",
+      "value": "5814542211.85",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E221"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F243",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "total_assets",
+      "item_label": "资产总计",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "13319171088.28",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E222"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F244",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "total_assets",
+      "item_label": "资产总计",
+      "statement": "balance_sheet",
+      "period": "FY2023",
+      "value": "16979326536.89",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E222"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F245",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "short_term_borrowings",
+      "item_label": "短期借款",
+      "statement": "balance_sheet",
+      "period": "FY2023",
+      "value": "600348611.09",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E223"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F246",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "accounts_payable",
+      "item_label": "应付账款",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "1846575493.59",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E224"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F247",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "accounts_payable",
+      "item_label": "应付账款",
+      "statement": "balance_sheet",
+      "period": "FY2023",
+      "value": "2123755217.82",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E224"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F248",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "current_liabilities",
+      "item_label": "流动负债合计",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "2606688892.16",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E225"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F249",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "current_liabilities",
+      "item_label": "流动负债合计",
+      "statement": "balance_sheet",
+      "period": "FY2023",
+      "value": "4446701155.56",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E225"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F250",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "total_liabilities",
+      "item_label": "负债合计",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "3117078422.57",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E226"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F251",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "total_liabilities",
+      "item_label": "负债合计",
+      "statement": "balance_sheet",
+      "period": "FY2023",
+      "value": "5541331336.92",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E226"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F252",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_revenue",
+      "item_label": "营业收入",
+      "statement": "income_statement",
+      "period": "FY2024",
+      "value": "6512734471.77",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E227"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F253",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_revenue",
+      "item_label": "营业收入",
+      "statement": "income_statement",
+      "period": "FY2023",
+      "value": "10318312851.48",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E227"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F254",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_cost",
+      "item_label": "营业成本",
+      "statement": "income_statement",
+      "period": "FY2024",
+      "value": "3244208648.07",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E228"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F255",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_cost",
+      "item_label": "营业成本",
+      "statement": "income_statement",
+      "period": "FY2023",
+      "value": "4407809142.42",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E228"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F256",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "net_profit",
+      "item_label": "净利润",
+      "statement": "income_statement",
+      "period": "FY2024",
+      "value": "-734183532.26",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E229"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F257",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "net_profit",
+      "item_label": "净利润",
+      "statement": "income_statement",
+      "period": "FY2023",
+      "value": "1344302675.78",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E229"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F258",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "cash_received_from_sales",
+      "item_label": "销售商品、提供劳务收到的现金",
+      "statement": "cash_flow_statement",
+      "period": "FY2024",
+      "value": "7374426224.70",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E230"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F259",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "cash_received_from_sales",
+      "item_label": "销售商品、提供劳务收到的现金",
+      "statement": "cash_flow_statement",
+      "period": "FY2023",
+      "value": "9181144274.41",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E230"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F260",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_cash_flow",
+      "item_label": "经营活动产生的现金流量净额",
+      "statement": "cash_flow_statement",
+      "period": "FY2024",
+      "value": "611013171.11",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E231"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "fact_id": "F261",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_cash_flow",
+      "item_label": "经营活动产生的现金流量净额",
+      "statement": "cash_flow_statement",
+      "period": "FY2023",
+      "value": "155457433.79",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "source_id": "S10",
+      "evidence_ids": [
+        "E231"
+      ],
+      "verification_status": "verified"
+    }
+  ],
+  "normalized_facts": [
+    {
+      "normalized_fact_id": "NF001",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "accounts_payable",
+      "item_label": "应付账款",
+      "statement": "balance_sheet",
+      "period": "FY2023",
+      "value": "2123755217.82",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F247"
+      ],
+      "source_ids": [
+        "S10"
+      ],
+      "evidence_ids": [
+        "E224"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF002",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "accounts_payable",
+      "item_label": "应付账款",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "1846575493.59",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F216",
+        "F246"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ],
+      "evidence_ids": [
+        "E208",
+        "E224"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF003",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "accounts_payable",
+      "item_label": "应付账款",
+      "statement": "balance_sheet",
+      "period": "FY2025",
+      "value": "1468269274.13",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F215"
+      ],
+      "source_ids": [
+        "S01"
+      ],
+      "evidence_ids": [
+        "E208"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF004",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "accounts_receivable",
+      "item_label": "应收账款",
+      "statement": "balance_sheet",
+      "period": "FY2023",
+      "value": "2401186364.09",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F234"
+      ],
+      "source_ids": [
+        "S10"
+      ],
+      "evidence_ids": [
+        "E217"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF005",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "accounts_receivable",
+      "item_label": "应收账款",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "1225430236.42",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F204",
+        "F233"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ],
+      "evidence_ids": [
+        "E202",
+        "E217"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF006",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "accounts_receivable",
+      "item_label": "应收账款",
+      "statement": "balance_sheet",
+      "period": "FY2025",
+      "value": "1228805576.37",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F203"
+      ],
+      "source_ids": [
+        "S01"
+      ],
+      "evidence_ids": [
+        "E202"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF007",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "cash_received_from_sales",
+      "item_label": "销售商品、提供劳务收到的现金",
+      "statement": "cash_flow_statement",
+      "period": "FY2023",
+      "value": "9181144274.41",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F259"
+      ],
+      "source_ids": [
+        "S10"
+      ],
+      "evidence_ids": [
+        "E230"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF008",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "cash_received_from_sales",
+      "item_label": "销售商品、提供劳务收到的现金",
+      "statement": "cash_flow_statement",
+      "period": "FY2024",
+      "value": "7374426224.70",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F228",
+        "F258"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ],
+      "evidence_ids": [
+        "E214",
+        "E230"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF009",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "cash_received_from_sales",
+      "item_label": "销售商品、提供劳务收到的现金",
+      "statement": "cash_flow_statement",
+      "period": "FY2025",
+      "value": "8491648565.26",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F227"
+      ],
+      "source_ids": [
+        "S01"
+      ],
+      "evidence_ids": [
+        "E214"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF010",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "current_assets",
+      "item_label": "流动资产合计",
+      "statement": "balance_sheet",
+      "period": "FY2023",
+      "value": "6543745737.68",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F240"
+      ],
+      "source_ids": [
+        "S10"
+      ],
+      "evidence_ids": [
+        "E220"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF011",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "current_assets",
+      "item_label": "流动资产合计",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "4334951809.12",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F210",
+        "F239"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ],
+      "evidence_ids": [
+        "E205",
+        "E220"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF012",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "current_assets",
+      "item_label": "流动资产合计",
+      "statement": "balance_sheet",
+      "period": "FY2025",
+      "value": "5206141683.31",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F209"
+      ],
+      "source_ids": [
+        "S01"
+      ],
+      "evidence_ids": [
+        "E205"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF013",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "current_liabilities",
+      "item_label": "流动负债合计",
+      "statement": "balance_sheet",
+      "period": "FY2023",
+      "value": "4446701155.56",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F249"
+      ],
+      "source_ids": [
+        "S10"
+      ],
+      "evidence_ids": [
+        "E225"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF014",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "current_liabilities",
+      "item_label": "流动负债合计",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "2606688892.16",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F218",
+        "F248"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ],
+      "evidence_ids": [
+        "E209",
+        "E225"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF015",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "current_liabilities",
+      "item_label": "流动负债合计",
+      "statement": "balance_sheet",
+      "period": "FY2025",
+      "value": "2208205004.61",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F217"
+      ],
+      "source_ids": [
+        "S01"
+      ],
+      "evidence_ids": [
+        "E209"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF016",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "fixed_assets",
+      "item_label": "固定资产",
+      "statement": "balance_sheet",
+      "period": "FY2023",
+      "value": "5814542211.85",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F242"
+      ],
+      "source_ids": [
+        "S10"
+      ],
+      "evidence_ids": [
+        "E221"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF017",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "fixed_assets",
+      "item_label": "固定资产",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "6011503000.70",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F212",
+        "F241"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ],
+      "evidence_ids": [
+        "E206",
+        "E221"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF018",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "fixed_assets",
+      "item_label": "固定资产",
+      "statement": "balance_sheet",
+      "period": "FY2025",
+      "value": "6016119428.08",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F211"
+      ],
+      "source_ids": [
+        "S01"
+      ],
+      "evidence_ids": [
+        "E206"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF019",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "inventory",
+      "item_label": "存货",
+      "statement": "balance_sheet",
+      "period": "FY2023",
+      "value": "2458692034.90",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F238"
+      ],
+      "source_ids": [
+        "S10"
+      ],
+      "evidence_ids": [
+        "E219"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF020",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "inventory",
+      "item_label": "存货",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "1746380345.14",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F208",
+        "F237"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ],
+      "evidence_ids": [
+        "E204",
+        "E219"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF021",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "inventory",
+      "item_label": "存货",
+      "statement": "balance_sheet",
+      "period": "FY2025",
+      "value": "1488559131.89",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F207"
+      ],
+      "source_ids": [
+        "S01"
+      ],
+      "evidence_ids": [
+        "E204"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF022",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "monetary_funds",
+      "item_label": "货币资金",
+      "statement": "balance_sheet",
+      "period": "FY2023",
+      "value": "940512433.11",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F232"
+      ],
+      "source_ids": [
+        "S10"
+      ],
+      "evidence_ids": [
+        "E216"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF023",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "monetary_funds",
+      "item_label": "货币资金",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "853034839.38",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F202",
+        "F231"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ],
+      "evidence_ids": [
+        "E201",
+        "E216"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF024",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "monetary_funds",
+      "item_label": "货币资金",
+      "statement": "balance_sheet",
+      "period": "FY2025",
+      "value": "1104952885.33",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F201"
+      ],
+      "source_ids": [
+        "S01"
+      ],
+      "evidence_ids": [
+        "E201"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF025",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "net_profit",
+      "item_label": "净利润",
+      "statement": "income_statement",
+      "period": "FY2023",
+      "value": "1344302675.78",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F257"
+      ],
+      "source_ids": [
+        "S10"
+      ],
+      "evidence_ids": [
+        "E229"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF026",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "net_profit",
+      "item_label": "净利润",
+      "statement": "income_statement",
+      "period": "FY2024",
+      "value": "-734183532.26",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F226",
+        "F256"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ],
+      "evidence_ids": [
+        "E213",
+        "E229"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF027",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "net_profit",
+      "item_label": "净利润",
+      "statement": "income_statement",
+      "period": "FY2025",
+      "value": "1281729907.88",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F225"
+      ],
+      "source_ids": [
+        "S01"
+      ],
+      "evidence_ids": [
+        "E213"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF028",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_cash_flow",
+      "item_label": "经营活动产生的现金流量净额",
+      "statement": "cash_flow_statement",
+      "period": "FY2023",
+      "value": "155457433.79",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F261"
+      ],
+      "source_ids": [
+        "S10"
+      ],
+      "evidence_ids": [
+        "E231"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF029",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_cash_flow",
+      "item_label": "经营活动产生的现金流量净额",
+      "statement": "cash_flow_statement",
+      "period": "FY2024",
+      "value": "611013171.11",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F230",
+        "F260"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ],
+      "evidence_ids": [
+        "E215",
+        "E231"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF030",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_cash_flow",
+      "item_label": "经营活动产生的现金流量净额",
+      "statement": "cash_flow_statement",
+      "period": "FY2025",
+      "value": "1776508378.47",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F229"
+      ],
+      "source_ids": [
+        "S01"
+      ],
+      "evidence_ids": [
+        "E215"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF031",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_cost",
+      "item_label": "营业成本",
+      "statement": "income_statement",
+      "period": "FY2023",
+      "value": "4407809142.42",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F255"
+      ],
+      "source_ids": [
+        "S10"
+      ],
+      "evidence_ids": [
+        "E228"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF032",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_cost",
+      "item_label": "营业成本",
+      "statement": "income_statement",
+      "period": "FY2024",
+      "value": "3244208648.07",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F224",
+        "F254"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ],
+      "evidence_ids": [
+        "E212",
+        "E228"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF033",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_cost",
+      "item_label": "营业成本",
+      "statement": "income_statement",
+      "period": "FY2025",
+      "value": "2797410173.75",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F223"
+      ],
+      "source_ids": [
+        "S01"
+      ],
+      "evidence_ids": [
+        "E212"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF034",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_revenue",
+      "item_label": "营业收入",
+      "statement": "income_statement",
+      "period": "FY2023",
+      "value": "10318312851.48",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F253"
+      ],
+      "source_ids": [
+        "S10"
+      ],
+      "evidence_ids": [
+        "E227"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF035",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_revenue",
+      "item_label": "营业收入",
+      "statement": "income_statement",
+      "period": "FY2024",
+      "value": "6512734471.77",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F222",
+        "F252"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ],
+      "evidence_ids": [
+        "E211",
+        "E227"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF036",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_revenue",
+      "item_label": "营业收入",
+      "statement": "income_statement",
+      "period": "FY2025",
+      "value": "7830737438.74",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F221"
+      ],
+      "source_ids": [
+        "S01"
+      ],
+      "evidence_ids": [
+        "E211"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF037",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "prepayments",
+      "item_label": "预付款项",
+      "statement": "balance_sheet",
+      "period": "FY2023",
+      "value": "109711768.30",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F236"
+      ],
+      "source_ids": [
+        "S10"
+      ],
+      "evidence_ids": [
+        "E218"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF038",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "prepayments",
+      "item_label": "预付款项",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "52771323.79",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F206",
+        "F235"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ],
+      "evidence_ids": [
+        "E203",
+        "E218"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF039",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "prepayments",
+      "item_label": "预付款项",
+      "statement": "balance_sheet",
+      "period": "FY2025",
+      "value": "70825121.85",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F205"
+      ],
+      "source_ids": [
+        "S01"
+      ],
+      "evidence_ids": [
+        "E203"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF040",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "short_term_borrowings",
+      "item_label": "短期借款",
+      "statement": "balance_sheet",
+      "period": "FY2023",
+      "value": "600348611.09",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F245"
+      ],
+      "source_ids": [
+        "S10"
+      ],
+      "evidence_ids": [
+        "E223"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF041",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "total_assets",
+      "item_label": "资产总计",
+      "statement": "balance_sheet",
+      "period": "FY2023",
+      "value": "16979326536.89",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F244"
+      ],
+      "source_ids": [
+        "S10"
+      ],
+      "evidence_ids": [
+        "E222"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF042",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "total_assets",
+      "item_label": "资产总计",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "13319171088.28",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F214",
+        "F243"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ],
+      "evidence_ids": [
+        "E207",
+        "E222"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF043",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "total_assets",
+      "item_label": "资产总计",
+      "statement": "balance_sheet",
+      "period": "FY2025",
+      "value": "13674998496.95",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F213"
+      ],
+      "source_ids": [
+        "S01"
+      ],
+      "evidence_ids": [
+        "E207"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF044",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "total_liabilities",
+      "item_label": "负债合计",
+      "statement": "balance_sheet",
+      "period": "FY2023",
+      "value": "5541331336.92",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F251"
+      ],
+      "source_ids": [
+        "S10"
+      ],
+      "evidence_ids": [
+        "E226"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF045",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "total_liabilities",
+      "item_label": "负债合计",
+      "statement": "balance_sheet",
+      "period": "FY2024",
+      "value": "3117078422.57",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F220",
+        "F250"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ],
+      "evidence_ids": [
+        "E210",
+        "E226"
+      ],
+      "verification_status": "verified"
+    },
+    {
+      "normalized_fact_id": "NF046",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "total_liabilities",
+      "item_label": "负债合计",
+      "statement": "balance_sheet",
+      "period": "FY2025",
+      "value": "2693101474.16",
+      "unit": "CNY",
+      "entity_scope": "consolidated",
+      "supporting_fact_ids": [
+        "F219"
+      ],
+      "source_ids": [
+        "S01"
+      ],
+      "evidence_ids": [
+        "E210"
+      ],
+      "verification_status": "verified"
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "E201",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 106,
+      "line_number": 16,
+      "page_or_section": "合并资产负债表（单位：元）",
+      "quote": "货币资金 1,104,952,885.33 853,034,839.38",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E202",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 106,
+      "line_number": 22,
+      "page_or_section": "合并资产负债表（单位：元）",
+      "quote": "应收账款 1,228,805,576.37 1,225,430,236.42",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E203",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 106,
+      "line_number": 24,
+      "page_or_section": "合并资产负债表（单位：元）",
+      "quote": "预付款项 70,825,121.85 52,771,323.79",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E204",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 106,
+      "line_number": 32,
+      "page_or_section": "合并资产负债表（单位：元）",
+      "quote": "存货 1,488,559,131.89 1,746,380,345.14",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E205",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 107,
+      "line_number": 5,
+      "page_or_section": "合并资产负债表（单位：元）",
+      "quote": "流动资产合计 5,206,141,683.31 4,334,951,809.12",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E206",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 107,
+      "line_number": 15,
+      "page_or_section": "合并资产负债表（单位：元）",
+      "quote": "固定资产 6,016,119,428.08 6,011,503,000.70",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E207",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 107,
+      "line_number": 29,
+      "page_or_section": "合并资产负债表（单位：元）",
+      "quote": "资产总计 13,674,998,496.95 13,319,171,088.28",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E208",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 107,
+      "line_number": 37,
+      "page_or_section": "合并资产负债表（单位：元）",
+      "quote": "应付账款 1,468,269,274.13 1,846,575,493.59",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E209",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 108,
+      "line_number": 12,
+      "page_or_section": "合并资产负债表（单位：元）",
+      "quote": "流动负债合计 2,208,205,004.61 2,606,688,892.16",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E210",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 108,
+      "line_number": 27,
+      "page_or_section": "合并资产负债表（单位：元）",
+      "quote": "负债合计 2,693,101,474.16 3,117,078,422.57",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E211",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 111,
+      "line_number": 6,
+      "page_or_section": "合并利润表（单位：元）",
+      "quote": "其中：营业收入 7,830,737,438.74 6,512,734,471.77",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E212",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 111,
+      "line_number": 11,
+      "page_or_section": "合并利润表（单位：元）",
+      "quote": "其中：营业成本 2,797,410,173.75 3,244,208,648.07",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E213",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 112,
+      "line_number": 12,
+      "page_or_section": "合并利润表（单位：元）",
+      "quote": "1,281,729,907.88 -734,183,532.26",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E214",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 114,
+      "line_number": 31,
+      "page_or_section": "合并现金流量表（单位：元）",
+      "quote": "销售商品、提供劳务收到的现金 8,491,648,565.26 7,374,426,224.70",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E215",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 115,
+      "line_number": 6,
+      "page_or_section": "合并现金流量表（单位：元）",
+      "quote": "经营活动产生的现金流量净额 1,776,508,378.47 611,013,171.11",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E216",
+      "source_id": "S10",
+      "source_sha256": "74965f8ce5a493ae687d9353a1e0be510c528d26b4ef75f8f9c718f477e9d752",
+      "page_number": 111,
+      "line_number": 19,
+      "page_or_section": "合并资产负债表（单位：元）",
+      "quote": "货币资金 853,034,839.38 940,512,433.11",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E217",
+      "source_id": "S10",
+      "source_sha256": "74965f8ce5a493ae687d9353a1e0be510c528d26b4ef75f8f9c718f477e9d752",
+      "page_number": 111,
+      "line_number": 25,
+      "page_or_section": "合并资产负债表（单位：元）",
+      "quote": "应收账款 1,225,430,236.42 2,401,186,364.09",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E218",
+      "source_id": "S10",
+      "source_sha256": "74965f8ce5a493ae687d9353a1e0be510c528d26b4ef75f8f9c718f477e9d752",
+      "page_number": 111,
+      "line_number": 27,
+      "page_or_section": "合并资产负债表（单位：元）",
+      "quote": "预付款项 52,771,323.79 109,711,768.30",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E219",
+      "source_id": "S10",
+      "source_sha256": "74965f8ce5a493ae687d9353a1e0be510c528d26b4ef75f8f9c718f477e9d752",
+      "page_number": 111,
+      "line_number": 35,
+      "page_or_section": "合并资产负债表（单位：元）",
+      "quote": "存货 1,746,380,345.14 2,458,692,034.90",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E220",
+      "source_id": "S10",
+      "source_sha256": "74965f8ce5a493ae687d9353a1e0be510c528d26b4ef75f8f9c718f477e9d752",
+      "page_number": 112,
+      "line_number": 7,
+      "page_or_section": "合并资产负债表（单位：元）",
+      "quote": "流动资产合计 4,334,951,809.12 6,543,745,737.68",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E221",
+      "source_id": "S10",
+      "source_sha256": "74965f8ce5a493ae687d9353a1e0be510c528d26b4ef75f8f9c718f477e9d752",
+      "page_number": 112,
+      "line_number": 17,
+      "page_or_section": "合并资产负债表（单位：元）",
+      "quote": "固定资产 6,011,503,000.70 5,814,542,211.85",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E222",
+      "source_id": "S10",
+      "source_sha256": "74965f8ce5a493ae687d9353a1e0be510c528d26b4ef75f8f9c718f477e9d752",
+      "page_number": 112,
+      "line_number": 31,
+      "page_or_section": "合并资产负债表（单位：元）",
+      "quote": "资产总计 13,319,171,088.28 16,979,326,536.89",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E223",
+      "source_id": "S10",
+      "source_sha256": "74965f8ce5a493ae687d9353a1e0be510c528d26b4ef75f8f9c718f477e9d752",
+      "page_number": 112,
+      "line_number": 33,
+      "page_or_section": "合并资产负债表（单位：元）",
+      "quote": "短期借款 600,348,611.09",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E224",
+      "source_id": "S10",
+      "source_sha256": "74965f8ce5a493ae687d9353a1e0be510c528d26b4ef75f8f9c718f477e9d752",
+      "page_number": 112,
+      "line_number": 39,
+      "page_or_section": "合并资产负债表（单位：元）",
+      "quote": "应付账款 1,846,575,493.59 2,123,755,217.82",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E225",
+      "source_id": "S10",
+      "source_sha256": "74965f8ce5a493ae687d9353a1e0be510c528d26b4ef75f8f9c718f477e9d752",
+      "page_number": 113,
+      "line_number": 14,
+      "page_or_section": "合并资产负债表（单位：元）",
+      "quote": "流动负债合计 2,606,688,892.16 4,446,701,155.56",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E226",
+      "source_id": "S10",
+      "source_sha256": "74965f8ce5a493ae687d9353a1e0be510c528d26b4ef75f8f9c718f477e9d752",
+      "page_number": 113,
+      "line_number": 29,
+      "page_or_section": "合并资产负债表（单位：元）",
+      "quote": "负债合计 3,117,078,422.57 5,541,331,336.92",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E227",
+      "source_id": "S10",
+      "source_sha256": "74965f8ce5a493ae687d9353a1e0be510c528d26b4ef75f8f9c718f477e9d752",
+      "page_number": 116,
+      "line_number": 7,
+      "page_or_section": "合并利润表（单位：元）",
+      "quote": "其中：营业收入 6,512,734,471.77 10,318,312,851.48",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E228",
+      "source_id": "S10",
+      "source_sha256": "74965f8ce5a493ae687d9353a1e0be510c528d26b4ef75f8f9c718f477e9d752",
+      "page_number": 116,
+      "line_number": 12,
+      "page_or_section": "合并利润表（单位：元）",
+      "quote": "其中：营业成本 3,244,208,648.07 4,407,809,142.42",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E229",
+      "source_id": "S10",
+      "source_sha256": "74965f8ce5a493ae687d9353a1e0be510c528d26b4ef75f8f9c718f477e9d752",
+      "page_number": 117,
+      "line_number": 10,
+      "page_or_section": "合并利润表（单位：元）",
+      "quote": "五、净利润（净亏损以“－”号填列） -734,183,532.26 1,344,302,675.78",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E230",
+      "source_id": "S10",
+      "source_sha256": "74965f8ce5a493ae687d9353a1e0be510c528d26b4ef75f8f9c718f477e9d752",
+      "page_number": 119,
+      "line_number": 27,
+      "page_or_section": "合并现金流量表（单位：元）",
+      "quote": "销售商品、提供劳务收到的现金 7,374,426,224.70 9,181,144,274.41",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E231",
+      "source_id": "S10",
+      "source_sha256": "74965f8ce5a493ae687d9353a1e0be510c528d26b4ef75f8f9c718f477e9d752",
+      "page_number": 120,
+      "line_number": 2,
+      "page_or_section": "合并现金流量表（单位：元）",
+      "quote": "经营活动产生的现金流量净额 611,013,171.11 155,457,433.79",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E280",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 58,
+      "line_number": 32,
+      "page_or_section": "管理层讨论与分析/现金流重大变动说明",
+      "quote": "（1）经营活动产生的现金流量净额同比增长 190.75%，主要是报告期内销售回款较同期增加所致。",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E281",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 52,
+      "line_number": 29,
+      "page_or_section": "管理层讨论与分析/营业收入构成",
+      "quote": "呼吸系统类 2,017,355,686.48 25.76% 795,134,832.89 12.21% 153.71%",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    },
+    {
+      "evidence_id": "E282",
+      "source_id": "S01",
+      "source_sha256": "7ae08fb745ddae05053f5f8a5c262e1df2712b4376bd01c69329c3b8eb557178",
+      "page_number": 54,
+      "line_number": 2,
+      "page_or_section": "管理层讨论与分析/实物销售变动原因",
+      "quote": "主要是呼吸系统类产品销量增加所致。",
+      "status": "verified",
+      "verification_method": "exact_text_match"
+    }
+  ],
+  "missing_information": [
+    {
+      "missing_id": "M201",
+      "entity_id": "CN-A-SZSE-002603",
+      "research_module": "financial_analysis",
+      "statement_type": "missing_info",
+      "topic": "FY2024及FY2025短期借款主表可比值",
+      "description": "已核对报表行未形成FY2024和FY2025短期借款数值事实；不能把空白单元格直接解释为零。",
+      "reason": "需要结合报表列结构、借款附注和银行授信资料进一步确认。",
+      "related_fact_ids": [],
+      "evidence_ids": []
+    },
+    {
+      "missing_id": "M202",
+      "entity_id": "CN-A-SZSE-002603",
+      "research_module": "financial_analysis",
+      "statement_type": "missing_info",
+      "topic": "重大变动原因",
+      "description": "V2.3已核对经营现金流等部分重大变动原因，但尚未覆盖每个重点科目的全部附注和管理层解释。",
+      "reason": "未取得直接原因证据的科目继续保留为待核实假设，不能由模型补造。",
+      "related_fact_ids": [],
+      "evidence_ids": []
+    }
+  ],
+  "limitations": [
+    "仅使用S01（2025年报）和S10（2024年报）的合并财务报表主表行；S11已登记并解析，留作后续扩大跨报告复核。",
+    "金额统一保留年报原始人民币元精度，未把万元或亿元格式化结果写回事实层。",
+    "财务原因仅收录当前人工审阅并通过精确原文匹配的披露，不代表已覆盖年报全部附注。",
+    "产品收入与销量信息可支持方向性分析，但不得自动提升为营业收入整体变化的唯一因果解释。",
+    "所有同比、比率和重大变动阈值均由确定性 Python 函数计算，未交由 LLM 判断。",
+    "重大变动和风险信号仅用于确定进一步核查方向，不等同于授信风险定性结论。"
+  ]
+}

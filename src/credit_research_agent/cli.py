@@ -31,6 +31,10 @@ from credit_research_agent.industry_agent_runtime import (
     IndustryRuntimeError,
     load_industry_search_fixture,
 )
+from credit_research_agent.integrated_agent_runtime import (
+    IntegratedCreditResearchAgentRuntime,
+    IntegratedRuntimeError,
+)
 from credit_research_agent.ownership import (
     OwnershipBuildError,
     build_ownership_artifacts,
@@ -98,7 +102,7 @@ def _find_project_root() -> Path:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="credit-research-agent",
-        description="企业授信研究Agent V2.4：结构化研究、财务分析与可追溯行业政策检索。",
+        description="企业授信研究Agent V2.5：单主Agent集成基本面、双Skill、行业检索与完整报告。",
     )
     parser.add_argument("company", help="上市公司名称、证券代码或带交易所后缀的代码")
     parser.add_argument(
@@ -165,6 +169,11 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="TASK",
         help="运行V2.4行业与政策研究Agent；默认LLM与百度搜索均为Mock",
     )
+    action_group.add_argument(
+        "--run-complete-research",
+        metavar="TASK",
+        help="运行V2.5完整企业授信研究；默认LLM与百度搜索均为Mock",
+    )
     parser.add_argument(
         "--skill-source",
         metavar="SOURCE_ID",
@@ -180,6 +189,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="--run-agent 使用的已登记官方来源，例如 S01",
     )
     parser.add_argument(
+        "--complete-source",
+        metavar="SOURCE_ID",
+        default="S01",
+        help="--run-complete-research绑定的主年报来源，默认S01；模型不可覆盖",
+    )
+    parser.add_argument(
         "--llm-mode",
         choices=[item.value for item in AgentMode],
         default=AgentMode.MOCK.value,
@@ -188,7 +203,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--confirm-live",
         action="store_true",
-        help="确认发送一次受限的真实DeepSeek请求；没有此参数绝不调用Live模型",
+        help=(
+            "确认执行一次受限的真实DeepSeek任务；任务可能包含多轮模型请求，"
+            "具体上限由--max-agent-turns控制；没有此参数绝不调用Live模型"
+        ),
     )
     parser.add_argument(
         "--search-mode",
@@ -416,6 +434,19 @@ def build_parser() -> argparse.ArgumentParser:
         "--industry-fundamentals-path",
         help="可选的fundamentals.json；默认使用 --fundamentals-dir/<entity_id>/fundamentals.json",
     )
+    parser.add_argument(
+        "--complete-dir",
+        default="data/complete_research",
+        help="V2.5完整报告、模块产物、网页原文、来源与轨迹目录",
+    )
+    parser.add_argument(
+        "--complete-trace-output",
+        help="可选的V2.5 CompleteExecutionTrace JSON输出路径",
+    )
+    parser.add_argument(
+        "--complete-fundamentals-path",
+        help="可选的既有fundamentals.json；未提供时由本次主年报确定性构建",
+    )
     return parser
 
 
@@ -470,6 +501,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         or args.run_agent
         or args.run_web_research
         or args.run_industry_research
+        or args.run_complete_research
     ):
         try:
             project_root = _find_project_root()
@@ -481,10 +513,17 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(json.dumps(output, ensure_ascii=False, indent=2))
             return 9
     llm_config = None
-    if args.run_agent or args.run_web_research or args.run_industry_research:
+    if (
+        args.run_agent
+        or args.run_web_research
+        or args.run_industry_research
+        or args.run_complete_research
+    ):
         assert project_root is not None
         retrieval_style_run = bool(
-            args.run_web_research or args.run_industry_research
+            args.run_web_research
+            or args.run_industry_research
+            or args.run_complete_research
         )
         try:
             llm_config = load_deepseek_config(
@@ -496,7 +535,11 @@ def main(argv: Optional[List[str]] = None) -> int:
                 max_output_tokens=(
                     args.max_output_tokens
                     if args.max_output_tokens is not None
-                    else (8000 if args.run_industry_research else 800)
+                    else (
+                        16000
+                        if args.run_complete_research
+                        else (8000 if args.run_industry_research else 800)
+                    )
                 ),
                 request_timeout_seconds=args.request_timeout_seconds,
                 max_retries=args.max_model_retries,
@@ -524,7 +567,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 print(json.dumps(output, ensure_ascii=False, indent=2))
                 return 9
     search_config = None
-    if args.run_web_research or args.run_industry_research:
+    if args.run_web_research or args.run_industry_research or args.run_complete_research:
         assert project_root is not None
         try:
             search_config = load_baidu_search_config(
@@ -557,8 +600,16 @@ def main(argv: Optional[List[str]] = None) -> int:
                 print(json.dumps(output, ensure_ascii=False, indent=2))
                 return 11
     requested_source_id = (
-        (args.skill_source if args.run_skill else args.agent_source)
-        if (args.run_skill or args.run_agent)
+        (
+            args.skill_source
+            if args.run_skill
+            else (
+                args.agent_source
+                if args.run_agent
+                else args.complete_source
+            )
+        )
+        if (args.run_skill or args.run_agent or args.run_complete_research)
         else (
             args.download_source
             or args.parse_source
@@ -609,6 +660,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             or args.build_report
             or args.run_skill
             or args.run_agent
+            or args.run_complete_research
         ):
             try:
                 artifacts = extract_to_artifacts(
@@ -1103,6 +1155,139 @@ def main(argv: Optional[List[str]] = None) -> int:
                 }
                 print(json.dumps(output, ensure_ascii=False, indent=2))
                 return 9
+
+    if args.run_complete_research:
+        assert (
+            project_root is not None
+            and llm_config is not None
+            and search_config is not None
+        )
+        complete_dir = Path(args.complete_dir) / company.entity_id
+        trace_output = (
+            Path(args.complete_trace_output)
+            if args.complete_trace_output
+            else complete_dir / "credit_research_execution_trace.json"
+        )
+        provider_override = None
+        fetcher_override = None
+        if search_config.mode is SearchMode.MOCK:
+            try:
+                fixture = load_industry_search_fixture(
+                    Path(args.search_fixture) if args.search_fixture else None
+                )
+                provider_override, fetcher_override = build_mock_retrieval_dependencies(
+                    fixture
+                )
+            except (OSError, ValueError, json.JSONDecodeError) as exc:
+                output["complete_research_error"] = {
+                    "code": "invalid_search_fixture",
+                    "message": str(exc),
+                }
+                print(json.dumps(output, ensure_ascii=False, indent=2))
+                return 13
+        try:
+            if args.complete_fundamentals_path:
+                fundamentals_path = Path(args.complete_fundamentals_path)
+                if not fundamentals_path.is_file():
+                    raise EvidenceBuildError(
+                        "fundamentals_not_found",
+                        f"指定的企业基本面产物不存在：{fundamentals_path}",
+                    )
+            else:
+                fundamentals_artifacts = build_fundamental_artifacts(
+                    identity=company,
+                    source=source,
+                    download=result,
+                    summary_path=artifacts.summary_path,
+                    pages_path=artifacts.pages_path,
+                    output_dir=complete_dir / "modules" / "fundamentals",
+                )
+                fundamentals_path = fundamentals_artifacts.fundamentals_path
+                output["complete_fundamentals"] = _as_dict(
+                    fundamentals_artifacts
+                )
+
+            comparison_inputs: List[FinancialSourceInput] = []
+            for comparison_source_id in args.financial_comparison_source or ["S10"]:
+                if comparison_source_id == source.source_id:
+                    continue
+                comparison_source = catalog.get(comparison_source_id)
+                if comparison_source.entity_id not in (None, company.entity_id):
+                    raise FinancialBuildError(
+                        "comparison_source_entity_mismatch",
+                        f"可比来源 {comparison_source_id} 不属于 {company.ticker}",
+                    )
+                comparison_download = OfficialPdfDownloader().download(
+                    comparison_source,
+                    Path(args.cache_dir),
+                    force=args.force_download,
+                )
+                comparison_extraction = extract_to_artifacts(
+                    comparison_download,
+                    Path(args.parsed_dir),
+                )
+                comparison_inputs.append(
+                    FinancialSourceInput(
+                        source=comparison_source,
+                        download=comparison_download,
+                        summary_path=comparison_extraction.summary_path,
+                        pages_path=comparison_extraction.pages_path,
+                    )
+                )
+            budget = SearchBudget(
+                max_search_rounds=args.max_search_rounds,
+                max_search_calls=args.max_search_calls,
+                max_search_requests=args.max_search_requests,
+                max_results_per_request=args.max_search_results,
+                max_fetches=args.max_source_fetches,
+                max_extractions=args.max_extract_calls,
+                max_total_tool_calls=(
+                    args.max_tool_calls
+                    if args.max_tool_calls is not None
+                    else args.max_total_tool_calls
+                ),
+                max_agent_turns=args.max_agent_turns or 70,
+                max_supplemental_rounds=args.max_supplemental_searches,
+            )
+            runtime = IntegratedCreditResearchAgentRuntime(
+                project_root,
+                llm_config,
+                search_config,
+                search_provider_override=provider_override,
+                source_fetcher_override=fetcher_override,
+            )
+            complete_result = runtime.run_sync(
+                task=args.run_complete_research,
+                identity=company,
+                source=source,
+                download=result,
+                summary_path=artifacts.summary_path,
+                pages_path=artifacts.pages_path,
+                comparison_inputs=comparison_inputs,
+                fundamentals_path=fundamentals_path,
+                output_dir=complete_dir,
+                trace_output=trace_output,
+                confirmed_llm_live=args.confirm_live,
+                confirmed_search_live=args.confirm_search_live,
+                budget=budget,
+            )
+            output["complete_research"] = _as_dict(complete_result)
+        except (
+            IntegratedRuntimeError,
+            SearchError,
+            EvidenceBuildError,
+            FinancialBuildError,
+            SourceNotFoundError,
+            DownloadError,
+            PdfExtractionError,
+        ) as exc:
+            output["complete_research_error"] = {
+                "code": getattr(exc, "code", "complete_research_failed"),
+                "message": str(exc),
+                "trace_path": str(getattr(exc, "trace_path", "") or "") or None,
+            }
+            print(json.dumps(output, ensure_ascii=False, indent=2))
+            return 13
 
     if args.run_web_research:
         assert project_root is not None and llm_config is not None and search_config is not None

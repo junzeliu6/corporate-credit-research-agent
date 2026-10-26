@@ -435,7 +435,218 @@ def test_one_failed_page_yields_partial_success_and_keeps_other_evidence(
         if item.get("status") == "failed_but_preserved_as_candidate"
     )
     assert failed_call["error_code"] == "access_restricted"
+    assert failed_call["recommended_alternative_urls"] == [official_url]
     assert trace["status"] == "partial_success"
+
+
+def test_pending_official_candidate_is_fetched_before_another_paid_search(
+    tmp_path: Path,
+) -> None:
+    nhsa_url = "https://www.nhsa.gov.cn/policy/available"
+    nmpa_url = "https://www.nmpa.gov.cn/policy/also-available"
+    fixture = {
+        "results": [
+            {
+                "title": "医保部门政策原文",
+                "url": nhsa_url,
+                "snippet": "医保政策搜索摘要。",
+                "published_at": "2026-10-01T00:00:00+08:00",
+            },
+            {
+                "title": "药监部门政策原文",
+                "url": nmpa_url,
+                "snippet": "药品监管搜索摘要。",
+                "published_at": "2026-10-02T00:00:00+08:00",
+            },
+        ],
+        "pages": {
+            nhsa_url: {
+                "status": 200,
+                "body": (
+                    "<html><head><title>医保政策原文</title></head><body>"
+                    "<p>中成药集中带量采购政策适用范围和实施要求测试原文。</p>"
+                    "</body></html>"
+                ),
+            },
+            nmpa_url: {"status": 200, "body": "<html><body>药品监管原文</body></html>"},
+        },
+    }
+    model = ScriptedModel(
+        [
+            ModelStep(
+                output=[
+                    function_call(
+                        SEARCH_WEB_TOOL,
+                        {
+                            "query": "中成药医保政策",
+                            "max_results": 5,
+                            "domain_filter": [],
+                            "recency": None,
+                        },
+                        call_id="search-1",
+                    )
+                ]
+            ),
+            # Runtime应阻止这次新增付费搜索，并把已有NHSA候选重新交给模型。
+            ModelStep(
+                output=[
+                    function_call(
+                        SEARCH_WEB_TOOL,
+                        {
+                            "query": "中药监管政策",
+                            "max_results": 5,
+                            "domain_filter": [],
+                            "recency": None,
+                        },
+                        call_id="search-2",
+                    )
+                ]
+            ),
+            ModelStep(
+                output=[function_call(FETCH_SOURCE_TOOL, {"url": nhsa_url}, call_id="fetch")]
+            ),
+            ModelStep(
+                output=[
+                    function_call(
+                        EXTRACT_EVIDENCE_TOOL,
+                        {"source_handle": "DOC001", "research_question": "医保集采政策"},
+                        call_id="extract",
+                    )
+                ]
+            ),
+            ModelStep(
+                output=[assistant_message('{"fact_ids":[],"candidate_ids":[],"analysis_claims":[]}')]
+            ),
+        ]
+    )
+    runtime, provider, fetcher = _runtime(
+        model=model,
+        fixture=fixture,
+        llm_config=DeepSeekLLMConfig(mode=AgentMode.MOCK, max_turns=5),
+    )
+
+    result = _run(runtime, tmp_path)
+    trace = json.loads(result.trace_path.read_text(encoding="utf-8"))
+    blocked_search = next(
+        item
+        for item in trace["tool_calls"]
+        if item.get("status") == "candidate_fetch_required"
+    )
+
+    assert provider.call_count == 1
+    assert fetcher.call_count == 1
+    assert blocked_search["recommended_candidate_urls"][0] == nhsa_url
+    assert trace["fetched_source_handles"] == ["DOC001"]
+    assert result.selected_fact_ids
+
+
+def test_search_budget_exhaustion_still_allows_fetch_and_extract_of_pending_candidate(
+    tmp_path: Path,
+) -> None:
+    first_url = "https://www.nhsa.gov.cn/policy/first"
+    second_url = "https://www.nmpa.gov.cn/policy/second"
+    fixture = {
+        "results": [
+            {
+                "title": "医保政策一",
+                "url": first_url,
+                "snippet": "医保政策一摘要。",
+            },
+            {
+                "title": "药监政策二",
+                "url": second_url,
+                "snippet": "药监政策二摘要。",
+            },
+        ],
+        "pages": {
+            first_url: {
+                "status": 200,
+                "body": "<html><body><p>医保政策适用范围测试原文。</p></body></html>",
+            },
+            second_url: {
+                "status": 200,
+                "body": "<html><body><p>药品质量监管实施要求测试原文。</p></body></html>",
+            },
+        },
+    }
+    model = ScriptedModel(
+        [
+            ModelStep(
+                output=[
+                    function_call(
+                        SEARCH_WEB_TOOL,
+                        {
+                            "query": "医药政策",
+                            "max_results": 5,
+                            "domain_filter": [],
+                            "recency": None,
+                        },
+                        call_id="search-1",
+                    )
+                ]
+            ),
+            ModelStep(output=[function_call(FETCH_SOURCE_TOOL, {"url": first_url}, call_id="fetch-1")]),
+            ModelStep(
+                output=[
+                    function_call(
+                        EXTRACT_EVIDENCE_TOOL,
+                        {"source_handle": "DOC001", "research_question": "医保政策"},
+                        call_id="extract-1",
+                    )
+                ]
+            ),
+            # 局部search预算在此耗尽，但不能禁止继续处理已有第二候选。
+            ModelStep(
+                output=[
+                    function_call(
+                        SEARCH_WEB_TOOL,
+                        {
+                            "query": "补充药品监管政策",
+                            "max_results": 5,
+                            "domain_filter": [],
+                            "recency": None,
+                        },
+                        call_id="search-2",
+                    )
+                ]
+            ),
+            ModelStep(output=[function_call(FETCH_SOURCE_TOOL, {"url": second_url}, call_id="fetch-2")]),
+            ModelStep(
+                output=[
+                    function_call(
+                        EXTRACT_EVIDENCE_TOOL,
+                        {"source_handle": "DOC002", "research_question": "药品质量监管"},
+                        call_id="extract-2",
+                    )
+                ]
+            ),
+            ModelStep(
+                output=[assistant_message('{"fact_ids":[],"candidate_ids":[],"analysis_claims":[]}')]
+            ),
+        ]
+    )
+    runtime, provider, fetcher = _runtime(
+        model=model,
+        fixture=fixture,
+        llm_config=DeepSeekLLMConfig(mode=AgentMode.MOCK, max_turns=7),
+    )
+
+    result = _run(
+        runtime,
+        tmp_path,
+        budget=SearchBudget(max_search_calls=1, max_agent_turns=7),
+    )
+    trace = json.loads(result.trace_path.read_text(encoding="utf-8"))
+
+    assert provider.call_count == 1
+    assert fetcher.call_count == 2
+    assert any(
+        item.get("error_code") == "search_call_limit_exceeded"
+        for item in trace["tool_calls"]
+    )
+    assert trace["fetched_source_handles"] == ["DOC001", "DOC002"]
+    assert result.selected_fact_ids
+    assert result.status is RetrievalStatus.PARTIAL_SUCCESS
 
 
 def test_single_source_fact_and_analysis_keep_qualification(tmp_path: Path) -> None:

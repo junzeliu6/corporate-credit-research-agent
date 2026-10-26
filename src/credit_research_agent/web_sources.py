@@ -398,10 +398,10 @@ class WebSourceFetcher:
 
         assert response is not None
         try:
-            if response.status_code in (401, 403):
+            if response.status_code in (401, 403, 412):
                 raise SourceFetchError(
                     "access_restricted",
-                    "目标网页需要登录、授权或拒绝访问；不会绕过访问控制",
+                    "目标网页需要登录、授权、前置条件或拒绝访问；不会绕过访问控制",
                 )
             if response.status_code == 429:
                 raise SourceFetchError("fetch_rate_limited", "目标网站请求受限", retryable=True)

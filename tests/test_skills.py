@@ -51,6 +51,58 @@ def test_selector_routes_ownership_and_financial_tasks_deterministically() -> No
     assert "财务" in financial.matched_keywords
 
 
+@pytest.mark.parametrize(
+    "task",
+    [
+        "请对以岭药业（002603.SZ）进行完整的企业授信研究。",
+        "请开展综合授信研究并形成完整报告。",
+    ],
+)
+def test_selector_select_many_routes_complete_research_to_both_skills(
+    task: str,
+) -> None:
+    selector = SkillSelector(SkillRegistry(PROJECT_ROOT))
+
+    selections = selector.select_many(task)
+
+    assert [item.selected_skill for item in selections] == [
+        "ownership-structure",
+        "financial-analysis",
+    ]
+
+
+def test_selector_select_many_returns_all_explicitly_matched_skills() -> None:
+    selector = SkillSelector(SkillRegistry(PROJECT_ROOT))
+
+    selections = selector.select_many("分析股权结构、实际控制人、财务和经营现金流")
+
+    assert [item.selected_skill for item in selections] == [
+        "ownership-structure",
+        "financial-analysis",
+    ]
+    assert "股权" in selections[0].matched_keywords
+    assert "财务" in selections[1].matched_keywords
+
+
+def test_selector_select_many_keeps_single_module_tasks_single() -> None:
+    selector = SkillSelector(SkillRegistry(PROJECT_ROOT))
+
+    ownership = selector.select_many("请生成股权结构图并核验持股比例")
+    financial = selector.select_many("请分析财务报表和偿债能力")
+
+    assert [item.selected_skill for item in ownership] == ["ownership-structure"]
+    assert [item.selected_skill for item in financial] == ["financial-analysis"]
+
+
+def test_selector_select_many_reuses_unknown_task_error() -> None:
+    selector = SkillSelector(SkillRegistry(PROJECT_ROOT))
+
+    with pytest.raises(SkillSelectionError, match="未命中") as unknown:
+        selector.select_many("整理公司发展历史")
+
+    assert unknown.value.code == "skill_not_selected"
+
+
 def test_selector_rejects_unknown_and_ambiguous_tasks() -> None:
     selector = SkillSelector(SkillRegistry(PROJECT_ROOT))
 

@@ -1,0 +1,35 @@
+{
+  "schema_version": "2.5.0",
+  "status": "partial_success",
+  "provider": "deepseek",
+  "model": "deepseek-flash",
+  "mode": "mock",
+  "authorship": "scripted_mock",
+  "llm_authored_report": false,
+  "python_generated_fallback_analysis": false,
+  "python_rewrote_llm_text": false,
+  "display_only_internal_markers_removed": true,
+  "content_validation_gate": "minimal_json_structure_only",
+  "planned_skills": [
+    "ownership-structure",
+    "financial-analysis"
+  ],
+  "executed_skills": [
+    "ownership-structure",
+    "financial-analysis"
+  ],
+  "delivered_topics": [
+    "company_background_and_ownership",
+    "operations_and_business_model",
+    "industry_and_policy",
+    "financial_analysis",
+    "integrated_credit_risk",
+    "due_diligence_and_missing_information"
+  ],
+  "missing_topics": [],
+  "question_count": 2,
+  "limitations": [
+    "离线Mock只验证V2.5系统编排，不代表真实研究结论。"
+  ],
+  "human_review_required": true
+}

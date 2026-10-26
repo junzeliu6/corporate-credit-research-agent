@@ -1,0 +1,934 @@
+{
+  "metrics": [
+    {
+      "metric_id": "FM001",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "accounts_payable",
+      "item_label": "应付账款",
+      "prior_period": "FY2023",
+      "current_period": "FY2024",
+      "prior_value": "2123755217.82",
+      "current_value": "1846575493.59",
+      "absolute_change": "-277179724.23",
+      "yoy_percent": "-13.05",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": false,
+      "trigger_reasons": [],
+      "supporting_fact_ids": [
+        "F216",
+        "F246",
+        "F247"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM002",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "accounts_payable",
+      "item_label": "应付账款",
+      "prior_period": "FY2024",
+      "current_period": "FY2025",
+      "prior_value": "1846575493.59",
+      "current_value": "1468269274.13",
+      "absolute_change": "-378306219.46",
+      "yoy_percent": "-20.49",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": true,
+      "trigger_reasons": [
+        "同比绝对变动达到20.00%阈值"
+      ],
+      "supporting_fact_ids": [
+        "F215",
+        "F216",
+        "F246"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM003",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "accounts_receivable",
+      "item_label": "应收账款",
+      "prior_period": "FY2023",
+      "current_period": "FY2024",
+      "prior_value": "2401186364.09",
+      "current_value": "1225430236.42",
+      "absolute_change": "-1175756127.67",
+      "yoy_percent": "-48.97",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": true,
+      "trigger_reasons": [
+        "同比绝对变动达到20.00%阈值"
+      ],
+      "supporting_fact_ids": [
+        "F204",
+        "F233",
+        "F234"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM004",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "accounts_receivable",
+      "item_label": "应收账款",
+      "prior_period": "FY2024",
+      "current_period": "FY2025",
+      "prior_value": "1225430236.42",
+      "current_value": "1228805576.37",
+      "absolute_change": "3375339.95",
+      "yoy_percent": "0.28",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": false,
+      "trigger_reasons": [],
+      "supporting_fact_ids": [
+        "F203",
+        "F204",
+        "F233"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM005",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "cash_received_from_sales",
+      "item_label": "销售商品、提供劳务收到的现金",
+      "prior_period": "FY2023",
+      "current_period": "FY2024",
+      "prior_value": "9181144274.41",
+      "current_value": "7374426224.70",
+      "absolute_change": "-1806718049.71",
+      "yoy_percent": "-19.68",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": false,
+      "trigger_reasons": [],
+      "supporting_fact_ids": [
+        "F228",
+        "F258",
+        "F259"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM006",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "cash_received_from_sales",
+      "item_label": "销售商品、提供劳务收到的现金",
+      "prior_period": "FY2024",
+      "current_period": "FY2025",
+      "prior_value": "7374426224.70",
+      "current_value": "8491648565.26",
+      "absolute_change": "1117222340.56",
+      "yoy_percent": "15.15",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": false,
+      "trigger_reasons": [],
+      "supporting_fact_ids": [
+        "F227",
+        "F228",
+        "F258"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM007",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "current_assets",
+      "item_label": "流动资产合计",
+      "prior_period": "FY2023",
+      "current_period": "FY2024",
+      "prior_value": "6543745737.68",
+      "current_value": "4334951809.12",
+      "absolute_change": "-2208793928.56",
+      "yoy_percent": "-33.75",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": true,
+      "trigger_reasons": [
+        "同比绝对变动达到20.00%阈值"
+      ],
+      "supporting_fact_ids": [
+        "F210",
+        "F239",
+        "F240"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM008",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "current_assets",
+      "item_label": "流动资产合计",
+      "prior_period": "FY2024",
+      "current_period": "FY2025",
+      "prior_value": "4334951809.12",
+      "current_value": "5206141683.31",
+      "absolute_change": "871189874.19",
+      "yoy_percent": "20.10",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": true,
+      "trigger_reasons": [
+        "同比绝对变动达到20.00%阈值"
+      ],
+      "supporting_fact_ids": [
+        "F209",
+        "F210",
+        "F239"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM009",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "current_liabilities",
+      "item_label": "流动负债合计",
+      "prior_period": "FY2023",
+      "current_period": "FY2024",
+      "prior_value": "4446701155.56",
+      "current_value": "2606688892.16",
+      "absolute_change": "-1840012263.40",
+      "yoy_percent": "-41.38",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": true,
+      "trigger_reasons": [
+        "同比绝对变动达到20.00%阈值"
+      ],
+      "supporting_fact_ids": [
+        "F218",
+        "F248",
+        "F249"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM010",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "current_liabilities",
+      "item_label": "流动负债合计",
+      "prior_period": "FY2024",
+      "current_period": "FY2025",
+      "prior_value": "2606688892.16",
+      "current_value": "2208205004.61",
+      "absolute_change": "-398483887.55",
+      "yoy_percent": "-15.29",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": false,
+      "trigger_reasons": [],
+      "supporting_fact_ids": [
+        "F217",
+        "F218",
+        "F248"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM011",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "fixed_assets",
+      "item_label": "固定资产",
+      "prior_period": "FY2023",
+      "current_period": "FY2024",
+      "prior_value": "5814542211.85",
+      "current_value": "6011503000.70",
+      "absolute_change": "196960788.85",
+      "yoy_percent": "3.39",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": false,
+      "trigger_reasons": [],
+      "supporting_fact_ids": [
+        "F212",
+        "F241",
+        "F242"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM012",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "fixed_assets",
+      "item_label": "固定资产",
+      "prior_period": "FY2024",
+      "current_period": "FY2025",
+      "prior_value": "6011503000.70",
+      "current_value": "6016119428.08",
+      "absolute_change": "4616427.38",
+      "yoy_percent": "0.08",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": false,
+      "trigger_reasons": [],
+      "supporting_fact_ids": [
+        "F211",
+        "F212",
+        "F241"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM013",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "inventory",
+      "item_label": "存货",
+      "prior_period": "FY2023",
+      "current_period": "FY2024",
+      "prior_value": "2458692034.90",
+      "current_value": "1746380345.14",
+      "absolute_change": "-712311689.76",
+      "yoy_percent": "-28.97",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": true,
+      "trigger_reasons": [
+        "同比绝对变动达到20.00%阈值"
+      ],
+      "supporting_fact_ids": [
+        "F208",
+        "F237",
+        "F238"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM014",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "inventory",
+      "item_label": "存货",
+      "prior_period": "FY2024",
+      "current_period": "FY2025",
+      "prior_value": "1746380345.14",
+      "current_value": "1488559131.89",
+      "absolute_change": "-257821213.25",
+      "yoy_percent": "-14.76",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": false,
+      "trigger_reasons": [],
+      "supporting_fact_ids": [
+        "F207",
+        "F208",
+        "F237"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM015",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "monetary_funds",
+      "item_label": "货币资金",
+      "prior_period": "FY2023",
+      "current_period": "FY2024",
+      "prior_value": "940512433.11",
+      "current_value": "853034839.38",
+      "absolute_change": "-87477593.73",
+      "yoy_percent": "-9.30",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": false,
+      "trigger_reasons": [],
+      "supporting_fact_ids": [
+        "F202",
+        "F231",
+        "F232"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM016",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "monetary_funds",
+      "item_label": "货币资金",
+      "prior_period": "FY2024",
+      "current_period": "FY2025",
+      "prior_value": "853034839.38",
+      "current_value": "1104952885.33",
+      "absolute_change": "251918045.95",
+      "yoy_percent": "29.53",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": true,
+      "trigger_reasons": [
+        "同比绝对变动达到20.00%阈值"
+      ],
+      "supporting_fact_ids": [
+        "F201",
+        "F202",
+        "F231"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM017",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "net_profit",
+      "item_label": "净利润",
+      "prior_period": "FY2023",
+      "current_period": "FY2024",
+      "prior_value": "1344302675.78",
+      "current_value": "-734183532.26",
+      "absolute_change": "-2078486208.04",
+      "yoy_percent": "-154.61",
+      "change_kind": "sign_change",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": true,
+      "trigger_reasons": [
+        "同比绝对变动达到20.00%阈值",
+        "数值发生正负号切换"
+      ],
+      "supporting_fact_ids": [
+        "F226",
+        "F256",
+        "F257"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM018",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "net_profit",
+      "item_label": "净利润",
+      "prior_period": "FY2024",
+      "current_period": "FY2025",
+      "prior_value": "-734183532.26",
+      "current_value": "1281729907.88",
+      "absolute_change": "2015913440.14",
+      "yoy_percent": "274.58",
+      "change_kind": "sign_change",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": true,
+      "trigger_reasons": [
+        "同比绝对变动达到20.00%阈值",
+        "数值发生正负号切换"
+      ],
+      "supporting_fact_ids": [
+        "F225",
+        "F226",
+        "F256"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM019",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_cash_flow",
+      "item_label": "经营活动产生的现金流量净额",
+      "prior_period": "FY2023",
+      "current_period": "FY2024",
+      "prior_value": "155457433.79",
+      "current_value": "611013171.11",
+      "absolute_change": "455555737.32",
+      "yoy_percent": "293.04",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": true,
+      "trigger_reasons": [
+        "同比绝对变动达到20.00%阈值"
+      ],
+      "supporting_fact_ids": [
+        "F230",
+        "F260",
+        "F261"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM020",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_cash_flow",
+      "item_label": "经营活动产生的现金流量净额",
+      "prior_period": "FY2024",
+      "current_period": "FY2025",
+      "prior_value": "611013171.11",
+      "current_value": "1776508378.47",
+      "absolute_change": "1165495207.36",
+      "yoy_percent": "190.75",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": true,
+      "trigger_reasons": [
+        "同比绝对变动达到20.00%阈值"
+      ],
+      "supporting_fact_ids": [
+        "F229",
+        "F230",
+        "F260"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM021",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_cost",
+      "item_label": "营业成本",
+      "prior_period": "FY2023",
+      "current_period": "FY2024",
+      "prior_value": "4407809142.42",
+      "current_value": "3244208648.07",
+      "absolute_change": "-1163600494.35",
+      "yoy_percent": "-26.40",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": true,
+      "trigger_reasons": [
+        "同比绝对变动达到20.00%阈值"
+      ],
+      "supporting_fact_ids": [
+        "F224",
+        "F254",
+        "F255"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM022",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_cost",
+      "item_label": "营业成本",
+      "prior_period": "FY2024",
+      "current_period": "FY2025",
+      "prior_value": "3244208648.07",
+      "current_value": "2797410173.75",
+      "absolute_change": "-446798474.32",
+      "yoy_percent": "-13.77",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": false,
+      "trigger_reasons": [],
+      "supporting_fact_ids": [
+        "F223",
+        "F224",
+        "F254"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM023",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_revenue",
+      "item_label": "营业收入",
+      "prior_period": "FY2023",
+      "current_period": "FY2024",
+      "prior_value": "10318312851.48",
+      "current_value": "6512734471.77",
+      "absolute_change": "-3805578379.71",
+      "yoy_percent": "-36.88",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": true,
+      "trigger_reasons": [
+        "同比绝对变动达到20.00%阈值"
+      ],
+      "supporting_fact_ids": [
+        "F222",
+        "F252",
+        "F253"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM024",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "operating_revenue",
+      "item_label": "营业收入",
+      "prior_period": "FY2024",
+      "current_period": "FY2025",
+      "prior_value": "6512734471.77",
+      "current_value": "7830737438.74",
+      "absolute_change": "1318002966.97",
+      "yoy_percent": "20.24",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": true,
+      "trigger_reasons": [
+        "同比绝对变动达到20.00%阈值"
+      ],
+      "supporting_fact_ids": [
+        "F221",
+        "F222",
+        "F252"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM025",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "prepayments",
+      "item_label": "预付款项",
+      "prior_period": "FY2023",
+      "current_period": "FY2024",
+      "prior_value": "109711768.30",
+      "current_value": "52771323.79",
+      "absolute_change": "-56940444.51",
+      "yoy_percent": "-51.90",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": true,
+      "trigger_reasons": [
+        "同比绝对变动达到20.00%阈值"
+      ],
+      "supporting_fact_ids": [
+        "F206",
+        "F235",
+        "F236"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM026",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "prepayments",
+      "item_label": "预付款项",
+      "prior_period": "FY2024",
+      "current_period": "FY2025",
+      "prior_value": "52771323.79",
+      "current_value": "70825121.85",
+      "absolute_change": "18053798.06",
+      "yoy_percent": "34.21",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": true,
+      "trigger_reasons": [
+        "同比绝对变动达到20.00%阈值"
+      ],
+      "supporting_fact_ids": [
+        "F205",
+        "F206",
+        "F235"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM027",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "total_assets",
+      "item_label": "资产总计",
+      "prior_period": "FY2023",
+      "current_period": "FY2024",
+      "prior_value": "16979326536.89",
+      "current_value": "13319171088.28",
+      "absolute_change": "-3660155448.61",
+      "yoy_percent": "-21.56",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": true,
+      "trigger_reasons": [
+        "同比绝对变动达到20.00%阈值"
+      ],
+      "supporting_fact_ids": [
+        "F214",
+        "F243",
+        "F244"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM028",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "total_assets",
+      "item_label": "资产总计",
+      "prior_period": "FY2024",
+      "current_period": "FY2025",
+      "prior_value": "13319171088.28",
+      "current_value": "13674998496.95",
+      "absolute_change": "355827408.67",
+      "yoy_percent": "2.67",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": false,
+      "trigger_reasons": [],
+      "supporting_fact_ids": [
+        "F213",
+        "F214",
+        "F243"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM029",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "total_liabilities",
+      "item_label": "负债合计",
+      "prior_period": "FY2023",
+      "current_period": "FY2024",
+      "prior_value": "5541331336.92",
+      "current_value": "3117078422.57",
+      "absolute_change": "-2424252914.35",
+      "yoy_percent": "-43.75",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": true,
+      "trigger_reasons": [
+        "同比绝对变动达到20.00%阈值"
+      ],
+      "supporting_fact_ids": [
+        "F220",
+        "F250",
+        "F251"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    },
+    {
+      "metric_id": "FM030",
+      "entity_id": "CN-A-SZSE-002603",
+      "item": "total_liabilities",
+      "item_label": "负债合计",
+      "prior_period": "FY2024",
+      "current_period": "FY2025",
+      "prior_value": "3117078422.57",
+      "current_value": "2693101474.16",
+      "absolute_change": "-423976948.41",
+      "yoy_percent": "-13.60",
+      "change_kind": "comparable",
+      "formula": "(current - prior) / abs(prior) * 100%",
+      "requires_deep_analysis": false,
+      "trigger_reasons": [],
+      "supporting_fact_ids": [
+        "F219",
+        "F220",
+        "F250"
+      ],
+      "source_ids": [
+        "S01",
+        "S10"
+      ]
+    }
+  ],
+  "ratios": [
+    {
+      "ratio_id": "FR001",
+      "name": "资产负债率",
+      "period": "FY2023",
+      "value_percent": "32.64",
+      "formula": "负债合计/资产总计*100%",
+      "supporting_fact_ids": [
+        "F244",
+        "F251"
+      ]
+    },
+    {
+      "ratio_id": "FR002",
+      "name": "流动比率",
+      "period": "FY2023",
+      "value_percent": "147.16",
+      "formula": "流动资产合计/流动负债合计*100%",
+      "supporting_fact_ids": [
+        "F240",
+        "F249"
+      ]
+    },
+    {
+      "ratio_id": "FR003",
+      "name": "毛利率",
+      "period": "FY2023",
+      "value_percent": "57.28",
+      "formula": "(营业收入-营业成本)/营业收入*100%",
+      "supporting_fact_ids": [
+        "F253",
+        "F255"
+      ]
+    },
+    {
+      "ratio_id": "FR004",
+      "name": "销售收现比",
+      "period": "FY2023",
+      "value_percent": "88.98",
+      "formula": "销售商品、提供劳务收到的现金/营业收入*100%",
+      "supporting_fact_ids": [
+        "F253",
+        "F259"
+      ]
+    },
+    {
+      "ratio_id": "FR005",
+      "name": "资产负债率",
+      "period": "FY2024",
+      "value_percent": "23.40",
+      "formula": "负债合计/资产总计*100%",
+      "supporting_fact_ids": [
+        "F214",
+        "F220",
+        "F243",
+        "F250"
+      ]
+    },
+    {
+      "ratio_id": "FR006",
+      "name": "流动比率",
+      "period": "FY2024",
+      "value_percent": "166.30",
+      "formula": "流动资产合计/流动负债合计*100%",
+      "supporting_fact_ids": [
+        "F210",
+        "F218",
+        "F239",
+        "F248"
+      ]
+    },
+    {
+      "ratio_id": "FR007",
+      "name": "毛利率",
+      "period": "FY2024",
+      "value_percent": "50.19",
+      "formula": "(营业收入-营业成本)/营业收入*100%",
+      "supporting_fact_ids": [
+        "F222",
+        "F224",
+        "F252",
+        "F254"
+      ]
+    },
+    {
+      "ratio_id": "FR008",
+      "name": "销售收现比",
+      "period": "FY2024",
+      "value_percent": "113.23",
+      "formula": "销售商品、提供劳务收到的现金/营业收入*100%",
+      "supporting_fact_ids": [
+        "F222",
+        "F228",
+        "F252",
+        "F258"
+      ]
+    },
+    {
+      "ratio_id": "FR009",
+      "name": "资产负债率",
+      "period": "FY2025",
+      "value_percent": "19.69",
+      "formula": "负债合计/资产总计*100%",
+      "supporting_fact_ids": [
+        "F213",
+        "F219"
+      ]
+    },
+    {
+      "ratio_id": "FR010",
+      "name": "流动比率",
+      "period": "FY2025",
+      "value_percent": "235.76",
+      "formula": "流动资产合计/流动负债合计*100%",
+      "supporting_fact_ids": [
+        "F209",
+        "F217"
+      ]
+    },
+    {
+      "ratio_id": "FR011",
+      "name": "毛利率",
+      "period": "FY2025",
+      "value_percent": "64.28",
+      "formula": "(营业收入-营业成本)/营业收入*100%",
+      "supporting_fact_ids": [
+        "F221",
+        "F223"
+      ]
+    },
+    {
+      "ratio_id": "FR012",
+      "name": "销售收现比",
+      "period": "FY2025",
+      "value_percent": "108.44",
+      "formula": "销售商品、提供劳务收到的现金/营业收入*100%",
+      "supporting_fact_ids": [
+        "F221",
+        "F227"
+      ]
+    }
+  ]
+}

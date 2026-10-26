@@ -1,0 +1,8 @@
+{
+  "schema_version": "2.5.0",
+  "generated_at": "2026-10-23T13:16:39.509681+00:00",
+  "provider": "deepseek",
+  "model": "deepseek-flash",
+  "mode": "mock",
+  "raw_model_output": "{\"report_title\": \"以岭药业企业授信研究（离线Mock）\", \"sections\": [{\"topic\": \"company_background_and_ownership\", \"heading\": \"企业基本情况\", \"analysis_markdown\": \"离线夹具已完成企业基本面读取、股权Skill加载、比例校验和图形生成；本段仅验证主Agent能够据此撰写章节，不代表Live研究结论。\"}, {\"topic\": \"operations_and_business_model\", \"heading\": \"经营情况分析\", \"analysis_markdown\": \"离线夹具能够读取年报结构化的主营业务、经营模式和主要产品。外部市场及上下游判断需在真实联网研究中核验。\"}, {\"topic\": \"industry_and_policy\", \"heading\": \"行业环境与政策分析\", \"analysis_markdown\": \"离线行业资料只用于验证搜索、原文获取和证据提取链路；政策效力、竞争格局及对企业的具体影响仍需Live研究确认。\"}, {\"topic\": \"financial_analysis\", \"heading\": \"财务分析\", \"analysis_markdown\": \"离线夹具已调用财务Skill并取得Python计算的跨期指标。本段验证数据能够交由同一主Agent分析，不将缺失的短期借款数据解释为零。\"}, {\"topic\": \"integrated_credit_risk\", \"heading\": \"综合授信风险分析\", \"analysis_markdown\": \"离线夹具验证主Agent能够把经营、治理、行业和财务维度放在同一章节综合考虑；具体风险强度和因果关系仍需基于真实DeepSeek与百度资料复核。\"}, {\"topic\": \"due_diligence_and_missing_information\", \"heading\": \"待补充资料及尽调问题\", \"analysis_markdown\": \"现阶段应优先补充关键财务科目明细、最新融资台账以及核心产品适用政策，以核验结构化数据之外的经营与偿债信息。\"}], \"due_diligence_questions\": [{\"question\": \"请提供最新银行借款、授信额度及到期安排，核验年报未披露的短期借款情况。\"}, {\"question\": \"请说明核心产品适用的医保、集采及价格政策，并提供当前执行口径。\"}], \"limitations\": [\"离线Mock只验证V2.5系统编排，不代表真实研究结论。\"]}"
+}
