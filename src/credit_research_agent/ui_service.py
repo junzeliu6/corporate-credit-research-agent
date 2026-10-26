@@ -23,6 +23,27 @@ from dotenv import dotenv_values
 from credit_research_agent.company import CompanyResolver
 
 
+# 网页 Live 需要容纳长篇报告生成；这是单次模型请求的等待上限，不是整项任务时限。
+WEB_LIVE_REQUEST_TIMEOUT_SECONDS = 600
+WEB_LIVE_MAX_MODEL_RETRIES = 0
+WEB_COMPLETE_LIVE_BUDGET_ARGS = (
+    "--max-agent-turns",
+    "30",
+    "--max-tool-calls",
+    "40",
+    "--max-search-rounds",
+    "6",
+    "--max-search-calls",
+    "6",
+    "--max-search-requests",
+    "6",
+    "--max-source-fetches",
+    "10",
+    "--max-extract-calls",
+    "10",
+)
+
+
 class UiServiceError(ValueError):
     """界面输入或执行配置不满足安全约束。"""
 
@@ -296,11 +317,24 @@ def build_research_command(
     if request.mode.uses_llm:
         argv.extend(["--llm-mode", execution_mode.value])
         if execution_mode is UiExecutionMode.LIVE:
-            argv.append("--confirm-live")
+            argv.extend(
+                [
+                    "--confirm-live",
+                    "--request-timeout-seconds",
+                    str(WEB_LIVE_REQUEST_TIMEOUT_SECONDS),
+                    "--max-model-retries",
+                    str(WEB_LIVE_MAX_MODEL_RETRIES),
+                ]
+            )
     if request.mode.uses_search:
         argv.extend(["--search-mode", execution_mode.value])
         if execution_mode is UiExecutionMode.LIVE:
             argv.append("--confirm-search-live")
+    if (
+        execution_mode is UiExecutionMode.LIVE
+        and request.mode is ResearchMode.COMPLETE
+    ):
+        argv.extend(WEB_COMPLETE_LIVE_BUDGET_ARGS)
 
     # CLI 新增的轻量进度输出只包含阶段、Tool 名称及计数，不记录密钥或正文。
     argv.extend(["--progress-output", str(progress_path)])

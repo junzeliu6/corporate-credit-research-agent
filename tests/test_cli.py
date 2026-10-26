@@ -628,7 +628,7 @@ def test_cli_live_preview_requires_confirmation_without_downloading(
             "--max-output-tokens",
             "50000",
             "--request-timeout-seconds",
-            "120",
+            "600",
             "--max-model-retries",
             "0",
         ]
@@ -640,7 +640,7 @@ def test_cli_live_preview_requires_confirmation_without_downloading(
     assert output["agent_error"]["code"] == "live_confirmation_required"
     assert output["agent_config"]["model"] == "deepseek-flash"
     assert output["agent_config"]["max_output_tokens"] == 50000
-    assert output["agent_config"]["request_timeout_seconds"] == 120.0
+    assert output["agent_config"]["request_timeout_seconds"] == 600.0
     assert output["agent_config"]["max_retries"] == 0
     assert secret not in captured.out
     assert secret not in captured.err

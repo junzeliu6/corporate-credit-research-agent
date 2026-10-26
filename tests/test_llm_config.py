@@ -95,6 +95,20 @@ def test_output_token_limit_rejects_values_above_50000(tmp_path: Path) -> None:
     assert error.value.code == "invalid_llm_config"
 
 
+def test_request_timeout_accepts_web_live_ten_minutes(tmp_path: Path) -> None:
+    config = load_deepseek_config(tmp_path, request_timeout_seconds=600)
+
+    assert config.request_timeout_seconds == 600
+    assert build_model_settings(config).timeout == 600
+
+
+def test_request_timeout_rejects_values_above_ten_minutes(tmp_path: Path) -> None:
+    with pytest.raises(LLMConfigError) as error:
+        load_deepseek_config(tmp_path, request_timeout_seconds=601)
+
+    assert error.value.code == "invalid_llm_config"
+
+
 def test_live_model_uses_deepseek_chat_completions_without_request(
     tmp_path: Path, monkeypatch
 ) -> None:

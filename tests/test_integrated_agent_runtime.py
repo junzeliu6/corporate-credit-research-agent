@@ -237,6 +237,48 @@ def test_parser_repairs_unescaped_inner_quotes_without_rewriting_prose() -> None
     assert draft.limitations == ['政策名称为《中医药振兴发展"十五五"规划》，需复核。']
 
 
+def test_parser_accepts_short_preamble_before_unique_json_fence() -> None:
+    payload = _draft_payload([COMPLETE_REQUIRED_TOPICS[0]])
+    payload["limitations"] = ['政策名称含有"十五五"字样，需复核。']
+    encoded = json.dumps(payload, ensure_ascii=False)
+    malformed = encoded.replace('\\"十五五\\"', '"十五五"')
+    model_output = (
+        "资料已按预算约束收尾。以下提交完整研究草稿。\n\n"
+        "```json\n"
+        + malformed
+        + "\n```"
+    )
+
+    draft = parse_complete_narrative_draft(model_output)
+
+    assert [item.topic for item in draft.sections] == [COMPLETE_REQUIRED_TOPICS[0]]
+    assert draft.limitations == ['政策名称含有"十五五"字样，需复核。']
+
+
+def test_parser_rejects_ambiguous_or_incomplete_fenced_output() -> None:
+    valid_json = json.dumps(
+        _draft_payload([COMPLETE_REQUIRED_TOPICS[0]]),
+        ensure_ascii=False,
+    )
+    invalid_outputs = [
+        "说明\n```json\n"
+        + valid_json
+        + "\n```\n```json\n"
+        + valid_json
+        + "\n```",
+        "说明\n```json\n" + valid_json,
+        "```json\n" + valid_json,
+        '说明\n```json\n{"report_title":"未完成","sections":[\n```',
+        "说" * 201 + "\n```json\n" + valid_json + "\n```",
+    ]
+
+    for model_output in invalid_outputs:
+        with pytest.raises(IntegratedRuntimeError) as exc_info:
+            parse_complete_narrative_draft(model_output)
+
+        assert exc_info.value.code == "invalid_complete_narrative_json"
+
+
 def test_parser_does_not_guess_truncated_or_non_json_output() -> None:
     with pytest.raises(IntegratedRuntimeError) as exc_info:
         parse_complete_narrative_draft('{"report_title":"未完成","sections":[')

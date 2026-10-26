@@ -144,12 +144,13 @@
 - Live只有在两个Skill和六章均完成、并且至少发生一次证据提取且得到事实或候选时才可标记`SUCCESS`。V2.5定向测试`69 passed in 5.62s`、全量回归`263 passed in 15.08s`；离线Mock在同一根轨迹中完成2次Skill调用、9次Tool调用和10次Mock模型请求，真实外部搜索请求为0。2026-10-23完整Live完成6次DeepSeek请求、10次Tool调用和6次百度真实搜索，并交付六章正文；但唯一网页读取返回HTTP 412，未取得外部原文或形成外部Fact，因此结果为`PARTIAL_SUCCESS`。详细结果见`V2_5_LIVE_TEST_STATUS.md`。
 - Live后已离线修复关键失败路径：局部搜索预算耗尽不再禁止读取/提取已有候选，已有候选优先于新增付费搜索，单页403/404/412后返回剩余候选；Tool结果新增股权、单品、两期趋势、流动资产归因和营运资金边界，Markdown不再显示内部错误码。修复后专项回归`105 passed in 6.79s`、全量回归`275 passed in 15.78s`，本轮未调用真实API。
 - 2026-10-26第二次完整Live中，DeepSeek请求28次、Function Tool调用29次、百度实际搜索6次；两个Skill均成功，5份政府网页原文形成20条事实和44条证据，模型生成6章及18个尽调问题。严格JSON解析因`"十五五"`内部双引号未转义而失败；解析器现仅对此类可确定内部引号作保守修复，截断或其他结构错误仍拒绝。保存草稿已离线恢复为`credit_research_report_recovered.md`，恢复过程网络请求为0；详细记录见`V2_5_LIVE_TEST_STATUS.md`。
+- 后续网页完整Live正常完成600秒超时配置下的模型与Tool链路，但模型在唯一完整`json`代码块前添加简短交付说明，旧解析器因此拒绝已完整结束的六章草稿。解析器现允许不超过200字符的前言加唯一闭合`json`代码块，并继续拒绝多个代码块、未闭合、截断、超长前言或尾随正文；本轮按用户要求只验证已保存原始草稿可解析，不恢复Markdown或Word，也不再次调用API。
 
 ## V3.1 Streamlit 本地交互界面
 
 - **V3.1A 报告展示**：安全发现`data/`下的完整研究运行和仓库内V2.5 Mock样例；优先展示`credit_research_report_recovered.md`，但保留原始失败状态并显示“已离线恢复，需复核”，不会把恢复版静默标成成功。
 - Markdown报告支持按二级标题切换“全文/章节”；股权PNG优先、SVG降级并由`st.image`单独展示；财务科目变动和Python已计算比率直接读取`financial_metrics.json`，界面不重新计算或改写分析。
-- **V3.1B Agent连接**：输入企业名称/股票代码、自定义任务并选择完整、股权、财务、行业或确定性基本面模式；`ui_service.py`只构造白名单argv，通过`sys.executable -m credit_research_agent.cli`且`shell=False`调用现有入口。完整/行业Live分别要求DeepSeek和百度确认，股权/财务要求DeepSeek确认；基本面模式不调用模型。
+- **V3.1B Agent连接**：输入企业名称/股票代码、自定义任务并选择完整、股权、财务、行业或确定性基本面模式；`ui_service.py`只构造白名单argv，通过`sys.executable -m credit_research_agent.cli`且`shell=False`调用现有入口。完整/行业Live分别要求DeepSeek和百度确认，股权/财务要求DeepSeek确认；基本面模式不调用模型。网页发起的LLM Live统一使用600秒单次请求超时及0次SDK自动重试，以容纳长正文并避免超时后的重复付费请求；该上限不是整项任务时限。网页完整Live另外固定使用30轮、40次总Tool、搜索轮次/调用次数/真实请求数均为6、10次网页读取和10次证据提取的隐藏预算，其他模式不受影响。
 - 每次运行写入`data/streamlit_runs/<run_id>/`独立目录；模型不能通过界面覆盖来源编号、Skill、本地路径或任意CLI参数。页面只显示API Key是否已配置，不读取或输出密钥值。
 - **V3.1C 任务状态**：独立后台Worker把请求和状态写入任务目录；页面刷新或关闭不会重新调用CLI，重新打开后可从磁盘恢复队列、运行、成功、部分成功或失败状态。幂等键、运行中任务锁和跨浏览器会话的项目级原子Live锁阻止重复调用；并发时只有一个标签页/会话可以启动Live。Worker完成、启动/请求校验失败或陈旧任务收敛时释放锁。意外断电或崩溃后PID已不存在的`running`任务，以及超过60秒仍未启动的`queued`任务，会自动收敛为失败并保留已有产物。Windows使用`OpenProcess/GetExitCodeProcess`只读探测PID，只有POSIX使用`os.kill(pid, 0)`，避免误终止Worker；损坏或空Live锁仅在确认不存在其他活动Live任务时自动清理并原子重试。轻量`ui_progress.jsonl`只记录阶段、模型轮次、Tool名称和Token计数等安全字段，不保存密钥、网页正文或模型上下文；完整研究继续以既有`credit_research_execution_trace.json`和交付状态为审计依据。
 - 完整研究和股权、财务、行业三个单项Runtime均复用同一个脱敏`progress_sink`，页面显示实际模型及Tool事件，不以固定进度条代替执行轨迹。
@@ -593,7 +594,7 @@ python -m credit_research_agent "002603.SZ" `
 
 `--max-output-tokens`限制的是**每次模型响应的输出Token**，不是整个Agent Loop的输入与输出总量。默认仍为800；当前允许显式提高到50000，例如`--max-output-tokens 50000`。提高该值会扩大潜在费用，也不会替代Python确定性数据计算和内部来源管理。V2.3完整财务正文曾在5000 Token处以`finish_reason=length`截断，因此更高上限只用于用户明确授权的受控Live任务。
 
-长正文Live还可显式设置`--request-timeout-seconds 120`和`--max-model-retries 0`。前者是单次模型请求的最长等待时间，后者关闭Agents SDK模型调用层自动重试；底层`AsyncOpenAI`传输重试原本即固定为0。两者不改变Agent轮次和Function Tool预算。
+长正文Live可显式设置`--request-timeout-seconds`和`--max-model-retries 0`。前者是单次模型请求的最长等待时间，CLI允许上限600秒；后者关闭Agents SDK模型调用层自动重试，底层`AsyncOpenAI`传输重试原本即固定为0。网页Live固定传入600秒和0次重试，但不改变Agent轮次和Function Tool预算，也不代表整项任务必须或只能运行10分钟。
 
 输出中的 `company` 是规范化上市主体；`sources` 是静态来源种子；`download` 是本机实际获取结果。`S01.status = registered` 只表示来源目录登记状态，不能替代实际下载清单。
 
@@ -775,7 +776,7 @@ V2.5多Skill计划、同一Agent双Skill调用、Skill方法投影、检索错�
 V2.5初始完整离线回归：263 passed in 15.08s；首次Live后稳定性修复专项回归：105 passed in 6.79s；最新全量回归：275 passed in 15.78s；`compileall`与`git diff --check`通过（仅CRLF提示）
 V3.1历史产物、受控命令、Live门禁、后台Worker、启动/校验失败回写、跨平台只读PID探测、陈旧任务收敛、幂等提交、跨会话原子Live锁及损坏锁恢复、状态恢复、路径安全与完整/单项Runtime脱敏进度：43 passed in 4.83s
 V3.1完整离线回归：321 passed in 16.03s；后台Mock端到端生成六章报告且刷新恢复未重复启动，真实DeepSeek/百度请求均为0
-V3.2 Word结构转换、中文正文、标题层级、列表编号重启、财务表、股权PNG、图片比例、缺图/远程图/路径越界、图表缓存失效、历史任务隔离、Live优先默认选择及CLI无外部客户端：专项`31 passed in 5.83s`；完整离线回归`344 passed in 19.13s`
+V3.2 Word结构转换、中文正文、标题层级、列表编号重启、财务表、股权PNG、图片比例、缺图/远程图/路径越界、图表缓存失效、历史任务隔离、Live优先默认选择及CLI无外部客户端：专项`31 passed in 5.83s`；网页Live解析与隐藏预算定向回归`24 passed in 4.20s`；最新完整离线回归`353 passed in 16.75s`
 ```
 
 网络请求使用离线假响应测试，因此日常 `pytest` 不依赖巨潮资讯、百度搜索或 DeepSeek 是否可访问。

@@ -42,6 +42,7 @@ Streamlit 表单
 - `ui_service.py`构造固定白名单argv，以`sys.executable -m credit_research_agent.cli`和`shell=False`调用现有CLI。
 - 完整研究继续走`--run-complete-research`；股权/财务走现有`--run-agent`；行业走`--run-industry-research`；基本面走`--build-fundamentals`。
 - Live完整/行业任务需要DeepSeek和百度搜索两项显式确认；Live股权/财务需要DeepSeek确认。CLI和Runtime继续执行第二层门禁。
+- 网页LLM Live命令固定传入600秒单次请求超时和0次SDK自动重试；该值用于避免长篇正文被30秒误判超时，不是整项研究时限。网页完整Live另固定传入30轮、40次总Tool、搜索轮次/调用次数/真实请求数均为6、10次网页读取和10次证据提取的隐藏预算，其他模式保持原预算。
 - 页面只返回`DEEPSEEK_API_KEY`、`BAIDU_SEARCH_API_KEY`是否配置的布尔值，不显示密钥。
 - 每次任务固定写入`data/streamlit_runs/<task_id>/`，不允许表单注入额外CLI参数、来源覆盖或任意输出路径。
 - 新增`build_mock_command`用于完全离线前后端链路验收；Mock命令不包含任何Live确认参数。
@@ -110,7 +111,8 @@ Streamlit 表单
 ## 8. 已知限制
 
 - 当前受控公司登记表只包含以岭药业；界面能输入其他企业名称或代码，但无法识别时会明确拒绝，不能据此宣称已支持全部A股公司。
-- 本轮没有从Streamlit发起真实付费Live，因此“界面→真实DeepSeek/百度”依赖已验证的CLI/Runtime门禁和既有V2.5 Live记录；下一次页面Live仍需用户主动确认。
+- V3.1初始开发轮没有从Streamlit发起真实付费Live；后续一次用户主动确认的网页完整Live已验证界面、Worker、CLI、DeepSeek、百度和双Skill链路。该次运行最终因完整JSON代码块前的简短前言触发旧解析器拒绝；修复阶段没有再次调用API，也按用户要求没有用保存草稿恢复Markdown或Word。
+- 网页Live解析与隐藏预算定向离线测试`24 passed in 4.20s`，最新完整离线回归`353 passed in 16.75s`。
 - V3.2 Word导出与V3.3 GitHub项目整理尚未启动。
 - Streamlit为本地单机MVP，没有用户账号、权限隔离、数据库或生产部署能力。
 - 执行进度只写脱敏摘要；模型上下文、网页正文和密钥不会为方便展示而复制到进度文件。

@@ -263,7 +263,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--request-timeout-seconds",
         type=float,
         default=30.0,
-        help="单次模型请求超时秒数，默认30、上限120",
+        help="单次模型请求超时秒数，默认30、上限600",
     )
     parser.add_argument(
         "--max-model-retries",

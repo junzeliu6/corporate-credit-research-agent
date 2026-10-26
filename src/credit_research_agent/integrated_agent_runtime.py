@@ -919,13 +919,41 @@ def create_complete_research_tools() -> List[Any]:
     ]
 
 
+_MAX_JSON_PREAMBLE_CHARS = 200
+_JSON_FENCE = "```"
+
+
 def _strip_json_fence(text: str) -> str:
     stripped = text.strip()
-    if stripped.startswith("```"):
-        lines = stripped.splitlines()[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        stripped = "\n".join(lines).strip()
+    if stripped.startswith(_JSON_FENCE):
+        lines = stripped.splitlines()
+        if (
+            stripped.count(_JSON_FENCE) != 2
+            or not lines
+            or lines[0].strip().lower() not in {_JSON_FENCE, "```json"}
+            or lines[-1].strip() != _JSON_FENCE
+        ):
+            return stripped
+        return "\n".join(lines[1:-1]).strip()
+
+    # DeepSeek有时会在唯一JSON代码块前添加一句简短交付说明。这里只接受
+    # 一个严格闭合的```json代码块，且闭合后不得出现其他正文；多个代码块、
+    # 未闭合代码块、长前言或截断JSON继续交由json.loads严格拒绝。
+    if stripped.count(_JSON_FENCE) != 2:
+        return stripped
+    opening_index = stripped.find(_JSON_FENCE)
+    closing_index = stripped.rfind(_JSON_FENCE)
+    preamble = stripped[:opening_index].strip()
+    opening_line_end = stripped.find("\n", opening_index)
+    if (
+        not preamble
+        or len(preamble) > _MAX_JSON_PREAMBLE_CHARS
+        or opening_line_end < 0
+        or stripped[opening_index:opening_line_end].strip().lower() != "```json"
+        or stripped[closing_index + len(_JSON_FENCE) :].strip()
+    ):
+        return stripped
+    stripped = stripped[opening_line_end + 1 : closing_index].strip()
     return stripped
 
 

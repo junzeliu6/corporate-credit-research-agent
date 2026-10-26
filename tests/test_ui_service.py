@@ -13,6 +13,7 @@ from credit_research_agent.ui_service import (
     ResearchRequest,
     UiServiceError,
     build_live_command,
+    build_mock_command,
     load_api_readiness,
     read_cli_log_tail,
     read_progress_events,
@@ -68,6 +69,68 @@ def test_build_live_command_maps_only_whitelisted_cli_options(
     assert command.run_dir.parent == PROJECT_ROOT / "data" / "streamlit_runs"
     assert command.artifact_dir.name == "CN-A-SZSE-002603"
     assert "shell" not in " ".join(command.argv).lower()
+    if mode.uses_llm:
+        timeout_index = command.argv.index("--request-timeout-seconds")
+        retry_index = command.argv.index("--max-model-retries")
+        assert command.argv[timeout_index + 1] == "600"
+        assert command.argv[retry_index + 1] == "0"
+    else:
+        assert "--request-timeout-seconds" not in command.argv
+        assert "--max-model-retries" not in command.argv
+
+
+def test_mock_command_does_not_override_live_timeout_or_retry_policy() -> None:
+    command = build_mock_command(
+        PROJECT_ROOT,
+        _request(ResearchMode.COMPLETE),
+        run_id="mock-keeps-cli-defaults",
+        python_executable="python-test",
+    )
+
+    assert "--request-timeout-seconds" not in command.argv
+    assert "--max-model-retries" not in command.argv
+    assert "--max-agent-turns" not in command.argv
+    assert "--max-tool-calls" not in command.argv
+
+
+def test_complete_live_uses_conservative_hidden_budget() -> None:
+    command = build_live_command(
+        PROJECT_ROOT,
+        _request(ResearchMode.COMPLETE),
+        run_id="complete-live-budget",
+        python_executable="python-test",
+    )
+    expected = {
+        "--max-agent-turns": "30",
+        "--max-tool-calls": "40",
+        "--max-search-rounds": "6",
+        "--max-search-calls": "6",
+        "--max-search-requests": "6",
+        "--max-source-fetches": "10",
+        "--max-extract-calls": "10",
+    }
+
+    for option, value in expected.items():
+        option_index = command.argv.index(option)
+        assert command.argv[option_index + 1] == value
+
+
+@pytest.mark.parametrize(
+    "mode",
+    [ResearchMode.OWNERSHIP, ResearchMode.FINANCIAL, ResearchMode.INDUSTRY],
+)
+def test_non_complete_live_modes_do_not_receive_complete_budget(
+    mode: ResearchMode,
+) -> None:
+    command = build_live_command(
+        PROJECT_ROOT,
+        _request(mode),
+        run_id=f"no-complete-budget-{mode.value}",
+        python_executable="python-test",
+    )
+
+    assert "--max-agent-turns" not in command.argv
+    assert "--max-tool-calls" not in command.argv
 
 
 def test_complete_live_requires_both_explicit_confirmations() -> None:
