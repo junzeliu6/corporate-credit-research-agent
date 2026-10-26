@@ -1250,6 +1250,7 @@ class FinancialResearchAgentRuntime:
         skill_runtime_factory: Callable[[Path], SkillRuntime] = SkillRuntime,
         clock: Optional[Callable[[], datetime]] = None,
         trace_id_factory: Optional[Callable[[], str]] = None,
+        progress_sink: Optional[Callable[[Any], None]] = None,
     ) -> None:
         self.project_root = Path(project_root).resolve()
         self.config = config
@@ -1259,6 +1260,7 @@ class FinancialResearchAgentRuntime:
         self.trace_id_factory = trace_id_factory or (
             lambda: "AF-" + uuid4().hex[:12].upper()
         )
+        self.progress_sink = progress_sink
 
     async def run(
         self,
@@ -1373,7 +1375,7 @@ class FinancialResearchAgentRuntime:
                 task,
                 context=context,
                 max_turns=self.config.max_turns,
-                hooks=_AgentTraceHooks(self.clock),
+                hooks=_AgentTraceHooks(self.clock, self.progress_sink),
                 run_config=RunConfig(
                     workflow_name="Corporate Credit Research V2.3",
                     tracing_disabled=True,

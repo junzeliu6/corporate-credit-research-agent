@@ -659,6 +659,7 @@ class IndustryResearchAgentRuntime:
         source_fetcher_override: Optional[Any] = None,
         clock: Optional[Callable[[], datetime]] = None,
         trace_id_factory: Optional[Callable[[], str]] = None,
+        progress_sink: Optional[Callable[[Any], None]] = None,
     ) -> None:
         self.project_root = Path(project_root).resolve()
         self.llm_config = llm_config
@@ -670,6 +671,7 @@ class IndustryResearchAgentRuntime:
         self.trace_id_factory = trace_id_factory or (
             lambda: "IR-" + uuid4().hex[:12].upper()
         )
+        self.progress_sink = progress_sink
 
     async def run(
         self,
@@ -823,7 +825,7 @@ class IndustryResearchAgentRuntime:
                 build_industry_agent_input(task, context_payload),
                 context=retrieval_context,
                 max_turns=runtime_budget.max_agent_turns,
-                hooks=RetrievalRunHooks(self.clock),
+                hooks=RetrievalRunHooks(self.clock, self.progress_sink),
                 run_config=RunConfig(
                     workflow_name="Corporate Credit Research V2.4",
                     tracing_disabled=True,

@@ -1508,15 +1508,34 @@ def create_ownership_function_tool():
 
 
 class _AgentTraceHooks(RunHooksBase[OwnershipAgentContext, Agent[OwnershipAgentContext]]):
-    def __init__(self, clock: Callable[[], datetime]) -> None:
+    def __init__(
+        self,
+        clock: Callable[[], datetime],
+        event_sink: Optional[Callable[[AgentExecutionEvent], None]] = None,
+    ) -> None:
         self.clock = clock
+        self.event_sink = event_sink
+
+    def _record(
+        self,
+        trace: AgentExecutionTrace,
+        stage: AgentExecutionStage,
+        message: str,
+        details: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        event = _append_event(trace, self.clock, stage, message, details)
+        if self.event_sink is not None:
+            try:
+                self.event_sink(event)
+            except Exception:
+                # UI进度属于旁路，不得影响Agent主流程。
+                pass
 
     async def on_llm_start(self, context, agent, system_prompt, input_items) -> None:
         trace = context.context.trace
         trace.llm_call_count += 1
-        _append_event(
+        self._record(
             trace,
-            self.clock,
             AgentExecutionStage.LLM_CALL_STARTED,
             "开始一次模型调用",
             {"llm_call_number": trace.llm_call_count, "input_item_count": len(input_items)},
@@ -1530,9 +1549,8 @@ class _AgentTraceHooks(RunHooksBase[OwnershipAgentContext, Agent[OwnershipAgentC
         trace.usage.input_tokens += usage.input_tokens
         trace.usage.output_tokens += usage.output_tokens
         trace.usage.total_tokens += usage.total_tokens
-        _append_event(
+        self._record(
             trace,
-            self.clock,
             AgentExecutionStage.LLM_CALL_COMPLETED,
             "模型调用完成",
             {
@@ -1546,9 +1564,8 @@ class _AgentTraceHooks(RunHooksBase[OwnershipAgentContext, Agent[OwnershipAgentC
     async def on_tool_start(self, context, agent, tool) -> None:
         trace = context.context.trace
         trace.selected_tool = tool.name
-        _append_event(
+        self._record(
             trace,
-            self.clock,
             AgentExecutionStage.LLM_TOOL_SELECTED,
             "LLM决定调用白名单Function Tool",
             {"tool_name": tool.name},
@@ -1561,16 +1578,16 @@ def _append_event(
     stage: AgentExecutionStage,
     message: str,
     details: Optional[Dict[str, Any]] = None,
-) -> None:
-    trace.events.append(
-        AgentExecutionEvent(
+) -> AgentExecutionEvent:
+    event = AgentExecutionEvent(
             sequence=len(trace.events) + 1,
             occurred_at=clock(),
             stage=stage,
             message=message,
             details=details or {},
-        )
     )
+    trace.events.append(event)
+    return event
 
 
 def _write_trace(path: Path, trace: AgentExecutionTrace) -> None:
@@ -1867,6 +1884,7 @@ class CreditResearchAgentRuntime:
         skill_runtime_factory: Callable[[Path], SkillRuntime] = SkillRuntime,
         clock: Optional[Callable[[], datetime]] = None,
         trace_id_factory: Optional[Callable[[], str]] = None,
+        progress_sink: Optional[Callable[[Any], None]] = None,
     ) -> None:
         self.project_root = Path(project_root).resolve()
         self.config = config
@@ -1876,6 +1894,7 @@ class CreditResearchAgentRuntime:
         self.trace_id_factory = trace_id_factory or (
             lambda: "AR-" + uuid4().hex[:12].upper()
         )
+        self.progress_sink = progress_sink
 
     async def run(
         self,
@@ -1989,7 +2008,7 @@ class CreditResearchAgentRuntime:
                 task,
                 context=context,
                 max_turns=self.config.max_turns,
-                hooks=_AgentTraceHooks(self.clock),
+                hooks=_AgentTraceHooks(self.clock, self.progress_sink),
                 run_config=RunConfig(
                     workflow_name="Corporate Credit Research V1.3B",
                     tracing_disabled=True,

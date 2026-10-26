@@ -1112,15 +1112,34 @@ def render_research_selection(
 
 
 class _RetrievalHooks(RunHooksBase[RetrievalContext, Agent[RetrievalContext]]):
-    def __init__(self, clock: Callable[[], datetime]) -> None:
+    def __init__(
+        self,
+        clock: Callable[[], datetime],
+        event_sink: Optional[Callable[[RetrievalEvent], None]] = None,
+    ) -> None:
         self.clock = clock
+        self.event_sink = event_sink
+
+    def _record(
+        self,
+        trace: RetrievalExecutionTrace,
+        stage: RetrievalStage,
+        message: str,
+        details: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        event = _append_event(trace, self.clock, stage, message, details)
+        if self.event_sink is not None:
+            try:
+                self.event_sink(event)
+            except Exception:
+                # 进度展示是旁路能力，不能反向中断研究主流程。
+                pass
 
     async def on_llm_start(self, context, agent, system_prompt, input_items) -> None:
         trace = context.context.trace
         trace.llm_call_count += 1
-        _append_event(
+        self._record(
             trace,
-            self.clock,
             RetrievalStage.LLM_CALL_STARTED,
             "开始一次模型调用",
             {"llm_call_number": trace.llm_call_count},
@@ -1133,18 +1152,16 @@ class _RetrievalHooks(RunHooksBase[RetrievalContext, Agent[RetrievalContext]]):
         trace.usage.input_tokens += usage.input_tokens
         trace.usage.output_tokens += usage.output_tokens
         trace.usage.total_tokens += usage.total_tokens
-        _append_event(
+        self._record(
             trace,
-            self.clock,
             RetrievalStage.LLM_CALL_COMPLETED,
             "模型调用完成",
             {"total_tokens": usage.total_tokens},
         )
 
     async def on_tool_start(self, context, agent, tool) -> None:
-        _append_event(
+        self._record(
             context.context.trace,
-            self.clock,
             RetrievalStage.TOOL_SELECTED,
             "LLM决定调用白名单检索Tool",
             {"tool_name": tool.name},
@@ -1157,16 +1174,16 @@ def _append_event(
     stage: RetrievalStage,
     message: str,
     details: Optional[Dict[str, Any]] = None,
-) -> None:
-    trace.events.append(
-        RetrievalEvent(
+) -> RetrievalEvent:
+    event = RetrievalEvent(
             sequence=len(trace.events) + 1,
             occurred_at=clock(),
             stage=stage,
             message=message,
             details=details or {},
-        )
     )
+    trace.events.append(event)
+    return event
 
 
 def _write_trace(path: Path, trace: RetrievalExecutionTrace) -> None:

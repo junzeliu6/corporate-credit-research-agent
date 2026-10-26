@@ -1,6 +1,6 @@
 # 企业授信研究Agent — 公共信息研究 Agent 开发路线（v5：双 Skill 集成）
 
-> V0.1—V0.4、V1.1—V1.2、V1.3A 与 V1.4 已由本地代码、真实年报产物和测试核验；`ownership-structure` 已接入白名单确定性 Skill Runtime 与 SDK Agent Loop。V1.3B与V1.5既有Agent、检索和安全能力继续保留。V2.1/V2.2已完成可比财务事实与确定性计算；V2.3已按简化后的正式报告规则恢复DeepSeek生成的完整财务正文。V2.4已完成离线实现与验证。V2.5单主Agent双Skill集成已完成；2026-10-26第二次DeepSeek+百度Live已取得5份政府网页原文、20条事实和六章正文。原始交付仅因一处未转义JSON内部引号失败，现已从同一保存草稿离线恢复完整Markdown且没有重写模型正文；核心Live链路已验证，但尚不标记为单次运行无故障完成。
+> V0.1—V0.4、V1.1—V1.2、V1.3A 与 V1.4 已由本地代码、真实年报产物和测试核验；`ownership-structure` 已接入白名单确定性 Skill Runtime 与 SDK Agent Loop。V1.3B与V1.5既有Agent、检索和安全能力继续保留。V2.1/V2.2已完成可比财务事实与确定性计算；V2.3已按简化后的正式报告规则恢复DeepSeek生成的完整财务正文。V2.4已完成离线实现与验证。V2.5单主Agent双Skill集成已完成；2026-10-26第二次DeepSeek+百度Live已取得5份政府网页原文、20条事实和六章正文。原始交付仅因一处未转义JSON内部引号失败，现已从同一保存草稿离线恢复完整Markdown且没有重写模型正文；核心Live链路已验证，但尚不标记为单次运行无故障完成。V3.1已在不复制Agent Loop的前提下完成Streamlit历史报告展示、既有Runtime调用及持久化后台任务管理；本阶段没有新增付费API调用。
 
 ## [x] V0：上市公司数据入口与证据基础
 - [x] **V0.1** 建立项目骨架、最少依赖、README、实体识别/映射（`以岭药业`、`002603`、`002603.SZ`→`石家庄以岭药业股份有限公司 / 002603.SZ`）及官方来源种子目录；编写离线测试。首个种子为2025年年报（`https://static.cninfo.com.cn/finalpage/2026-04-28/1225205683.PDF`）；同时登记深交所、巨潮资讯和公司官网。V0.1不要求真实下载，也不需要立即写通用搜索引擎。
@@ -60,10 +60,11 @@
 - V2.5模型上下文不得嵌入完整PDF/网页正文或重复大JSON；两个Skill与检索Tools受统一轮次和总Tool预算限制。Mock不联网，完整Live仍需DeepSeek与百度搜索分别显式确认。
 
 ## [ ] V3：演示产品与工程质量
-- [ ] V3.1 Streamlit名称输入、主体展示、执行状态、分模块结果、图表；首版无需上传控件。
+- [x] **V3.1A 历史报告展示**：Streamlit安全发现并加载既有Markdown报告，支持全文/章节导航、股权PNG/SVG和现有财务数据表展示；恢复版报告保留原始失败状态，不静默包装为成功。
+- [x] **V3.1B 连接既有 Agent Runtime**：支持企业名称/代码、研究指令和完整/股权/财务/行业/基本面模式；通过受控Python服务以白名单参数、`shell=False`调用现有CLI/Runtime。Live按模式要求DeepSeek或DeepSeek+百度显式确认，CLI/Runtime保留第二层门禁。
+- [x] **V3.1C 持久化任务与用户体验**：独立后台Worker保存任务请求、状态和脱敏进度；页面刷新或关闭不重复启动任务，幂等键、运行中任务锁及跨浏览器会话的项目级原子Live锁阻止重复提交；并发时只有一个会话能启动Live。支持从磁盘恢复队列/运行/完成/部分完成/失败状态并保留已有产物。Worker完成、启动/校验失败或陈旧任务收敛时释放Live锁；PID消失的`running`任务或超过60秒的`queued`任务会自动收敛为失败。Windows通过`OpenProcess/GetExitCodeProcess`只读探测PID，POSIX才使用`os.kill(pid, 0)`；损坏/空锁仅在确认无其他活动Live任务后清理并原子重试。完整及股权/财务/行业单项Runtime共用脱敏进度接口。
 - [ ] V3.2 Word报告生成、来源附录、图表嵌入、报告导出。
-- [ ] V3.3 增加网络异常、PDF解析失败、来源冲突、币种混淆、年份口径错误等离线测试与人工核查样本。
-- [ ] V3.4 GitHub文档、演示视频/截图、耗时和效果评估；只写真实测出的简历结果。
+- [ ] V3.3 项目整理：完善GitHub README、架构图、技术栈与开发过程、Agent/Skill/Tools关系、界面截图、示例报告、已知限制和后续规划；只写真实测出的简历结果。
 
 **V3验收**：全新环境可按README复现，输入以岭药业得到有来源的七模块初稿和需补充资料清单；对失败和资料不足处理明确。
 
@@ -365,3 +366,13 @@
 - 写作边界：基本面、股权、财务Tool结果新增`reporting_constraints`，禁止从未知股东残差推断无国资、从产品名单推断大单品集中、把两期数据称为长期、用局部科目概括整体营运资金或无行业基准时称高毛利/领先。货币资金对流动资产增量的贡献率由Python确定性计算为28.92%。
 - 协议与展示：`ownership-structure/SKILL.md`第3.6节已与现行LLM正文规则统一；正式Markdown机械规范标题层级，并把后台错误码转换为中文限制，精确诊断仍保留在轨迹。
 - 本轮只做离线修复，未调用DeepSeek或百度。专项命令结果`105 passed in 6.79s`，全量回归`275 passed in 15.78s`，`compileall`和`git diff --check`通过。原始Live目录保持不变，修复效果需在用户再次授权的新Live目录中验证。
+
+### 2026-10-26 — V3.1 Streamlit 完整交互界面
+
+- V3.1A完成历史报告安全发现与展示：Markdown支持全文/章节导航，股权图独立渲染，财务表复用现有结构化指标；本机Streamlit健康检查返回`200 / ok`，并人工确认以岭药业恢复版报告、股权图和财务表可见。
+- V3.1B完成页面到既有Agent Runtime的真实调用边界：公司、任务和研究模式被转换为固定白名单CLI参数，通过`sys.executable -m credit_research_agent.cli`、`shell=False`执行；没有在Streamlit中复制Agent Loop、Skill选择或报告写作逻辑。
+- V3.1C完成独立后台Worker、磁盘状态、刷新恢复、幂等提交、运行中任务锁和跨浏览器会话的项目级原子Live锁；并发时只有一个会话可启动Live，Worker完成、启动/校验失败或陈旧任务收敛时释放锁。Windows使用`OpenProcess/GetExitCodeProcess`只读探测PID，POSIX才使用`os.kill(pid, 0)`，避免误终止Worker；损坏或空锁仅在确认无其他活动Live任务时清理并原子重试。`ui_progress.jsonl`只保存阶段、Tool、轮次和Token等脱敏字段，完整审计继续使用既有ExecutionTrace。断电/崩溃后PID不存在的`running`任务和超过60秒的`queued`任务自动失败收敛，既有产物不删除。
+- 完整研究以及股权、财务、行业三个单项Runtime均接入相同脱敏`progress_sink`，页面展示实际模型和Tool事件，不依赖固定假进度。
+- V3.1五组专项测试最终为`43 passed in 4.83s`（测试临时目录放在项目可写路径）；`compileall`通过。全量离线回归`.venv\Scripts\python.exe -m pytest --basetemp .pytest_tmp_v31_full_windows -q`结果为`321 passed in 16.03s`。
+- 后台Mock端到端任务`v31_mock_e2e_20261026`退出码为`0`，状态按Mock规则为`partial_success`，完成10次Mock模型调用并生成完整六章报告；页面刷新后从磁盘恢复同一任务且未重启Worker。该结果没有任何真实DeepSeek或百度请求，不能冒充Live验收。
+- 本阶段没有从Streamlit执行真实DeepSeek或百度调用。真实Live仍需页面确认和Runtime二次门禁；V3.2 Word导出与V3.3项目整理尚未启动。详细说明见`V3_1_STATUS.md`。

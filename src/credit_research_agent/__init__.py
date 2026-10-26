@@ -156,5 +156,5 @@ __all__ = [
     "validate_financial_facts",
 ]
 
-__version__ = "2.5.0"
+__version__ = "3.1.0"
 

@@ -62,6 +62,7 @@ from credit_research_agent.skills import (
     SkillSelector,
 )
 from credit_research_agent.sources import SourceCatalog, SourceNotFoundError
+from credit_research_agent.ui_progress import ProgressJsonlWriter
 
 
 def _as_dict(model: BaseModel) -> Dict[str, Any]:
@@ -447,6 +448,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--complete-fundamentals-path",
         help="可选的既有fundamentals.json；未提供时由本次主年报确定性构建",
     )
+    parser.add_argument(
+        "--progress-output",
+        help="可选的安全进度 JSONL 输出路径，供本地 Streamlit 界面轮询",
+    )
     return parser
 
 
@@ -457,6 +462,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         reconfigure(encoding="utf-8")
 
     args = build_parser().parse_args(argv)
+    progress_sink = ProgressJsonlWriter(Path(args.progress_output)) if args.progress_output else None
+    progress_runtime_kwargs = (
+        {"progress_sink": progress_sink} if progress_sink is not None else {}
+    )
+    if progress_sink is not None:
+        progress_sink.write("cli_started", "CLI 已启动并准备解析研究任务")
     resolver = CompanyResolver.from_default_catalog()
 
     try:
@@ -1048,7 +1059,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                         / "agent_skill_execution_trace.json"
                     )
                     financial_runtime = FinancialResearchAgentRuntime(
-                        project_root, llm_config
+                        project_root, llm_config, **progress_runtime_kwargs
                     )
                     agent_result = financial_runtime.run_sync(
                         task=args.run_agent,
@@ -1079,7 +1090,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                         / company.entity_id
                         / "agent_skill_execution_trace.json"
                     )
-                    runtime = CreditResearchAgentRuntime(project_root, llm_config)
+                    runtime = CreditResearchAgentRuntime(
+                        project_root, llm_config, **progress_runtime_kwargs
+                    )
                     agent_result = runtime.run_sync(
                         task=args.run_agent,
                         identity=company,
@@ -1255,6 +1268,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 search_config,
                 search_provider_override=provider_override,
                 source_fetcher_override=fetcher_override,
+                **progress_runtime_kwargs,
             )
             complete_result = runtime.run_sync(
                 task=args.run_complete_research,
@@ -1460,6 +1474,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 search_config,
                 search_provider_override=provider_override,
                 source_fetcher_override=fetcher_override,
+                **progress_runtime_kwargs,
             )
             industry_result = runtime.run_sync(
                 task=args.run_industry_research,

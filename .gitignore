@@ -31,6 +31,7 @@ data/parsed/
 data/reports/
 data/web_research/
 data/complete_research*/
+data/streamlit_runs/
 data/.pytest-tmp*/
 *.pdf
 

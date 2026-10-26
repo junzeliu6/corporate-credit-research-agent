@@ -2,7 +2,7 @@
 
 企业授信研究Agent（Corporate Credit Research Agent）是一个面向银行对公场景的学习型项目：从上市公司公开披露出发，逐步构建可追溯的企业研究辅助 Agent。
 
-当前代码版本已完成 **V2.5：完整企业授信研究集成**；需求基线为 **v5**。V2.5使用一个DeepSeek主Agent，显式调用`ownership-structure`和`financial-analysis`两个既有Skill，并复用V1.5行业检索工具；行业研究不是第三个Skill。DeepSeek撰写全部专业正文，Python只负责数据、计算、图表、来源/预算、最小结构解析和Markdown组装。2026-10-26第二次受控DeepSeek+百度Live已真实完成双Skill、5份政府网页原文读取、20条事实提取和六章正文写作；原始一次性交付仅因模型JSON中的一处未转义引号失败，现已用保守解析器从同一份保存草稿离线恢复完整Markdown，未重写模型正文或再次付费调用。V2.5核心链路已验证，但仍未把这次“离线恢复后成功”描述成单次运行无故障完成。本项目不是授信审批系统，不给出授信额度、贷款定价或具有审批效力的结论。
+当前代码版本已完成 **V3.1：Streamlit 本地交互界面**；需求基线为 **v5**。V3.1在V2.5单主Agent、双Skill与百度检索链路之上增加一层薄前端：历史报告可以离线读取Markdown、股权图和结构化财务表；新研究通过受控Python服务把公司、任务和研究模式转换为现有CLI参数，并继续由既有Agent Runtime执行，不在Streamlit内复制Agent Loop或生成模板分析。持久化后台Worker支持进度读取、刷新恢复和重复提交保护。Live调用仍需用户在网页中分别确认DeepSeek与百度搜索，CLI/Runtime保留第二层门禁。V2.5的第二次受控Live及离线恢复记录继续保留；本轮V3.1开发与测试没有自动发起新的付费API请求。本项目不是授信审批系统，不给出授信额度、贷款定价或具有审批效力的结论。
 
 ## V0.1—V0.4 已实现
 
@@ -121,7 +121,7 @@
 - Mock Agent命令：`.venv\Scripts\python.exe -m credit_research_agent.cli 002603.SZ --run-agent "分析财务报表、现金流和重大同比变动" --agent-source S01 --financial-comparison-source S10 --llm-mode mock --financial-dir data/financial`。
 - 示例产物：`examples/v2_financial/CN-A-SZSE-002603/`。最新受控Live已验证模型调用Tool并完整撰写9章正文和9项尽调问题；120秒超时和0次自动重试配置有效。本轮直接使用已保存草稿离线恢复最终报告，不重新调用DeepSeek。
 
-当前仍未实现全部附注原因的自动覆盖、完整审计意见分析、RAG、MCP或Streamlit。V2.5只做单主Agent双Skill与行业检索的最小集成，不重构V1.5检索、V2.3财务内核或V1.2股权绘图。
+当前仍未实现全部附注原因的自动覆盖、完整审计意见分析、RAG、MCP或Word导出。V3.1只在V2.5权威CLI/Runtime之上增加本地交互、任务状态与产物展示，不重构V1.5检索、V2.3财务内核或V1.2股权绘图。
 
 ## V2.4 离线实现已验证：DeepSeek 行业与政策研究（Live待授权）
 
@@ -144,6 +144,18 @@
 - Live只有在两个Skill和六章均完成、并且至少发生一次证据提取且得到事实或候选时才可标记`SUCCESS`。V2.5定向测试`69 passed in 5.62s`、全量回归`263 passed in 15.08s`；离线Mock在同一根轨迹中完成2次Skill调用、9次Tool调用和10次Mock模型请求，真实外部搜索请求为0。2026-10-23完整Live完成6次DeepSeek请求、10次Tool调用和6次百度真实搜索，并交付六章正文；但唯一网页读取返回HTTP 412，未取得外部原文或形成外部Fact，因此结果为`PARTIAL_SUCCESS`。详细结果见`V2_5_LIVE_TEST_STATUS.md`。
 - Live后已离线修复关键失败路径：局部搜索预算耗尽不再禁止读取/提取已有候选，已有候选优先于新增付费搜索，单页403/404/412后返回剩余候选；Tool结果新增股权、单品、两期趋势、流动资产归因和营运资金边界，Markdown不再显示内部错误码。修复后专项回归`105 passed in 6.79s`、全量回归`275 passed in 15.78s`，本轮未调用真实API。
 - 2026-10-26第二次完整Live中，DeepSeek请求28次、Function Tool调用29次、百度实际搜索6次；两个Skill均成功，5份政府网页原文形成20条事实和44条证据，模型生成6章及18个尽调问题。严格JSON解析因`"十五五"`内部双引号未转义而失败；解析器现仅对此类可确定内部引号作保守修复，截断或其他结构错误仍拒绝。保存草稿已离线恢复为`credit_research_report_recovered.md`，恢复过程网络请求为0；详细记录见`V2_5_LIVE_TEST_STATUS.md`。
+
+## V3.1 Streamlit 本地交互界面
+
+- **V3.1A 报告展示**：安全发现`data/`下的完整研究运行和仓库内V2.5 Mock样例；优先展示`credit_research_report_recovered.md`，但保留原始失败状态并显示“已离线恢复，需复核”，不会把恢复版静默标成成功。
+- Markdown报告支持按二级标题切换“全文/章节”；股权PNG优先、SVG降级并由`st.image`单独展示；财务科目变动和Python已计算比率直接读取`financial_metrics.json`，界面不重新计算或改写分析。
+- **V3.1B Agent连接**：输入企业名称/股票代码、自定义任务并选择完整、股权、财务、行业或确定性基本面模式；`ui_service.py`只构造白名单argv，通过`sys.executable -m credit_research_agent.cli`且`shell=False`调用现有入口。完整/行业Live分别要求DeepSeek和百度确认，股权/财务要求DeepSeek确认；基本面模式不调用模型。
+- 每次运行写入`data/streamlit_runs/<run_id>/`独立目录；模型不能通过界面覆盖来源编号、Skill、本地路径或任意CLI参数。页面只显示API Key是否已配置，不读取或输出密钥值。
+- **V3.1C 任务状态**：独立后台Worker把请求和状态写入任务目录；页面刷新或关闭不会重新调用CLI，重新打开后可从磁盘恢复队列、运行、成功、部分成功或失败状态。幂等键、运行中任务锁和跨浏览器会话的项目级原子Live锁阻止重复调用；并发时只有一个标签页/会话可以启动Live。Worker完成、启动/请求校验失败或陈旧任务收敛时释放锁。意外断电或崩溃后PID已不存在的`running`任务，以及超过60秒仍未启动的`queued`任务，会自动收敛为失败并保留已有产物。Windows使用`OpenProcess/GetExitCodeProcess`只读探测PID，只有POSIX使用`os.kill(pid, 0)`，避免误终止Worker；损坏或空Live锁仅在确认不存在其他活动Live任务时自动清理并原子重试。轻量`ui_progress.jsonl`只记录阶段、模型轮次、Tool名称和Token计数等安全字段，不保存密钥、网页正文或模型上下文；完整研究继续以既有`credit_research_execution_trace.json`和交付状态为审计依据。
+- 完整研究和股权、财务、行业三个单项Runtime均复用同一个脱敏`progress_sink`，页面显示实际模型及Tool事件，不以固定进度条代替执行轨迹。
+- 首次界面验收只加载已有以岭药业V2.5报告，不调用DeepSeek或百度。真实Live只能由用户在页面勾选确认后主动点击启动；页面刷新和历史报告查看不得触发模型调用。
+- 离线Mock端到端任务`v31_mock_e2e_20261026`已通过后台Worker完成10次Mock模型调用并生成六章报告；刷新后能恢复同一任务，未重复启动。该验证的真实API请求为0，不等同于Live研究质量验收。
+- V3.1五组专项测试最终为`43 passed in 4.83s`；全量离线回归为`321 passed in 16.03s`。本轮没有从Streamlit执行真实DeepSeek或百度调用。
 
 ## v5 文档与 Skill 规范
 
@@ -187,6 +199,11 @@ corporate-credit-research-agent/
 │  ├─ retrieval_runtime.py   # V1.5 Agent检索Tools、事实选择和执行轨迹
 │  ├─ industry_agent_runtime.py # V2.4行业研究Instructions、检索编排、LLM正文和Markdown组装
 │  ├─ integrated_agent_runtime.py # V2.5单主Agent、双Skill、行业检索及完整报告组装
+│  ├─ ui_artifacts.py       # V3.1受控历史产物发现、状态映射与展示数据
+│  ├─ ui_service.py         # V3.1输入校验、白名单CLI参数与任务服务
+│  ├─ ui_progress.py        # V3.1脱敏增量进度JSONL
+│  ├─ ui_worker.py          # V3.1独立后台任务，重建并核对受控CLI命令
+│  ├─ streamlit_app.py      # V3.1页面组件与报告/图表/财务表展示
 │  ├─ pdf_parser.py          # 逐页提取、质量摘要和章节定位
 │  └─ cli.py                 # 企业识别、来源处理和Skill运行入口
 ├─ examples/
@@ -235,7 +252,12 @@ corporate-credit-research-agent/
 │  ├─ test_cli_v24.py
 │  ├─ test_integrated_agent_runtime.py # V2.5完整编排、容错、作者边界与双Live确认
 │  ├─ test_cli_v25.py        # V2.5完整研究CLI离线边界
+│  ├─ test_ui_artifacts.py   # V3.1历史报告、恢复状态与路径边界
+│  ├─ test_ui_service.py     # V3.1 Live门禁、白名单argv与进程边界
+│  ├─ test_ui_tasks.py       # V3.1后台任务、幂等提交、状态恢复与路径安全
+│  ├─ test_ui_progress.py    # V3.1脱敏进度事件
 │  └─ test_cli.py
+├─ streamlit_app.py          # 项目根Streamlit启动入口
 ├─ .env.example
 ├─ pyproject.toml
 ├─ SKILLS_SPEC.md
@@ -244,6 +266,7 @@ corporate-credit-research-agent/
 ├─ V1_5_STATUS.md
 ├─ V2_4_STATUS.md
 ├─ V2_5_STATUS.md
+├─ V3_1_STATUS.md
 └─ ROADMAP.md
 ```
 
@@ -258,6 +281,12 @@ python -m pip install --upgrade pip
 python -m pip install ".[dev]"
 ```
 
+如需运行本地Web界面，安装可选UI依赖：
+
+```powershell
+python -m pip install -e ".[ui]"
+```
+
 项目位于包含中文字符的 Windows 路径时，建议使用上述普通安装。部分旧版 setuptools 的 editable `.pth` 文件可能按错误代码页读取中文路径。
 
 运行全部离线测试：
@@ -267,6 +296,22 @@ python -m pytest -q
 ```
 
 ## 使用示例
+
+### 启动 V3.1 本地界面
+
+```powershell
+.venv\Scripts\streamlit.exe run streamlit_app.py
+```
+
+浏览器打开Streamlit显示的本地地址后：
+
+1. “历史报告”可直接加载此前V2.5报告、股权图和财务表，不检查密钥，也不发送网络请求。
+2. “新建研究”输入`以岭药业`、`002603`或`002603.SZ`，选择研究模式并修改任务。
+3. 只有Live模式所需密钥已经配置、用户勾选相应费用确认后，“启动研究”才可用。
+4. 完整/行业研究会分别经过DeepSeek与百度搜索双确认；股权/财务只确认DeepSeek；确定性基本面提取不调用LLM。
+5. 运行产物保存在`data/streamlit_runs/`，完成后可在同一页面或“历史报告”重新打开。
+
+页面只是现有CLI/Agent Runtime的调用与展示层；报告正文仍由DeepSeek撰写，Python继续负责数据、计算、图表和Markdown组装。历史报告查看不会触发API；任务恢复和去重的准确行为见`V3_1_STATUS.md`。
 
 安装后可通过名称或代码识别企业：
 
@@ -698,11 +743,13 @@ V2.4行业Instructions、检索Tool编排、V2.3财务上下文复用、来源/�
 V2.4定向测试：14 passed in 4.73s；完整离线回归：237 passed in 12.63s。所有Mock测试禁止真实DeepSeek、百度或其他外部网络请求
 V2.5多Skill计划、同一Agent双Skill调用、Skill方法投影、检索错误降级、Live证据门槛、统一主体/期间、部分成功、上下文压缩、章节容错、无Python模板、完整Markdown及双Live确认：定向测试69 passed in 5.62s
 V2.5初始完整离线回归：263 passed in 15.08s；首次Live后稳定性修复专项回归：105 passed in 6.79s；最新全量回归：275 passed in 15.78s；`compileall`与`git diff --check`通过（仅CRLF提示）
+V3.1历史产物、受控命令、Live门禁、后台Worker、启动/校验失败回写、跨平台只读PID探测、陈旧任务收敛、幂等提交、跨会话原子Live锁及损坏锁恢复、状态恢复、路径安全与完整/单项Runtime脱敏进度：43 passed in 4.83s
+V3.1完整离线回归：321 passed in 16.03s；后台Mock端到端生成六章报告且刷新恢复未重复启动，真实DeepSeek/百度请求均为0
 ```
 
 网络请求使用离线假响应测试，因此日常 `pytest` 不依赖巨潮资讯、百度搜索或 DeepSeek 是否可访问。
 
 ## 下一阶段
 
-V2.5离线Mock、回归和两次完整Live均已执行。第二次Live已验证一个主Agent真实调用两个Skill、读取外部政府原文、提取证据并由DeepSeek生成六章完整报告；同一份模型草稿已在不重新调用API的情况下恢复为Markdown。下一步优先降低28轮Agent Loop造成的重复上下文与716,154总Token消耗，并让保守JSON恢复路径在下一次正常任务中自然生效；未经授权不自动再次调用或重试付费服务。
+V3.1A历史报告展示、V3.1B既有Agent Runtime连接和V3.1C持久化后台任务均已完成。下一步为V3.2 Word报告导出：复用现有Markdown、股权图和财务表，保留DeepSeek正文，不让Python重新撰写分析；随后再进行V3.3项目整理。未经授权不自动调用或重试DeepSeek、百度等付费服务。
 

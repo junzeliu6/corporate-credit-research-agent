@@ -1584,6 +1584,7 @@ class IntegratedCreditResearchAgentRuntime:
         skill_runtime_factory: Callable[[Path], SkillRuntime] = SkillRuntime,
         clock: Optional[Callable[[], datetime]] = None,
         trace_id_factory: Optional[Callable[[], str]] = None,
+        progress_sink: Optional[Callable[[Any], None]] = None,
     ) -> None:
         self.project_root = Path(project_root).resolve()
         self.llm_config = llm_config
@@ -1596,6 +1597,16 @@ class IntegratedCreditResearchAgentRuntime:
         self.trace_id_factory = trace_id_factory or (
             lambda: "CR-" + uuid4().hex[:12].upper()
         )
+        self.progress_sink = progress_sink
+
+    def _emit_latest_progress(self, trace: CompleteExecutionTrace) -> None:
+        if self.progress_sink is None or not trace.events:
+            return
+        try:
+            self.progress_sink(trace.events[-1])
+        except Exception:
+            # UI 进度写入失败不能改变授信研究结果。
+            pass
 
     async def run(
         self,
@@ -1676,6 +1687,7 @@ class IntegratedCreditResearchAgentRuntime:
             "V2.5完整企业授信研究单Agent运行开始",
             {"planned_skills": planned_skills},
         )
+        self._emit_latest_progress(trace)
         base_context = build_complete_research_context(
             task=task,
             identity=identity,
@@ -1782,7 +1794,7 @@ class IntegratedCreditResearchAgentRuntime:
                 build_complete_agent_input(task, base_context),
                 context=context,
                 max_turns=runtime_budget.max_agent_turns,
-                hooks=RetrievalRunHooks(self.clock),
+                hooks=RetrievalRunHooks(self.clock, self.progress_sink),
                 run_config=RunConfig(
                     workflow_name="Corporate Credit Research V2.5",
                     tracing_disabled=True,
@@ -2012,6 +2024,7 @@ class IntegratedCreditResearchAgentRuntime:
             "V2.5完整研究已交付" if status is RetrievalStatus.SUCCEEDED else "V2.5离线或部分研究已交付",
             {"status": status.value, "delivered_topics": delivered, "missing_topics": missing},
         )
+        self._emit_latest_progress(trace)
         write_retrieval_trace(trace_output, trace)
         return CompleteResearchResult(
             status=status,
@@ -2115,6 +2128,7 @@ class IntegratedCreditResearchAgentRuntime:
             "主模型正文未形成；未使用Python模板冒充综合分析",
             {"error_code": error_code},
         )
+        self._emit_latest_progress(trace)
         write_retrieval_trace(trace_output, trace)
         return CompleteResearchResult(
             status=RetrievalStatus.FAILED,
@@ -2208,6 +2222,7 @@ class IntegratedCreditResearchAgentRuntime:
             "V2.5运行时初始化失败；未调用模型或生成模板分析",
             {"error_code": error_code},
         )
+        self._emit_latest_progress(trace)
         write_retrieval_trace(trace_output, trace)
         return CompleteResearchResult(
             status=RetrievalStatus.FAILED,
