@@ -1,5 +1,8 @@
 import json
+import os
+from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -7,10 +10,13 @@ from credit_research_agent.ui_artifacts import (
     ArtifactAccessError,
     ReportDisplayStatus,
     discover_research_runs,
+    ensure_word_report,
     load_financial_tables,
     load_research_run,
     read_report_markdown,
+    read_word_report,
 )
+from credit_research_agent.word_export import WordExportError
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -155,3 +161,139 @@ def test_discovery_is_sorted_and_deduplicated(tmp_path: Path) -> None:
 
     assert len(runs) == 2
     assert {item.run_dir for item in runs} == {first.resolve(), second.resolve()}
+
+
+def test_word_export_is_confined_to_the_artifact_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    run = _make_run(tmp_path)
+    assets = run / "assets"
+    assets.mkdir()
+    image = assets / "ownership_structure.png"
+    image.write_bytes(b"png")
+    artifact = load_research_run(run, allowed_roots=[tmp_path])
+    calls: list[dict[str, object]] = []
+
+    def fake_export(markdown_path: Path, output_path: Path, **kwargs: object) -> object:
+        calls.append(
+            {
+                "markdown_path": markdown_path,
+                "output_path": output_path,
+                **kwargs,
+            }
+        )
+        Path(output_path).write_bytes(b"valid-docx-payload")
+        return SimpleNamespace(docx_path=Path(output_path).resolve())
+
+    monkeypatch.setattr(
+        "credit_research_agent.ui_artifacts.export_markdown_report", fake_export
+    )
+
+    path, payload = read_word_report(artifact)
+
+    assert path == (run / "credit_research_report.docx").resolve()
+    assert payload == b"valid-docx-payload"
+    assert len(calls) == 1
+    assert calls[0]["allowed_root"] == run.resolve()
+    assert calls[0]["ownership_image_path"] == image.resolve()
+    assert calls[0]["require_ownership_image"] is True
+    assert Path(calls[0]["output_path"]).parent == run.resolve()
+
+
+def test_fresh_word_export_is_reused_without_running_converter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    run = _make_run(tmp_path)
+    artifact = load_research_run(run, allowed_roots=[tmp_path])
+    output = run / "credit_research_report.docx"
+    output.write_bytes(b"existing-docx")
+    report_time = artifact.report_path.stat().st_mtime_ns if artifact.report_path else 0
+    os.utime(output, ns=(report_time + 1_000_000, report_time + 1_000_000))
+
+    def unexpected_export(*args: object, **kwargs: object) -> object:
+        raise AssertionError("页面刷新不应重复导出未变更的 Word")
+
+    monkeypatch.setattr(
+        "credit_research_agent.ui_artifacts.export_markdown_report", unexpected_export
+    )
+
+    assert ensure_word_report(artifact) == output.resolve()
+
+
+def test_word_export_rejects_report_outside_run_directory(tmp_path: Path) -> None:
+    run = _make_run(tmp_path)
+    artifact = load_research_run(run, allowed_roots=[tmp_path])
+    outside = tmp_path / "other.md"
+    outside.write_text("# outside", encoding="utf-8")
+
+    with pytest.raises(ArtifactAccessError, match="超出本次运行目录"):
+        ensure_word_report(replace(artifact, report_path=outside.resolve()))
+
+
+def test_existing_recovered_word_file_is_discovered_separately(tmp_path: Path) -> None:
+    run = _make_run(tmp_path, status="failed")
+    (run / "credit_research_report_recovered.md").write_text(
+        "# 恢复后的 DeepSeek 报告", encoding="utf-8"
+    )
+    recovered_docx = run / "credit_research_report_recovered.docx"
+    recovered_docx.write_bytes(b"recovered")
+    _write_json(
+        run / "credit_research_recovery.json",
+        {"status": "recovered_offline", "original_run_status": "failed"},
+    )
+
+    artifact = load_research_run(run, allowed_roots=[tmp_path])
+
+    assert artifact.word_report_path == recovered_docx.resolve()
+
+
+def test_cached_word_is_invalidated_when_another_markdown_chart_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    run = _make_run(tmp_path)
+    assets = run / "assets"
+    assets.mkdir()
+    chart = assets / "financial_trend.png"
+    chart.write_bytes(b"chart-v1")
+    report = run / "credit_research_report.md"
+    report.write_text(
+        "# 报告\n\n## 财务趋势\n\n![财务趋势](assets/financial_trend.png)\n",
+        encoding="utf-8",
+    )
+    artifact = load_research_run(run, allowed_roots=[tmp_path])
+    output = run / "credit_research_report.docx"
+    output.write_bytes(b"old-docx")
+    report_time = report.stat().st_mtime_ns
+    os.utime(output, ns=(report_time + 1_000_000, report_time + 1_000_000))
+    os.utime(chart, ns=(report_time + 2_000_000, report_time + 2_000_000))
+    calls = 0
+
+    def fake_export(markdown_path: Path, output_path: Path, **kwargs: object) -> object:
+        nonlocal calls
+        calls += 1
+        Path(output_path).write_bytes(b"new-docx")
+        return SimpleNamespace(docx_path=Path(output_path).resolve())
+
+    monkeypatch.setattr(
+        "credit_research_agent.ui_artifacts.export_markdown_report", fake_export
+    )
+
+    assert ensure_word_report(artifact) == output.resolve()
+    assert calls == 1
+    assert output.read_bytes() == b"new-docx"
+
+
+def test_ownership_chart_heading_cannot_reuse_or_export_a_missing_chart(
+    tmp_path: Path,
+) -> None:
+    run = _make_run(tmp_path)
+    report = run / "credit_research_report.md"
+    report.write_text("# 报告\n\n## 股权结构图\n\n图表待补充。\n", encoding="utf-8")
+    output = run / "credit_research_report.docx"
+    output.write_bytes(b"stale-docx-without-chart")
+    artifact = load_research_run(run, allowed_roots=[tmp_path])
+
+    with pytest.raises(WordExportError) as error:
+        ensure_word_report(artifact)
+
+    assert error.value.code == "ownership_image_required"

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "corporate-credit-research-agent"
-version = "3.1.0"
+version = "3.2.0"
 description = "上市公司公开信息驱动的企业授信研究 Agent"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -16,6 +16,7 @@ dependencies = [
     "openai-agents>=0.21,<0.22",
     "Brotli>=1.2,<2",
     "python-dotenv>=1,<2",
+    "python-docx>=1.1,<2",
 ]
 
 [project.optional-dependencies]

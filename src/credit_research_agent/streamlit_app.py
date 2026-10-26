@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from credit_research_agent.company import CompanyResolutionError, CompanyResolver
 from credit_research_agent.ui_artifacts import (
+    ArtifactAccessError,
     ReportDisplayStatus,
     ResearchRunArtifact,
     default_artifact_roots,
@@ -16,6 +17,7 @@ from credit_research_agent.ui_artifacts import (
     load_financial_tables,
     load_research_run,
     read_report_markdown,
+    read_word_report,
 )
 from credit_research_agent.ui_service import (
     ResearchMode,
@@ -32,12 +34,14 @@ from credit_research_agent.ui_service import (
     reconcile_interrupted_task,
     submit_research_task,
 )
+from credit_research_agent.word_export import WordExportError
 
 
 DEFAULT_TASK = (
     "请研究以岭药业的企业背景、股权结构、经营情况、行业政策及财务状况，"
     "并从银行授信角度撰写完整研究报告。"
 )
+HISTORY_SELECTION_KEY = "v32_selected_history_run"
 MODE_TASKS = {
     ResearchMode.COMPLETE: DEFAULT_TASK,
     ResearchMode.OWNERSHIP: (
@@ -137,7 +141,7 @@ def render_artifact(
     *,
     key_prefix: str = "artifact",
 ) -> None:
-    """展示已有产物；本函数只读本地文件，不创建模型或搜索客户端。"""
+    """展示已有产物；Word 仅由本地文件转换，不创建模型或搜索客户端。"""
 
     _status_badge(st, artifact)
     mode_label = "Live" if artifact.is_live else "Mock / 离线"
@@ -158,13 +162,30 @@ def render_artifact(
     )
     with report_tab:
         if report:
-            st.download_button(
+            download_columns = st.columns(2)
+            download_columns[0].download_button(
                 "下载 Markdown 报告",
                 data=report.encode("utf-8"),
                 file_name=artifact.report_path.name if artifact.report_path else "report.md",
                 mime="text/markdown",
-                key=f"{key_prefix}-download-{abs(hash(str(artifact.run_dir)))}",
+                key=f"{key_prefix}-download-md-{abs(hash(str(artifact.run_dir)))}",
             )
+            try:
+                word_path, word_payload = read_word_report(artifact)
+            except (ArtifactAccessError, WordExportError, OSError, ValueError) as exc:
+                st.warning(f"Word 报告导出失败，Markdown 仍可正常查看：{exc}")
+            else:
+                download_columns[1].download_button(
+                    "下载 Word 报告",
+                    data=word_payload,
+                    file_name=word_path.name,
+                    mime=(
+                        "application/vnd.openxmlformats-officedocument."
+                        "wordprocessingml.document"
+                    ),
+                    key=f"{key_prefix}-download-docx-{abs(hash(str(artifact.run_dir)))}",
+                )
+                st.caption("Word 由当前 Markdown 与既有图表在本地转换，不会调用模型或搜索 API。")
             sections = split_report_sections(_strip_local_image_links(report))
             selected_section = st.selectbox(
                 "章节导航",
@@ -461,6 +482,22 @@ def _first_existing(paths: list[Path]) -> Optional[Path]:
     return next((path for path in paths if path.is_file()), None)
 
 
+def preferred_history_run_path(runs: list[ResearchRunArtifact]) -> str:
+    """优先选择最近一份可展示的Live报告，否则回退到最新本地报告。
+
+    ``discover_research_runs`` 已按更新时间倒序返回，所以第一个匹配项就是
+    相应类别中的最新报告。该选择只影响界面默认值，不改变用户手动选择。
+    """
+
+    for artifact in runs:
+        if artifact.is_live and artifact.report_path is not None:
+            return str(artifact.run_dir)
+    for artifact in runs:
+        if artifact.report_path is not None:
+            return str(artifact.run_dir)
+    return str(runs[0].run_dir) if runs else ""
+
+
 def _render_history(st: Any, project_root: Path) -> None:
     st.subheader("历史报告")
     st.caption("这里仅读取本地产物，不检查 API Key，也不会发送网络请求。")
@@ -468,14 +505,22 @@ def _render_history(st: Any, project_root: Path) -> None:
     if not runs:
         st.info("尚未发现 V2.5 完整研究报告。")
         return
-    selected_index = st.selectbox(
+    runs_by_path = {str(item.run_dir): item for item in runs}
+    options = list(runs_by_path)
+    current_selection = st.session_state.get(HISTORY_SELECTION_KEY)
+    if current_selection not in runs_by_path:
+        st.session_state[HISTORY_SELECTION_KEY] = preferred_history_run_path(runs)
+    selected_path = st.selectbox(
         "选择报告",
-        options=range(len(runs)),
-        format_func=lambda index: (
-            f"{runs[index].label} · {runs[index].updated_at.astimezone().strftime('%Y-%m-%d %H:%M')}"
+        options=options,
+        format_func=lambda path: (
+            f"{runs_by_path[path].label} · "
+            f"{runs_by_path[path].updated_at.astimezone().strftime('%Y-%m-%d %H:%M')}"
         ),
+        key=HISTORY_SELECTION_KEY,
     )
-    render_artifact(st, runs[int(selected_index)], key_prefix="history")
+    # Markdown展示和Word导出都接收同一个Artifact，确保两者读取同一report_path。
+    render_artifact(st, runs_by_path[selected_path], key_prefix="history")
 
 
 def main() -> None:

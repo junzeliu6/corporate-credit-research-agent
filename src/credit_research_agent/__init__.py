@@ -85,6 +85,13 @@ from credit_research_agent.skill_runtime import (
     SkillRuntime,
 )
 from credit_research_agent.skills import SkillLoader, SkillRegistry, SkillSelector
+from credit_research_agent.word_export import (
+    MarkdownImageInspection,
+    WordExportError,
+    WordExportResult,
+    export_markdown_report,
+    inspect_markdown_images,
+)
 
 __all__ = [
     "CompanyIdentity",
@@ -154,7 +161,12 @@ __all__ = [
     "render_financial_data_appendix",
     "restore_financial_report_from_saved_draft",
     "validate_financial_facts",
+    "MarkdownImageInspection",
+    "WordExportError",
+    "WordExportResult",
+    "export_markdown_report",
+    "inspect_markdown_images",
 ]
 
-__version__ = "3.1.0"
+__version__ = "3.2.0"
 

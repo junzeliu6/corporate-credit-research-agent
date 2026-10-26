@@ -2,7 +2,7 @@
 
 企业授信研究Agent（Corporate Credit Research Agent）是一个面向银行对公场景的学习型项目：从上市公司公开披露出发，逐步构建可追溯的企业研究辅助 Agent。
 
-当前代码版本已完成 **V3.1：Streamlit 本地交互界面**；需求基线为 **v5**。V3.1在V2.5单主Agent、双Skill与百度检索链路之上增加一层薄前端：历史报告可以离线读取Markdown、股权图和结构化财务表；新研究通过受控Python服务把公司、任务和研究模式转换为现有CLI参数，并继续由既有Agent Runtime执行，不在Streamlit内复制Agent Loop或生成模板分析。持久化后台Worker支持进度读取、刷新恢复和重复提交保护。Live调用仍需用户在网页中分别确认DeepSeek与百度搜索，CLI/Runtime保留第二层门禁。V2.5的第二次受控Live及离线恢复记录继续保留；本轮V3.1开发与测试没有自动发起新的付费API请求。本项目不是授信审批系统，不给出授信额度、贷款定价或具有审批效力的结论。
+当前代码版本已完成 **V3.2：Word 报告导出**；需求基线为 **v5**。V3.1在V2.5单主Agent、双Skill与百度检索链路之上增加一层薄前端，V3.2继续复用同一任务目录和既有Markdown正文，把标题、段落、列表、表格及本地图表确定性转换为排版规范的`.docx`。历史报告和新完成任务均可在Streamlit中下载Word；CLI也提供同一导出内核。导出过程不重新调用DeepSeek或百度、不重写分析文字，并以研究任务目录作为路径安全边界。Live调用仍需用户在网页中分别确认DeepSeek与百度搜索，CLI/Runtime保留第二层门禁。本项目不是授信审批系统，不给出授信额度、贷款定价或具有审批效力的结论。
 
 ## V0.1—V0.4 已实现
 
@@ -121,7 +121,7 @@
 - Mock Agent命令：`.venv\Scripts\python.exe -m credit_research_agent.cli 002603.SZ --run-agent "分析财务报表、现金流和重大同比变动" --agent-source S01 --financial-comparison-source S10 --llm-mode mock --financial-dir data/financial`。
 - 示例产物：`examples/v2_financial/CN-A-SZSE-002603/`。最新受控Live已验证模型调用Tool并完整撰写9章正文和9项尽调问题；120秒超时和0次自动重试配置有效。本轮直接使用已保存草稿离线恢复最终报告，不重新调用DeepSeek。
 
-当前仍未实现全部附注原因的自动覆盖、完整审计意见分析、RAG、MCP或Word导出。V3.1只在V2.5权威CLI/Runtime之上增加本地交互、任务状态与产物展示，不重构V1.5检索、V2.3财务内核或V1.2股权绘图。
+当前仍未实现全部附注原因的自动覆盖、完整审计意见分析、RAG或MCP。V3.1/V3.2只在V2.5权威CLI/Runtime及现有Markdown产物之上增加本地交互、任务状态、产物展示和Word导出，不重构V1.5检索、V2.3财务内核或V1.2股权绘图。
 
 ## V2.4 离线实现已验证：DeepSeek 行业与政策研究（Live待授权）
 
@@ -156,6 +156,17 @@
 - 首次界面验收只加载已有以岭药业V2.5报告，不调用DeepSeek或百度。真实Live只能由用户在页面勾选确认后主动点击启动；页面刷新和历史报告查看不得触发模型调用。
 - 离线Mock端到端任务`v31_mock_e2e_20261026`已通过后台Worker完成10次Mock模型调用并生成六章报告；刷新后能恢复同一任务，未重复启动。该验证的真实API请求为0，不等同于Live研究质量验收。
 - V3.1五组专项测试最终为`43 passed in 4.83s`；全量离线回归为`321 passed in 16.03s`。本轮没有从Streamlit执行真实DeepSeek或百度调用。
+
+## V3.2 Word 报告导出
+
+- 新增独立`word_export.py`，把已有UTF-8 Markdown转换为真正的Word标题、段落、行内加粗/斜体、列表、表格和本地图片；正文直接沿用DeepSeek已生成内容，Python只转换文档结构，不重新分析或改写。
+- 采用A4页面、标准页边距、宋体正文、黑体标题、统一行距、页眉/页码和简洁封面；表格具有表头、边框及数值对齐，图片居中并限制在版心内以保持纵横比。
+- Markdown中的SVG图片引用会优先解析同名PNG；股权图复用任务目录内既有PNG，不重新运行Graphviz。引用图片缺失、远程图片或路径越界会明确报错，不静默交付内容不完整的正式报告。
+- CLI新增`--export-word`、`--word-output`和`--word-image`，在解析企业身份后立即走纯本地导出分支，不创建下载器、模型或搜索客户端；输出结果明确记录`external_api_requests=0`。
+- Streamlit在当前报告旁提供“下载 Word 报告”。历史任务与新任务都按各自目录生成或复用对应DOCX；页面刷新不会启动研究，Markdown或其引用的任一本地图表更新后才重新转换。导出失败只显示警告，仍可继续查看或下载Markdown。
+- 历史报告默认优先选择按时间排序后的最新有效Live报告；只有没有可展示的Live报告时才回退到最新Mock。网页Markdown与Word下载始终使用同一个`ResearchRunArtifact.report_path`，避免Mock正文与Live Word错配。
+- UI调用强制Markdown、图片和DOCX都位于经任务管理确认的`run_dir`，拒绝任意路径读取和跨任务混用；下载大小也受限制。
+- 真实V2.5以岭药业恢复报告已导出为16页A4 Word，包含1张股权图、2个财务表和48个标题。因本机内置LibreOffice不可用，使用Microsoft Word 2021导出PDF并逐页检查；未发现明显表格溢出、图片变形、标题断裂或中文乱码。V3.2专项回归`31 passed in 5.83s`，项目完整离线回归`344 passed in 19.13s`；详见`V3_2_STATUS.md`。
 
 ## v5 文档与 Skill 规范
 
@@ -203,7 +214,8 @@ corporate-credit-research-agent/
 │  ├─ ui_service.py         # V3.1输入校验、白名单CLI参数与任务服务
 │  ├─ ui_progress.py        # V3.1脱敏增量进度JSONL
 │  ├─ ui_worker.py          # V3.1独立后台任务，重建并核对受控CLI命令
-│  ├─ streamlit_app.py      # V3.1页面组件与报告/图表/财务表展示
+│  ├─ word_export.py        # V3.2 Markdown到Word的本地确定性转换与排版
+│  ├─ streamlit_app.py      # V3.1/V3.2页面、报告展示及Word下载
 │  ├─ pdf_parser.py          # 逐页提取、质量摘要和章节定位
 │  └─ cli.py                 # 企业识别、来源处理和Skill运行入口
 ├─ examples/
@@ -256,6 +268,9 @@ corporate-credit-research-agent/
 │  ├─ test_ui_service.py     # V3.1 Live门禁、白名单argv与进程边界
 │  ├─ test_ui_tasks.py       # V3.1后台任务、幂等提交、状态恢复与路径安全
 │  ├─ test_ui_progress.py    # V3.1脱敏进度事件
+│  ├─ test_word_export.py    # V3.2标题、列表、表格、图片、排版与路径边界
+│  ├─ test_cli_v32.py        # V3.2 CLI本地导出且不创建外部客户端
+│  ├─ integration/test_word_export_existing_reports.py # 既有V2.5与V3.1 Mock报告导出
 │  └─ test_cli.py
 ├─ streamlit_app.py          # 项目根Streamlit启动入口
 ├─ .env.example
@@ -267,6 +282,7 @@ corporate-credit-research-agent/
 ├─ V2_4_STATUS.md
 ├─ V2_5_STATUS.md
 ├─ V3_1_STATUS.md
+├─ V3_2_STATUS.md
 └─ ROADMAP.md
 ```
 
@@ -297,7 +313,7 @@ python -m pytest -q
 
 ## 使用示例
 
-### 启动 V3.1 本地界面
+### 启动 V3 本地界面
 
 ```powershell
 .venv\Scripts\streamlit.exe run streamlit_app.py
@@ -310,8 +326,22 @@ python -m pytest -q
 3. 只有Live模式所需密钥已经配置、用户勾选相应费用确认后，“启动研究”才可用。
 4. 完整/行业研究会分别经过DeepSeek与百度搜索双确认；股权/财务只确认DeepSeek；确定性基本面提取不调用LLM。
 5. 运行产物保存在`data/streamlit_runs/`，完成后可在同一页面或“历史报告”重新打开。
+6. 有效报告旁显示“下载 Word 报告”；第一次点击时在同一任务目录本地生成DOCX，之后在Markdown未变化时直接复用，不会重新调用Agent或外部API。
 
-页面只是现有CLI/Agent Runtime的调用与展示层；报告正文仍由DeepSeek撰写，Python继续负责数据、计算、图表和Markdown组装。历史报告查看不会触发API；任务恢复和去重的准确行为见`V3_1_STATUS.md`。
+页面只是现有CLI/Agent Runtime的调用与展示层；报告正文仍由DeepSeek撰写，Python继续负责数据、计算、图表、Markdown组装和Word结构转换。历史报告查看及Word下载不会触发API；任务恢复和去重见`V3_1_STATUS.md`，Word导出边界见`V3_2_STATUS.md`。
+
+### 将既有 Markdown 导出为 Word
+
+以下命令只读取本地Markdown和既有PNG，不调用DeepSeek、百度或Graphviz：
+
+```powershell
+.venv\Scripts\python.exe -m credit_research_agent.cli "002603.SZ" `
+  --export-word "data\complete_research_live_v25_retest_20261026\CN-A-SZSE-002603\credit_research_report_recovered.md" `
+  --word-output "data\complete_research_live_v25_retest_20261026\CN-A-SZSE-002603\credit_research_report.docx" `
+  --word-image "data\complete_research_live_v25_retest_20261026\CN-A-SZSE-002603\assets\ownership_structure.png"
+```
+
+省略`--word-output`时默认输出为Markdown同名`.docx`；报告包含股权章节时建议显式提供任务目录内的PNG。`--word-output`与`--word-image`只能和`--export-word`共同使用。
 
 安装后可通过名称或代码识别企业：
 
@@ -745,11 +775,12 @@ V2.5多Skill计划、同一Agent双Skill调用、Skill方法投影、检索错�
 V2.5初始完整离线回归：263 passed in 15.08s；首次Live后稳定性修复专项回归：105 passed in 6.79s；最新全量回归：275 passed in 15.78s；`compileall`与`git diff --check`通过（仅CRLF提示）
 V3.1历史产物、受控命令、Live门禁、后台Worker、启动/校验失败回写、跨平台只读PID探测、陈旧任务收敛、幂等提交、跨会话原子Live锁及损坏锁恢复、状态恢复、路径安全与完整/单项Runtime脱敏进度：43 passed in 4.83s
 V3.1完整离线回归：321 passed in 16.03s；后台Mock端到端生成六章报告且刷新恢复未重复启动，真实DeepSeek/百度请求均为0
+V3.2 Word结构转换、中文正文、标题层级、列表编号重启、财务表、股权PNG、图片比例、缺图/远程图/路径越界、图表缓存失效、历史任务隔离、Live优先默认选择及CLI无外部客户端：专项`31 passed in 5.83s`；完整离线回归`344 passed in 19.13s`
 ```
 
 网络请求使用离线假响应测试，因此日常 `pytest` 不依赖巨潮资讯、百度搜索或 DeepSeek 是否可访问。
 
 ## 下一阶段
 
-V3.1A历史报告展示、V3.1B既有Agent Runtime连接和V3.1C持久化后台任务均已完成。下一步为V3.2 Word报告导出：复用现有Markdown、股权图和财务表，保留DeepSeek正文，不让Python重新撰写分析；随后再进行V3.3项目整理。未经授权不自动调用或重试DeepSeek、百度等付费服务。
+V3.1A历史报告展示、V3.1B既有Agent Runtime连接、V3.1C持久化后台任务及V3.2 Word报告导出均已完成。下一步为V3.3项目整理；按用户安排，完成V3后再扩展通用上市公司Agent。未经授权不自动调用或重试DeepSeek、百度等付费服务。
 

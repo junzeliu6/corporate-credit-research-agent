@@ -63,6 +63,7 @@ from credit_research_agent.skills import (
 )
 from credit_research_agent.sources import SourceCatalog, SourceNotFoundError
 from credit_research_agent.ui_progress import ProgressJsonlWriter
+from credit_research_agent.word_export import WordExportError, export_markdown_report
 
 
 def _as_dict(model: BaseModel) -> Dict[str, Any]:
@@ -174,6 +175,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--run-complete-research",
         metavar="TASK",
         help="运行V2.5完整企业授信研究；默认LLM与百度搜索均为Mock",
+    )
+    action_group.add_argument(
+        "--export-word",
+        metavar="MARKDOWN_PATH",
+        help="把既有Markdown研究报告本地转换为Word；不会调用LLM或搜索API",
     )
     parser.add_argument(
         "--skill-source",
@@ -410,6 +416,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="可选的Markdown报告输出路径",
     )
     parser.add_argument(
+        "--word-output",
+        help="--export-word的可选.docx输出路径；默认与Markdown同名",
+    )
+    parser.add_argument(
+        "--word-image",
+        help="可选的既有股权PNG路径；必须位于Markdown所属研究任务目录内",
+    )
+    parser.add_argument(
         "--web-research-dir",
         default="data/web_research",
         help="V1.5搜索缓存、网页原文、来源和证据产物目录",
@@ -505,6 +519,44 @@ def main(argv: Optional[List[str]] = None) -> int:
         }
         print(json.dumps(output, ensure_ascii=False, indent=2))
         return 9
+    if (args.word_output or args.word_image) and not args.export_word:
+        output["word_export_error"] = {
+            "code": "orphan_word_export_option",
+            "message": "--word-output/--word-image 只能与 --export-word 一起使用",
+        }
+        print(json.dumps(output, ensure_ascii=False, indent=2))
+        return 14
+    if args.export_word:
+        markdown_path = Path(args.export_word).resolve()
+        try:
+            word_result = export_markdown_report(
+                markdown_path,
+                Path(args.word_output) if args.word_output else None,
+                allowed_root=markdown_path.parent,
+                ownership_image_path=(
+                    Path(args.word_image) if args.word_image else None
+                ),
+                company_name=company.legal_name,
+                ticker=company.ticker,
+            )
+            output["word_export"] = {
+                "markdown_path": str(word_result.markdown_path),
+                "docx_path": str(word_result.docx_path),
+                "image_count": word_result.image_count,
+                "table_count": word_result.table_count,
+                "heading_count": word_result.heading_count,
+                "warning_codes": list(word_result.warning_codes),
+                "external_api_requests": 0,
+            }
+        except WordExportError as exc:
+            output["word_export_error"] = {
+                "code": exc.code,
+                "message": str(exc),
+            }
+            print(json.dumps(output, ensure_ascii=False, indent=2))
+            return 14
+        print(json.dumps(output, ensure_ascii=False, indent=2))
+        return 0
 
     project_root: Optional[Path] = None
     if (

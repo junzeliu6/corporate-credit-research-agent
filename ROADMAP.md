@@ -1,6 +1,6 @@
 # 企业授信研究Agent — 公共信息研究 Agent 开发路线（v5：双 Skill 集成）
 
-> V0.1—V0.4、V1.1—V1.2、V1.3A 与 V1.4 已由本地代码、真实年报产物和测试核验；`ownership-structure` 已接入白名单确定性 Skill Runtime 与 SDK Agent Loop。V1.3B与V1.5既有Agent、检索和安全能力继续保留。V2.1/V2.2已完成可比财务事实与确定性计算；V2.3已按简化后的正式报告规则恢复DeepSeek生成的完整财务正文。V2.4已完成离线实现与验证。V2.5单主Agent双Skill集成已完成；2026-10-26第二次DeepSeek+百度Live已取得5份政府网页原文、20条事实和六章正文。原始交付仅因一处未转义JSON内部引号失败，现已从同一保存草稿离线恢复完整Markdown且没有重写模型正文；核心Live链路已验证，但尚不标记为单次运行无故障完成。V3.1已在不复制Agent Loop的前提下完成Streamlit历史报告展示、既有Runtime调用及持久化后台任务管理；本阶段没有新增付费API调用。
+> V0.1—V0.4、V1.1—V1.2、V1.3A 与 V1.4 已由本地代码、真实年报产物和测试核验；`ownership-structure` 已接入白名单确定性 Skill Runtime 与 SDK Agent Loop。V1.3B与V1.5既有Agent、检索和安全能力继续保留。V2.1/V2.2已完成可比财务事实与确定性计算；V2.3已按简化后的正式报告规则恢复DeepSeek生成的完整财务正文。V2.4已完成离线实现与验证。V2.5单主Agent双Skill集成已完成；2026-10-26第二次DeepSeek+百度Live已取得5份政府网页原文、20条事实和六章正文。原始交付仅因一处未转义JSON内部引号失败，现已从同一保存草稿离线恢复完整Markdown且没有重写模型正文；核心Live链路已验证，但尚不标记为单次运行无故障完成。V3.1已在不复制Agent Loop的前提下完成Streamlit历史报告展示、既有Runtime调用及持久化后台任务管理；V3.2已完成既有Markdown、财务表与股权图的本地Word导出及Streamlit下载，本阶段没有新增付费API调用。
 
 ## [x] V0：上市公司数据入口与证据基础
 - [x] **V0.1** 建立项目骨架、最少依赖、README、实体识别/映射（`以岭药业`、`002603`、`002603.SZ`→`石家庄以岭药业股份有限公司 / 002603.SZ`）及官方来源种子目录；编写离线测试。首个种子为2025年年报（`https://static.cninfo.com.cn/finalpage/2026-04-28/1225205683.PDF`）；同时登记深交所、巨潮资讯和公司官网。V0.1不要求真实下载，也不需要立即写通用搜索引擎。
@@ -63,7 +63,7 @@
 - [x] **V3.1A 历史报告展示**：Streamlit安全发现并加载既有Markdown报告，支持全文/章节导航、股权PNG/SVG和现有财务数据表展示；恢复版报告保留原始失败状态，不静默包装为成功。
 - [x] **V3.1B 连接既有 Agent Runtime**：支持企业名称/代码、研究指令和完整/股权/财务/行业/基本面模式；通过受控Python服务以白名单参数、`shell=False`调用现有CLI/Runtime。Live按模式要求DeepSeek或DeepSeek+百度显式确认，CLI/Runtime保留第二层门禁。
 - [x] **V3.1C 持久化任务与用户体验**：独立后台Worker保存任务请求、状态和脱敏进度；页面刷新或关闭不重复启动任务，幂等键、运行中任务锁及跨浏览器会话的项目级原子Live锁阻止重复提交；并发时只有一个会话能启动Live。支持从磁盘恢复队列/运行/完成/部分完成/失败状态并保留已有产物。Worker完成、启动/校验失败或陈旧任务收敛时释放Live锁；PID消失的`running`任务或超过60秒的`queued`任务会自动收敛为失败。Windows通过`OpenProcess/GetExitCodeProcess`只读探测PID，POSIX才使用`os.kill(pid, 0)`；损坏/空锁仅在确认无其他活动Live任务后清理并原子重试。完整及股权/财务/行业单项Runtime共用脱敏进度接口。
-- [ ] V3.2 Word报告生成、来源附录、图表嵌入、报告导出。
+- [x] **V3.2 Word报告导出**：新增CLI与Streamlit共用的本地确定性导出模块，把既有Markdown转换为A4 Word标题、正文、列表、表格和图片；复用任务目录内既有股权PNG，不重跑Graphviz、不调用LLM/搜索、不改写DeepSeek正文。Streamlit按当前任务目录生成或缓存对应DOCX，历史报告同样可下载；路径越界、远程图片和必要图片缺失会显式失败。真实V2.5以岭药业恢复报告已生成16页A4 DOCX并完成逐页视觉核查；专项与完整回归结果见`V3_2_STATUS.md`。
 - [ ] V3.3 项目整理：完善GitHub README、架构图、技术栈与开发过程、Agent/Skill/Tools关系、界面截图、示例报告、已知限制和后续规划；只写真实测出的简历结果。
 
 **V3验收**：全新环境可按README复现，输入以岭药业得到有来源的七模块初稿和需补充资料清单；对失败和资料不足处理明确。
@@ -376,3 +376,13 @@
 - V3.1五组专项测试最终为`43 passed in 4.83s`（测试临时目录放在项目可写路径）；`compileall`通过。全量离线回归`.venv\Scripts\python.exe -m pytest --basetemp .pytest_tmp_v31_full_windows -q`结果为`321 passed in 16.03s`。
 - 后台Mock端到端任务`v31_mock_e2e_20261026`退出码为`0`，状态按Mock规则为`partial_success`，完成10次Mock模型调用并生成完整六章报告；页面刷新后从磁盘恢复同一任务且未重启Worker。该结果没有任何真实DeepSeek或百度请求，不能冒充Live验收。
 - 本阶段没有从Streamlit执行真实DeepSeek或百度调用。真实Live仍需页面确认和Runtime二次门禁；V3.2 Word导出与V3.3项目整理尚未启动。详细说明见`V3_1_STATUS.md`。
+
+### 2026-10-26 — V3.2 Word 报告导出
+
+- 新增`word_export.py`，把现有Markdown中的标题、段落、行内格式、列表、GFM表格及本地图片转换为真正的DOCX结构；A4、中文字体、页边距、行距、页眉页码、表格边框及图片版心宽度统一设置。
+- 正文和章节顺序直接来自既有Markdown，不调用DeepSeek、不调用百度、不使用模板重写分析。SVG引用优先复用同名PNG，股权图复用既有Graphviz产物，不重新绘制。
+- CLI新增`--export-word`、`--word-output`、`--word-image`纯本地分支；Streamlit在报告展示区新增Markdown/Word并列下载，并按任务目录缓存。Markdown或其中引用的任一本地图表变化时才重新导出，页面刷新或下载不会启动Agent。
+- 历史报告默认优先展示最新有效Live任务，无Live时才回退Mock；网页正文与Word导出绑定同一个`report_path`，避免最新Mock遮蔽已完成的V2.5 Live报告。
+- UI安全边界保持在任务管理确认的`run_dir`：Markdown、图片及输出DOCX均不得越界；远程图片、缺失图片或无效DOCX明确报错，Word失败不影响Markdown继续查看。
+- 真实V2.5恢复报告导出包含1张股权图、2个财务表和48个标题。由于内置LibreOffice不可用，使用本机Microsoft Word 2021转为16页A4 PDF并逐页检查，未见明显溢出、图片变形或中文乱码。
+- V3.2专项回归为`31 passed in 5.83s`；完整离线回归为`344 passed in 19.13s`。完整回归因受限沙箱阻断Windows `asyncio`本机loopback socketpair而在获准的离线测试环境运行，测试本身未访问DeepSeek、百度或其他外网。本阶段没有真实付费API请求，没有执行Git Push。

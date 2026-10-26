@@ -1,7 +1,7 @@
-"""V3.1 Streamlit 界面使用的只读研究产物适配层。
+"""V3 Streamlit 界面使用的研究产物适配层。
 
-本模块不依赖 Streamlit，也不触发 Agent、网络或模型调用。它只在受控目录中
-发现 V2.5 产物，并把不同完成状态整理成便于界面展示的统一结构。
+本模块不依赖 Streamlit，也不触发 Agent、网络或模型调用。它在受控目录中
+发现 V2.5 产物、整理展示结构，并可把已确认的 Markdown 本地转换为 Word。
 """
 
 from __future__ import annotations
@@ -13,8 +13,14 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Optional
 
+from credit_research_agent.word_export import (
+    export_markdown_report,
+    inspect_markdown_images,
+)
+
 
 MAX_TEXT_BYTES = 8 * 1024 * 1024
+MAX_WORD_BYTES = 64 * 1024 * 1024
 
 
 class ArtifactAccessError(ValueError):
@@ -54,6 +60,7 @@ class ResearchRunArtifact:
     is_live: bool
     recovered: bool
     report_path: Optional[Path]
+    word_report_path: Optional[Path]
     ownership_image_path: Optional[Path]
     financial_metrics_path: Optional[Path]
     delivery_path: Optional[Path]
@@ -175,6 +182,11 @@ def load_research_run(
         and str(recovery.get("status", "")).lower() == "recovered_offline"
     )
     report_path = recovered_report if recovered else standard_report
+    word_report_path = (
+        _safe_child(resolved, report_path.with_suffix(".docx").name)
+        if report_path is not None
+        else None
+    )
 
     original_status = str(
         delivery.get("status")
@@ -225,6 +237,7 @@ def load_research_run(
         is_live=is_live,
         recovered=recovered,
         report_path=report_path,
+        word_report_path=word_report_path,
         ownership_image_path=ownership_image_path,
         financial_metrics_path=financial_metrics_path,
         delivery_path=delivery_path,
@@ -302,6 +315,78 @@ def read_report_markdown(artifact: ResearchRunArtifact) -> str:
     if path.stat().st_size > MAX_TEXT_BYTES:
         raise ArtifactAccessError("报告文件过大，拒绝在界面中直接加载")
     return path.read_text(encoding="utf-8")
+
+
+def ensure_word_report(artifact: ResearchRunArtifact) -> Path:
+    """在当前研究目录内生成或复用 Word，不触发 Agent 或外部 API。
+
+    输出文件名跟随实际展示的 Markdown（恢复版与原始版分别保存），并在
+    Markdown 或股权图更新后重新导出。所有输入、输出都必须属于本次运行目录。
+    """
+
+    if artifact.report_path is None:
+        raise ArtifactAccessError("该运行尚未生成可导出的 Markdown 报告")
+    run_dir = artifact.run_dir.resolve()
+    report_path = artifact.report_path.resolve()
+    if not _is_relative_to(report_path, run_dir) or not report_path.is_file():
+        raise ArtifactAccessError("报告文件超出本次运行目录或已不存在")
+
+    image_path = artifact.ownership_image_path
+    if image_path is not None:
+        image_path = image_path.resolve()
+        if not _is_relative_to(image_path, run_dir) or not image_path.is_file():
+            raise ArtifactAccessError("股权结构图超出本次运行目录或已不存在")
+
+    output_path = report_path.with_suffix(".docx").resolve()
+    if not _is_relative_to(output_path, run_dir):
+        raise ArtifactAccessError("Word 输出路径超出本次运行目录")
+
+    image_inspection = inspect_markdown_images(
+        report_path,
+        allowed_root=run_dir,
+        ownership_image_path=image_path,
+    )
+    dependencies = [report_path, *image_inspection.image_paths]
+    newest_input = max(item.stat().st_mtime_ns for item in dependencies)
+    if (
+        output_path.is_file()
+        and output_path.stat().st_mtime_ns >= newest_input
+        and output_path.stat().st_size > 0
+        and (
+            not image_inspection.requires_ownership_image
+            or image_inspection.ownership_image_path is not None
+        )
+    ):
+        return output_path
+
+    result = export_markdown_report(
+        report_path,
+        output_path,
+        allowed_root=run_dir,
+        ownership_image_path=image_path,
+        company_name=artifact.company_name or None,
+        ticker=artifact.ticker or None,
+        report_date=artifact.updated_at.date(),
+        require_ownership_image=image_inspection.requires_ownership_image,
+    )
+    exported = result.docx_path.resolve()
+    if exported != output_path or not _is_relative_to(exported, run_dir):
+        raise ArtifactAccessError("Word 导出器返回了非预期输出路径")
+    if not exported.is_file() or exported.stat().st_size <= 0:
+        raise ArtifactAccessError("Word 导出未生成有效文件")
+    return exported
+
+
+def read_word_report(artifact: ResearchRunArtifact) -> tuple[Path, bytes]:
+    """返回安全的 Word 下载载荷；只读取当前研究目录内的导出文件。"""
+
+    path = ensure_word_report(artifact).resolve()
+    if not _is_relative_to(path, artifact.run_dir.resolve()):
+        raise ArtifactAccessError("Word 文件超出本次运行目录")
+    size = path.stat().st_size
+    if size <= 0 or size > MAX_WORD_BYTES:
+        raise ArtifactAccessError("Word 文件为空或超过界面下载大小限制")
+    return path, path.read_bytes()
 
 
 def load_financial_tables(artifact: ResearchRunArtifact) -> FinancialTables:
