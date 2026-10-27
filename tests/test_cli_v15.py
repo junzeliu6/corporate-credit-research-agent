@@ -9,6 +9,32 @@ from credit_research_agent import cli
 TASK = "请搜索以岭药业官方网站，补充主营业务、主要产品和经营模式，并提供来源。"
 
 
+def test_cli_search_budget_defaults_and_explicit_overrides() -> None:
+    defaults = cli.build_parser().parse_args(
+        ["002603.SZ", "--run-web-research", TASK]
+    )
+    overridden = cli.build_parser().parse_args(
+        [
+            "002603.SZ",
+            "--run-web-research",
+            TASK,
+            "--max-search-rounds",
+            "7",
+            "--max-search-calls",
+            "8",
+            "--max-search-requests",
+            "9",
+        ]
+    )
+
+    assert defaults.max_search_rounds == 15
+    assert defaults.max_search_calls == 15
+    assert defaults.max_search_requests == 15
+    assert overridden.max_search_rounds == 7
+    assert overridden.max_search_calls == 8
+    assert overridden.max_search_requests == 9
+
+
 def test_cli_v15_mock_runs_full_retrieval_without_network_or_keys(
     tmp_path: Path, monkeypatch, capsys
 ) -> None:

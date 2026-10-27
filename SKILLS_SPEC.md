@@ -62,11 +62,11 @@
 2. `SkillRegistry` 已维护技能 `name`/`description`/相对路径/版本/SHA-256/状态/Tool 名称；`SkillLoader` 只读加载且二次验哈希。主 Agent 仅使用代码内批准的技能白名单，不从网页下载可执行技能。
 3. 数据获取工具供两项 Skill 复用，不复制已有 V0 实现；绘图和数值计算各自只保留一份确定性 Python 实现。
 4. 内部继续使用现有 V0 Source/Evidence 记录来源、URL和定位信息，不因更新文档破坏已有 ID 和接口；正式报告默认不展示`[Sxx]`、`Fxxx`、`FMxxx`等技术编号，需要时另行导出研究依据文件。
-5. `ownership` 与 `finance` 的工具返回结构化对象；DeepSeek负责专业分析与正式报告文字，Python负责图表、数据表、最小结构解析和Markdown机械组装。遇到资料不足时由模型在正文中说明“未核验/需进一步核实”；模型整体失败时报告标记未完成，不以Python模板替写。
+5. `ownership` 与 `finance` 的工具均保留结构化后台产物；DeepSeek负责专业分析与正式报告文字，Python负责图表、数据表、最小结构解析和Markdown机械组装。在完整报告中，ownership仅提供可选股权图，不再要求模型撰写常规股权/控制关系文字；finance继续向模型提供专业分析上下文。遇到资料不足时由模型在相关正文中说明“未核验/需进一步核实”；模型整体失败时报告标记未完成，不以Python模板替写。
 6. **集成验收**必须有运行日志或自动化测试证明加载哪一个 `SKILL.md`、何时使用何种工具以及得到何种校验结果；不将“文件放对路径”误当已运行。
 7. V1.3B历史单Skill入口只注册`run_ownership_research`；该兼容入口保持不变。LLM可填写的Tool输入仅有已解析ticker。`source_id`及文件路径由Python Runtime从已验证应用上下文绑定；Runtime复核来源登记、主体和下载产物一致性，并拒绝模型提供来源覆盖字段。LLM无权执行Python、Shell或读写任意路径。V2.5的双Skill入口遵循下述新增契约，不反向扩大旧入口权限。
 8. 默认使用不会联网的Mock模型；Live DeepSeek必须显式选择、存在`DEEPSEEK_API_KEY`并再次确认。`financial-analysis`的LLM Function Tool只接受ticker，来源、可比年报和路径由Runtime绑定；金额和同比由Python计算后作为分析上下文提供，模型不得徒手计算关键数值。
-9. Tool返回模型的内容应压缩为核实关系、控制关系、财务数据、确定性计算、必要附注、资料缺口和来源概况，不重复发送完整PDF文本。Python继续复用现有`FactRecord`、`EvidenceRecord`和`SourceRecord`维护内部溯源，但不要求模型在正文中回填这些ID；Skill阈值不得冒充企业实际事实。
+9. Tool返回模型的内容应保持紧凑，不重复发送完整PDF文本。完整研究的ownership Tool只投影`chart_generated`、基准日和运行状态，不向主模型发送股东名称、持股比例、控制关系、国资性质或完整Skill正文；相关事实与校验继续保存在后台产物和轨迹。financial Tool继续返回财务数据、确定性计算、必要附注、资料缺口和来源概况。Python复用现有`FactRecord`、`EvidenceRecord`和`SourceRecord`维护内部溯源，但不要求模型在正文中回填这些ID；Skill阈值不得冒充企业实际事实。
 10. 财务模型最终响应应包含完整自然语言章节和尽调问题，不再强制提交Fact/Metric/Explanation/Source/Missing ID。Python只解析最小结构、保存模型原始草稿及调用诊断，并把模型文字原样组装进Markdown；不得使用百分比白名单、关键词或逐句来源匹配拒绝正文，也不得用固定模板重写。模型应将未证实的具体原因写为“可能/需进一步核实”，完全无依据的金额、比例、经营事件不得编造成企业事实。
 11. 财务Tool阶段可以保留数据产物和“尚未调用模型”的占位；模型完成后，Python把原始章节、尽调问题、必要财务数据表和首页免责声明组装成最终Markdown。`financial_llm_draft.json`继续保存原始生成结果；若保留生成状态文件，只记录调用/解析是否完成，不再作为自然语言事实审判门禁。禁止以Python模板分析作为失败降级。
 12. V1.5检索能力是Skill共享基础设施，而不是新的领域Skill。模型可调用`search_web`、`fetch_source`、`extract_evidence`，但只能读取当次搜索返回的URL，不能填写`source_id`或任意路径。Python生成`source_handle`和`Sxx`，经原文获取、主体/来源层级/定位校验后才将事实放入统一引用目录。
@@ -80,14 +80,14 @@
 20. V2.5使用一个主Agent和一个根执行轨迹。模型必须实际调用`run_ownership_research`与`run_financial_research`，并按需调用`search_web`、`fetch_source`和`extract_evidence`；轨迹分别记录模型Tool选择、Registry确认、SkillLoader路径/哈希、实际Python Tool、模块状态和产物。
 21. 两个高层Skill Tool只允许模型提供已解析ticker。官方来源、PDF/JSON路径、比较年度、Skill名称、输出目录和其他运行上下文字段由Python绑定；模型尝试覆盖时必须拒绝。
 22. 所有模块共享同一`CompanyIdentity`。财务上下文必须保持FY2024/FY2025可比口径、币种、单位及合并范围；股权使用其实际披露基准日。不同时间点只能清楚标注后并列分析，不得直接混合。
-23. DeepSeek负责六章完整报告及跨模块综合授信风险分析。Python可以插入经过校验的财务表格、股权SVG/PNG和统一免责声明，但不得改写模型章节、拼接旧模块模板或在模型失败时补写专业正文。
-24. 完整报告上下文使用企业基本面、股权关系/控制结论、紧凑财务快照及检索证据，不发送完整PDF、网页全文或重复的大型JSON。两个Skill和检索Tools受同一根运行时轮次及总Tool预算控制。
-25. 单个Skill、来源或章节失败时保留其他成功模块并返回`PARTIAL_SUCCESS`；模型整体失败或最小结构无法解析时保留数据、图表、来源、草稿和轨迹，只交付“报告未完成”说明。不得以Python模板冒充完成。
-26. 正式`credit_research_report.md`覆盖企业基本情况、经营、行业政策、财务、综合授信风险及尽调问题，不显示Fact/Metric/Source/Evidence等技术ID。后台`credit_research_context.json`、`credit_research_sources.json`、`credit_research_execution_trace.json`及模型草稿继续支持审计。
+23. DeepSeek负责六章完整报告及跨模块综合授信风险分析。Python可以插入经过校验的财务表格、存在时的股权SVG/PNG及中性图注和统一免责声明，但不得改写模型章节、拼接旧模块模板或在模型失败时补写专业正文。股权图片缺失时不生成空图块，也不影响其他章节。
+24. 完整报告上下文使用企业基本面、紧凑财务快照、ownership绘图状态及检索证据，不向主模型发送完整股权关系/控制结论、完整PDF、网页全文或重复的大型JSON。第一章所需企业历史、当前定位、产业链位置及上下游角色可通过通用检索Tools补充；两个Skill和检索Tools受同一根运行时轮次及总Tool预算控制。
+25. 财务Skill、来源或章节失败时保留其他成功模块并按实际完成范围降级；ownership仍须尝试执行并在后台记录状态，但其`success / partial_success / failed`均只影响可选股权图，不单独阻断完整报告。模型整体失败或最小结构无法解析时保留数据、图表、来源、草稿和轨迹，只交付“报告未完成”说明。不得以Python模板冒充完成。
+26. 正式`credit_research_report.md`覆盖企业基本情况、经营、行业政策、财务、综合授信风险及尽调问题，不显示Fact/Metric/Source/Evidence等技术ID。第一章写到研究日，覆盖成立背景、改制/上市、重大事件与里程碑、业务演变/转型、当前行业或产业链定位和上下游角色，不写常规股东、控制关系、比例完整性或国资性质分析；只有明确原文支持的控制权变更、资金占用、重大关联交易、股权质押等重大治理风险事件可进入第五/六章。后台`credit_research_context.json`、`credit_research_sources.json`、`credit_research_execution_trace.json`及模型草稿继续支持审计。
 27. V2.5首次完整Live已经执行并为部分成功。任何后续复测仍同时跨越DeepSeek与百度搜索两条外部边界，必须分别配置密钥、选择Live并获得新的显式确认；缺少任一确认时不得发出外部请求。
 28. `SkillRuntime`返回本次实际加载的`SKILL.md` instructions；V2.5高层Tool从实际Loader结果生成紧凑`skill_method`供DeepSeek使用，既证明专业方法进入运行上下文，又不重复发送整份Skill文档。
 29. 检索Tool的超时、鉴权和参数错误必须转换为结构化失败，保留在轨迹中并允许模型使用其余资料继续生成部分报告。
-30. V2.5 Live只有在两个Skill和六章完成、且至少发生一次证据提取并取得事实或候选时才可标记`SUCCESS`；只有搜索/抓取事件不满足成功条件。
+30. V2.5 Live要求两个Skill均被尝试、六章完成、financial Skill成功，且至少发生一次证据提取并取得事实或候选，才可标记`SUCCESS`；ownership可以成功、部分成功或失败，其状态只决定是否有可插入的股权图。只有搜索/抓取事件不满足成功条件。
 31. 股权图本地绝对路径不得发送给模型。S01/S10的本地下载和解析路径只记录在后台顶层来源文件，并附`runtime_status=parsed`。
 32. 单个格式错误章节只跳过该章，其他已解析的模型章节继续交付并明确缺失；不得因一章错误拒绝整份草稿或用Python模板补齐。
 33. CLI必须说明`--confirm-live`确认的是一次受控任务，而一次Agent任务可能包含多次模型请求；本地轮次和Token预算不等于供应商账单硬上限。

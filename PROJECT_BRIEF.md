@@ -80,10 +80,10 @@
 - V1.5将百度智能云官方“百度搜索”封装为通用`SearchProvider`。LLM只决定搜索主题和选择白名单Tool；Python负责搜索请求、URL安全、原文获取、缓存及必要的内部来源登记。既有细粒度状态可继续用于运行时诊断，但正式报告只显示“已核验/未核验”：可靠原始披露和确定性计算属于已核验，单一来源、未确认候选或分析假设属于未核验；完全无依据的内容不得作为企业事实输出。网页文字不是Agent指令，真实搜索和模型仍需分别显式开启并确认。
 - V2.4在单Agent内新增独立的轻量行业研究Instructions，不创建第三个Skill。模型围绕行业趋势、竞争格局、监管政策、企业影响及授信关注点自主制定检索方向，复用`search_web`、`fetch_source`、`extract_evidence`取得原文，并读取V2.3确定性财务数据/既有业务资料形成跨模块分析。一般行业政策不得直接写成目标企业已发生的具体影响；未经确认的因果关系须用“可能/需进一步核实”等措辞。
 - V2.4预期独立保存`industry_analysis.md`、`industry_research_context.json`、`industry_sources.json`和`industry_execution_trace.json`。正式Markdown不展示Fact/Metric等技术ID；来源URL、网页原文、检索轨迹、失败原因与预算计数保存在后台研究依据产物中。DeepSeek整体失败时只保留数据/来源/轨迹并标记报告未完成，不生成Python固定模板行业正文。
-- V2.5在同一主Agent运行中先规划并调用两个既有Skill，再按需使用`search_web`、`fetch_source`和`extract_evidence`，最终由DeepSeek撰写企业背景与股权、经营、行业政策、财务、综合授信风险及尽调问题六章正文。运行时统一绑定上市主体、官方来源、财务期间和输出目录，模型不能填写或覆盖`source_id`、本地路径、Skill名称或任意工具权限。
+- V2.5在同一主Agent运行中先规划并调用两个既有Skill，再按需使用`search_web`、`fetch_source`和`extract_evidence`，最终由DeepSeek撰写企业基本情况、经营、行业政策、财务、综合授信风险及尽调问题六章正文。第一章写到研究日，重点覆盖历史背景、重大事件/业务演变、企业定位、产业链位置及上下游角色；运行时统一绑定上市主体、官方来源、财务期间和输出目录，模型不能填写或覆盖`source_id`、本地路径、Skill名称或任意工具权限。
 - V2.5的`SkillRuntime`返回实际加载的`SKILL.md` instructions，高层Tool从中投影紧凑`skill_method`给DeepSeek，证明专业方法真正进入应用运行上下文。模型上下文不包含股权图本地绝对路径；S01/S10下载与解析路径只在后台来源中保存，并记录`runtime_status=parsed`。
-- V2.5不把各模块旧Markdown机械拼接为正式报告。Python可以插入经过校验的股权图和财务数据表，但不得改写DeepSeek章节或在失败时用固定模板补齐。单个Skill或检索来源失败时保留其他成果并标记`PARTIAL_SUCCESS`；模型整体失败时交付数据、图表、来源、轨迹和“报告未完成”说明。
-- 搜索超时、鉴权或参数错误必须转换为结构化Tool失败并允许继续部分报告；单个格式错误章节只跳过该章，不丢弃已通过解析的其他模型章节。真实`SUCCESS`除两个Skill和六章外，还必须存在证据提取事件及至少一项事实或候选。
+- V2.5不把各模块旧Markdown机械拼接为正式报告。Python可以插入经过校验且实际存在的股权图和财务数据表，但不得改写DeepSeek章节或在失败时用固定模板补齐。ownership仍在后台完成核验与绘图，主模型不再撰写常规股东、控制关系、比例完整性或国资性质分析；资料不完整或无图时直接跳过图形区块，不阻断其他章节。财务Skill或检索来源失败时保留其他成果并按完成范围降级；模型整体失败时交付数据、图表、来源、轨迹和“报告未完成”说明。
+- 搜索超时、鉴权或参数错误必须转换为结构化Tool失败并允许继续部分报告；单个格式错误章节只跳过该章，不丢弃已通过解析的其他模型章节。真实`SUCCESS`要求两个Skill均已尝试、financial Skill和六章完成，并存在证据提取事件及至少一项事实或候选；ownership状态只决定是否插入可选股权图。
 - V2.5正式产物包括`credit_research_report.md`、`credit_research_context.json`、`credit_research_sources.json`、`credit_research_execution_trace.json`、模型原始草稿/交付状态以及股权图。首次完整Live为部分成功；后续复测仍必须同时获得DeepSeek与百度搜索两项新的显式确认，并输出到新目录。
 - Tool返回LLM前由Python把现有 Fact/Evidence/Source 与股权、财务结果整理为紧凑、可读的分析上下文。DeepSeek直接提交完整自然语言分析，不再承担Fact/Metric/Source ID回填任务；Python不使用百分比白名单、正则或逐句来源匹配来拒绝正文，只负责数据与来源的内部保存、最小结构解析、图表和Markdown组装。模型整体调用或结构解析失败时标记报告未完成，不用固定模板冒充模型研究成果。
 - RAG/MCP 按需要引入，不为堆栈而堆栈。

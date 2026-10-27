@@ -562,6 +562,62 @@ def test_pharmaceutical_question_retains_contextual_pharmaceutical_terms() -> No
     assert {"医保", "集采", "药品注册", "质量监管", "药品"}.issubset(tokens)
 
 
+def test_history_and_value_chain_questions_expand_recall_terms() -> None:
+    from credit_research_agent.web_sources import _question_tokens
+
+    tokens = _question_tokens(
+        "某公司发展历程、重大事件、业务转型、企业定位及产业链上下游角色"
+    )
+
+    assert {
+        "成立",
+        "改制",
+        "上市",
+        "并购",
+        "重组",
+        "投产",
+        "里程碑",
+        "业务转型",
+        "产业链",
+        "上游",
+        "供应商",
+        "下游",
+        "客户",
+        "销售渠道",
+    }.issubset(tokens)
+
+
+def test_company_history_and_value_chain_original_text_can_form_evidence(
+    tmp_path: Path,
+) -> None:
+    source = _source(
+        "S08",
+        "https://www.example-company.cn/about/history",
+        tier=1,
+        source_type=SourceType.COMPANY_WEBSITE,
+    )
+    fetched = _fetched(
+        "S08",
+        str(source.url),
+        [
+            "公司成立于1998年，2012年完成改制并上市，2020年智能工厂建成投产。",
+            "公司定位于智能制造产业链的设备与解决方案环节，上游包括电子元器件和原材料供应商。",
+            "下游客户主要来自通信设备、云计算基础设施及工业互联网应用领域。",
+        ],
+    )
+    store = WebEvidenceStore(identity=_identity(), output_path=tmp_path / "history.json")
+
+    result = store.extract(
+        source=source,
+        fetched=fetched,
+        research_question="企业发展历程、重大事件、业务定位及产业链上下游角色",
+    )
+
+    assert len(result.facts) == 3
+    assert len(result.evidence) == 3
+    assert all(item.evidence_ids for item in result.facts)
+
+
 def test_captcha_and_access_challenge_page_is_rejected(tmp_path: Path) -> None:
     fetcher = FixtureSourceFetcher(
         {

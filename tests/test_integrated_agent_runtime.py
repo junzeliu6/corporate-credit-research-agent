@@ -25,6 +25,7 @@ from credit_research_agent.integrated_agent_runtime import (
     CompleteExecutionTrace,
     IntegratedCreditResearchAgentRuntime,
     IntegratedRuntimeError,
+    _ownership_chart_tool_view,
     _ownership_reporting_constraints,
     _public_runtime_limitations,
     build_fundamental_snapshot,
@@ -448,6 +449,7 @@ def test_report_keeps_llm_prose_inserts_graph_and_financial_table_without_ids(
     assert len(re.findall(r"^## (?!#)", report, flags=re.MULTILINE)) == 6
     assert all(f"## {COMPLETE_TOPIC_LABELS[topic]}" in report for topic in COMPLETE_REQUIRED_TOPICS)
     assert "![股权结构图](assets/ownership_structure.svg)" in report
+    assert "可能不代表完整股东名册或完整股权穿透" in report
     assert "### 重点财务数据" in report
     assert "| 营业收入 | 1.00 | 1.20 | 20.00% |" in report
     assert "| 资产负债率 | 35.50% |" in report
@@ -458,6 +460,60 @@ def test_report_keeps_llm_prose_inserts_graph_and_financial_table_without_ids(
     assert ":fetch_http_error" not in report
     assert "search_web:search_call_limit_exceeded" not in report
     assert not TECHNICAL_MARKER.search(report)
+
+
+def test_report_skips_ownership_block_when_no_image_without_affecting_other_sections(
+    tmp_path: Path,
+) -> None:
+    draft = parse_complete_narrative_draft(
+        json.dumps(_draft_payload(), ensure_ascii=False)
+    )
+
+    report = render_complete_report(
+        draft,
+        identity=_identity(),
+        status=RetrievalStatus.SUCCEEDED,
+        mock_mode=False,
+        ownership_image=None,
+        report_dir=tmp_path,
+        financial_snapshot=None,
+    )
+
+    assert "## 第一章：企业基本情况" in report
+    assert "## 第二章：经营情况分析" in report
+    assert "## 第六章：待补充资料及尽调问题" in report
+    assert "### 股权结构图" not in report
+    assert "![股权结构图]" not in report
+
+
+def test_ownership_tool_view_exposes_chart_status_but_not_equity_narrative_data(
+    tmp_path: Path,
+) -> None:
+    graph = tmp_path / "ownership_structure.svg"
+    graph.write_text("<svg xmlns='http://www.w3.org/2000/svg'></svg>", encoding="utf-8")
+    snapshot = {
+        "as_of_date": "2025-12-31",
+        "formal_ready": True,
+        "ownership_relations": [
+            {"holder": "不应发送给主模型的股东", "percentage": 31.53}
+        ],
+        "control_relationships": [
+            {"relation_type": "actual_controller", "subjects": ["不应发送的控制人"]}
+        ],
+        "skill_method": {"available": True, "instructions_markdown": "完整规则"},
+    }
+
+    view = _ownership_chart_tool_view(snapshot, {"svg_path": str(graph)})
+    serialized = json.dumps(view, ensure_ascii=False)
+
+    assert view["reporting_scope"] == "chart_only"
+    assert view["chart_generated"] is True
+    assert view["as_of_date"] == "2025-12-31"
+    assert view["skill_method"]["available"] is True
+    assert "31.53" not in serialized
+    assert "不应发送给主模型的股东" not in serialized
+    assert "不应发送的控制人" not in serialized
+    assert "完整规则" not in serialized
 
 
 def test_complete_shareholder_register_alone_does_not_prove_no_state_ownership() -> None:
@@ -504,6 +560,15 @@ def test_complete_agent_instructions_forbid_known_live_overclaims() -> None:
     """Live复盘发现的过度外推应由数据边界约束，而非事后重写正文。"""
 
     for required in (
+        "第一章是“企业基本情况”",
+        "正文不得介绍股东名单、持股比例、控股股东、实际控制人",
+        "企业历史按时间顺序写到研究日",
+        "当前行业/产业链定位",
+        "上游和下游分别承担的角色",
+        "默认全局搜索上限为15次",
+        "资料充分时应提前停止",
+        "第五章必须关联经营、行业政策及财务表现中的至少两个维度",
+        "只有取得明确原文支持的控制权变更、资金占用、重大关联交易、股权质押",
         "不得据此断言“无国资背景”",
         "不得写“高度依赖少数品种”“大单品驱动”",
         "不得把两期变化表述为“长期”“连续多年”",
@@ -740,7 +805,7 @@ def test_one_scripted_agent_calls_both_skills_and_delivers_six_chapters(
     assert result.module_status == {"ownership": "success", "financial": "success"}
     assert result.delivered_topics == list(COMPLETE_REQUIRED_TOPICS)
     assert all(f"## {COMPLETE_TOPIC_LABELS[topic]}" in report for topic in COMPLETE_REQUIRED_TOPICS)
-    assert "离线夹具验证主Agent能够把经营、治理、行业和财务维度" in report
+    assert "离线夹具验证主Agent能够把经营、行业政策和财务维度" in report
     assert "![股权结构图](assets/ownership_structure.svg)" in report
     assert "### 重点财务数据" in report
     assert not TECHNICAL_MARKER.search(report)
@@ -748,6 +813,12 @@ def test_one_scripted_agent_calls_both_skills_and_delivers_six_chapters(
     assert fetcher.call_count >= 1
     assert result.search_api_requests == 0
     assert result.estimated_search_cost_cny == 0
+    assert context_payload["research_as_of_date"] == "2026-10-23"
+    assert context_payload["tool_policy"]["ownership_narrative_scope"] == "chart_only"
+    assert any(
+        "发展历程" in item.get("query", "") and "产业链" in item.get("query", "")
+        for item in trace["search_queries"]
+    )
     ownership_snapshot = context_payload["module_results"]["ownership"]
     financial_snapshot = context_payload["module_results"]["financial"]
     assert "graph_paths" not in ownership_snapshot
@@ -959,6 +1030,17 @@ class _FinancialFailingSkillRuntime(_ArtifactBackedSkillRuntime):
         return super().execute(**kwargs)
 
 
+class _OwnershipFailingSkillRuntime(_ArtifactBackedSkillRuntime):
+    calls: list[str] = []
+
+    def execute(self, **kwargs: Any) -> SkillExecutionResult:
+        selected = str(kwargs["selected_skill"])
+        if selected == "ownership-structure":
+            self.__class__.calls.append(selected)
+            raise RuntimeError("离线夹具模拟股权资料不完整且无法出图")
+        return super().execute(**kwargs)
+
+
 class _FailingSearchProvider:
     call_count = 0
 
@@ -1025,6 +1107,135 @@ def test_one_skill_failure_keeps_other_outputs_and_returns_partial_success(
     assert "本章仅保留模型已形成的分析及资料限制" in report
 
 
+def test_ownership_failure_skips_graph_but_does_not_block_complete_live_delivery(
+    tmp_path: Path,
+) -> None:
+    """使用离线替身模拟Live状态，证明股权图失败不是整份报告门禁。"""
+
+    fixture = load_industry_search_fixture()
+    provider, fetcher = build_mock_retrieval_dependencies(
+        fixture, clock=lambda: FIXED_TIME
+    )
+    first_url = "https://www.yiling.cn/v2-4-industry-mock"
+    model = ScriptedModel(
+        [
+            ModelStep(
+                output=[
+                    function_call(
+                        OWNERSHIP_FUNCTION_TOOL,
+                        {"ticker": "002603.SZ"},
+                        call_id="ownership-fails",
+                    )
+                ]
+            ),
+            ModelStep(
+                output=[
+                    function_call(
+                        FINANCIAL_FUNCTION_TOOL,
+                        {"ticker": "002603.SZ"},
+                        call_id="financial-succeeds",
+                    )
+                ]
+            ),
+            ModelStep(
+                output=[
+                    function_call(
+                        SEARCH_WEB_TOOL,
+                        {
+                            "query": "以岭药业 发展历程 业务定位 产业链",
+                            "max_results": 5,
+                            "domain_filter": [],
+                            "recency": None,
+                        },
+                        call_id="history-search",
+                    )
+                ]
+            ),
+            ModelStep(
+                output=[
+                    function_call(
+                        FETCH_SOURCE_TOOL,
+                        {"url": first_url},
+                        call_id="history-fetch",
+                    )
+                ]
+            ),
+            ModelStep(
+                output=[
+                    function_call(
+                        EXTRACT_EVIDENCE_TOOL,
+                        {
+                            "source_handle": "DOC001",
+                            "research_question": "以岭药业发展历程、主营业务、业务定位和产业链角色",
+                        },
+                        call_id="history-extract",
+                    )
+                ]
+            ),
+            ModelStep(
+                output=[assistant_message(json.dumps(_draft_payload(), ensure_ascii=False))]
+            ),
+        ]
+    )
+    source, download, summary_path, pages_path = _download(tmp_path, "S01")
+    comparison_source, comparison_download, comparison_summary, comparison_pages = _download(
+        tmp_path, "S10"
+    )
+    runtime = IntegratedCreditResearchAgentRuntime(
+        PROJECT_ROOT,
+        DeepSeekLLMConfig(
+            mode=AgentMode.LIVE,
+            api_key=SecretStr("deepseek-offline-test-secret"),
+            max_turns=10,
+            max_tool_calls=20,
+            max_output_tokens=5000,
+        ),
+        BaiduSearchConfig(
+            mode=SearchMode.LIVE,
+            api_key=SecretStr("baidu-offline-test-secret"),
+        ),
+        model_override=model,
+        search_provider_override=provider,
+        source_fetcher_override=fetcher,
+        skill_runtime_factory=_OwnershipFailingSkillRuntime,
+        clock=lambda: FIXED_TIME,
+    )
+
+    result = runtime.run_sync(
+        task=FULL_TASK,
+        identity=_identity(),
+        source=source,
+        download=download,
+        summary_path=summary_path,
+        pages_path=pages_path,
+        comparison_inputs=[
+            FinancialSourceInput(
+                source=comparison_source,
+                download=comparison_download,
+                summary_path=comparison_summary,
+                pages_path=comparison_pages,
+            )
+        ],
+        fundamentals_path=FUNDAMENTALS_EXAMPLE_PATH,
+        output_dir=tmp_path / "ownership-nonblocking",
+        trace_output=tmp_path / "ownership-nonblocking-trace.json",
+        budget=SearchBudget(max_agent_turns=10, max_total_tool_calls=20),
+        confirmed_llm_live=True,
+        confirmed_search_live=True,
+    )
+    report = result.report_path.read_text(encoding="utf-8")
+    trace = json.loads(result.trace_path.read_text(encoding="utf-8"))
+
+    assert result.status is RetrievalStatus.SUCCEEDED
+    assert result.module_status == {"ownership": "failed", "financial": "success"}
+    assert result.ownership_svg_path is None
+    assert result.ownership_png_path is None
+    assert "### 股权结构图" not in report
+    assert "离线夹具模拟股权资料不完整且无法出图" not in report
+    assert result.delivered_topics == list(COMPLETE_REQUIRED_TOPICS)
+    assert trace["module_errors"]["ownership"].startswith("离线夹具模拟股权")
+
+
 def test_search_failure_keeps_both_skill_outputs_and_delivers_partial_report(
     tmp_path: Path,
 ) -> None:
@@ -1084,7 +1295,7 @@ def test_search_failure_keeps_both_skill_outputs_and_delivers_partial_report(
         and item.get("status") == "failed_but_task_continues"
         for item in trace["tool_calls"]
     )
-    assert "离线夹具验证主Agent能够把经营、治理、行业和财务维度" in report
+    assert "离线夹具验证主Agent能够把经营、行业政策和财务维度" in report
     assert result.ownership_svg_path is not None
 
 

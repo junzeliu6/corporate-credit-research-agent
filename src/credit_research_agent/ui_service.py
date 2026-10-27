@@ -29,19 +29,19 @@ WEB_LIVE_REQUEST_TIMEOUT_SECONDS = 600
 WEB_LIVE_MAX_MODEL_RETRIES = 0
 WEB_COMPLETE_LIVE_BUDGET_ARGS = (
     "--max-agent-turns",
-    "30",
+    "70",
     "--max-tool-calls",
-    "40",
+    "60",
     "--max-search-rounds",
-    "6",
+    "15",
     "--max-search-calls",
-    "6",
+    "15",
     "--max-search-requests",
-    "6",
+    "15",
     "--max-source-fetches",
-    "10",
+    "20",
     "--max-extract-calls",
-    "10",
+    "20",
 )
 
 

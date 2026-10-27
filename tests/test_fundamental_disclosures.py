@@ -165,6 +165,66 @@ def test_generic_fundamentals_extracts_heading_scoped_disclosures_without_seeds(
     assert {item.page_number for item in result.bundle.evidence} == {1, 2, 3, 4}
 
 
+def test_development_history_recalls_locatable_corporate_milestones(
+    tmp_path: Path,
+) -> None:
+    identity = _identity()
+    source = _source(identity)
+    history_page = (
+        "公司发展历程\n"
+        "1998年，公司前身通用制造厂正式成立。\n"
+        "2002年，公司名称由通用制造有限公司变更为通用智能有限公司。\n"
+        "2008年，公司完成改制并整体变更为股份有限公司。\n"
+        "2012年，公司完成重大资产重组，收购控制器业务相关资产。\n"
+        "2016年，公司由单一设备制造向智能制造整体解决方案业务转型。\n"
+        "2020年，智能制造基地项目建成投产。\n"
+        "2023年，新一代控制器实现量产，标志着公司进入新的发展阶段。\n"
+        "2030年，公司计划由设备制造向平台服务转型。"
+    )
+    download, summary_path, pages_path = _write_inputs(
+        tmp_path,
+        identity,
+        source,
+        pages=[history_page],
+    )
+
+    result = FundamentalDisclosureExtractor(clock=lambda: FIXED_NOW).extract(
+        identity=identity,
+        source=source,
+        download=download,
+        summary_path=summary_path,
+        pages_path=pages_path,
+    )
+
+    history_facts = [
+        item
+        for item in result.bundle.facts
+        if item.research_module is ResearchModule.DEVELOPMENT_HISTORY
+    ]
+    history_values = [str(item.value) for item in history_facts]
+
+    # max_items 由4提高后，同一沿革页可保留更完整的原文事件序列。
+    assert len(history_facts) == 7
+    assert any("名称由通用制造有限公司变更为" in value for value in history_values)
+    assert any("完成重大资产重组" in value for value in history_values)
+    assert any("智能制造整体解决方案业务转型" in value for value in history_values)
+    assert any("基地项目建成投产" in value for value in history_values)
+    assert any("标志着公司进入新的发展阶段" in value for value in history_values)
+    assert all("计划由设备制造" not in value for value in history_values)
+
+    history_evidence_ids = {
+        evidence_id
+        for fact in history_facts
+        for evidence_id in fact.evidence_ids
+    }
+    history_evidence = [
+        item for item in result.bundle.evidence if item.evidence_id in history_evidence_ids
+    ]
+    assert all(item.page_number == 1 for item in history_evidence)
+    assert all(item.line_number >= 1 for item in history_evidence)
+    assert {item.quote for item in history_evidence} == set(history_values)
+
+
 def test_generic_fundamental_artifacts_are_agent_compatible(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -93,7 +93,7 @@ def test_mock_command_does_not_override_live_timeout_or_retry_policy() -> None:
     assert "--max-tool-calls" not in command.argv
 
 
-def test_complete_live_uses_conservative_hidden_budget() -> None:
+def test_complete_live_uses_expanded_hidden_budget() -> None:
     command = build_live_command(
         PROJECT_ROOT,
         _request(ResearchMode.COMPLETE),
@@ -101,13 +101,13 @@ def test_complete_live_uses_conservative_hidden_budget() -> None:
         python_executable="python-test",
     )
     expected = {
-        "--max-agent-turns": "30",
-        "--max-tool-calls": "40",
-        "--max-search-rounds": "6",
-        "--max-search-calls": "6",
-        "--max-search-requests": "6",
-        "--max-source-fetches": "10",
-        "--max-extract-calls": "10",
+        "--max-agent-turns": "70",
+        "--max-tool-calls": "60",
+        "--max-search-rounds": "15",
+        "--max-search-calls": "15",
+        "--max-search-requests": "15",
+        "--max-source-fetches": "20",
+        "--max-extract-calls": "20",
     }
 
     for option, value in expected.items():

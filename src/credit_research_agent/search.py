@@ -229,9 +229,9 @@ class SearchBudget(BaseModel):
 
     model_config = ConfigDict(validate_assignment=True)
 
-    max_search_rounds: int = Field(default=10, ge=1, le=10)
-    max_search_calls: int = Field(default=10, ge=1, le=10)
-    max_search_requests: int = Field(default=10, ge=1, le=10)
+    max_search_rounds: int = Field(default=15, ge=1, le=15)
+    max_search_calls: int = Field(default=15, ge=1, le=15)
+    max_search_requests: int = Field(default=15, ge=1, le=15)
     max_results_per_request: int = Field(default=5, ge=1, le=10)
     max_fetches: int = Field(default=20, ge=1, le=20)
     max_extractions: int = Field(default=20, ge=1, le=20)
@@ -239,7 +239,7 @@ class SearchBudget(BaseModel):
     max_agent_turns: int = Field(default=70, ge=2, le=70)
     # 兼容旧CLI显式参数：提供时仍表示“首轮之后最多补充多少次搜索调用”。
     # 新代码使用max_search_rounds和max_search_calls分别约束轮次与调用数。
-    max_supplemental_rounds: Optional[int] = Field(default=None, ge=0, le=9)
+    max_supplemental_rounds: Optional[int] = Field(default=None, ge=0, le=14)
     search_rounds: int = 0
     search_tool_calls: int = 0
     search_api_requests: int = 0

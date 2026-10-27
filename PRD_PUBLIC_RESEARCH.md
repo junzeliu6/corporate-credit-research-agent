@@ -7,16 +7,13 @@
 
 ## 2. 输出文档结构
 - 封面：主体名称/代码、研究日期、财务报表口径、公开信息研究声明。
-- 01 股权结构与股东背景：主要股东与股权图；若不足则列表并说明未核实。
-- 02 公司发展历史：带日期的关键里程碑。
-- 03 主营业务：分部、收入结构及服务市场（来源允许时）。
-- 04 经营模式：采购、研发/生产、销售、客户、盈利模式及已知/未知项。
-- 05 主要产品：产品、应用领域、业务板块、进展与披露日期。
-- 06 行业发展和监管：近年趋势、扶持政策、监管变化、潜在业务影响。
-- 07 财务分析：三表核心数据、同比趋势、指标、现金流及风险信号。
-- 08 综合研究结论：有依据的观察、潜在风险、信息局限，不给授信审批结论。
-- 09 待补充资料与尽调问题清单：按优先级与对应章节组织。
-- 10 研究依据（可选独立文件）：内部保留原始URL、文件标题、发布时间及可定位的页码/章节；正式报告默认不展示`[Sxx]`、`Fxxx`、`FMxxx`等技术编号。
+- 01 企业基本情况：按时间写到研究日，覆盖成立背景、改制/上市、重大历史事件与里程碑、业务演变或转型、当前行业/产业链定位及上下游角色。股权图在数据允许且图片实际生成时作为可选图表插入，不写常规股东、控制关系、比例完整性或国资性质分析。
+- 02 经营情况分析：主营业务、主要产品、采购、研发/生产、销售、客户、盈利模式及已知/未知项。
+- 03 行业环境与政策分析：近年趋势、竞争格局、扶持政策、监管变化、潜在业务影响。
+- 04 财务分析：三表核心数据、同比趋势、指标、现金流及风险信号。
+- 05 综合授信风险分析：有依据的经营、行业政策及财务观察和潜在风险，不给授信审批结论。只有明确原文支持的重大治理风险事件可审慎提及。
+- 06 待补充资料及尽调问题：按优先级与对应章节组织。
+- 研究依据（可选独立文件）：内部保留原始URL、文件标题、发布时间及可定位的页码/章节；正式报告默认不展示`[Sxx]`、`Fxxx`、`FMxxx`等技术编号。
 
 ## 3. 专业 Skill 设计（v5 新增）
 
@@ -41,12 +38,12 @@
 - V2.5继续使用**一个DeepSeek主Agent**，不建设多Agent系统。完整授信任务通过多Skill计划同时纳入`ownership-structure`和`financial-analysis`；行业与政策研究继续使用独立Instructions和V1.5通用检索Tools，**不是第三个Skill**。
 - 主Agent必须在运行时真实调用两个高层Skill Tool。两个Tool只接受已解析的ticker等必要参数；`source_id`、PDF/JSON路径、可比年度、Skill名称和输出目录由Python Runtime绑定并验证，模型不得覆盖。
 - 所有模块必须使用同一`CompanyIdentity`。首测财务比较固定为FY2024/FY2025合并口径，股权结构使用实际披露基准日；不同期间只可并列说明，不得混合加总或写成同一时点事实。
-- 企业基本面、股权、财务和行业检索先形成紧凑结构化上下文。DeepSeek负责撰写企业背景与股权、经营、行业政策、财务、综合授信风险和尽调问题六章正文；Python只插入确定性财务表格、股权图并机械组装Markdown，不使用固定模板代写，也不把各模块旧Markdown简单拼接为正式报告。
-- 第五章综合授信风险应关联至少两个研究维度，区分可核实事实与审慎推断，不决定具体授信额度、不输出具有审批效力的结论。第六章问题应对应前文实际风险和资料缺口，避免通用问题堆叠。
+- 企业基本面、股权、财务和行业检索先形成结构化后台产物。DeepSeek负责撰写企业基本情况、经营、行业政策、财务、综合授信风险和尽调问题六章正文；第一章使用年报及通用检索取得的企业历史、定位和产业链原文。ownership Tool只向主模型投影绘图状态，完整股权关系留在后台。Python只插入确定性财务表格和实际存在的股权图并机械组装Markdown，不使用固定模板代写，也不把各模块旧Markdown简单拼接为正式报告。
+- 第五章综合授信风险应关联经营、行业政策和财务中的至少两个研究维度，区分可核实事实与审慎推断，不决定具体授信额度、不输出具有审批效力的结论。常规股权/控制关系不进入正文；只有明确原文支持的控制权变更、资金占用、重大关联交易、股权质押等重大治理风险事件可进入第五/六章。第六章问题应对应前文实际风险和资料缺口，避免通用问题堆叠。
 - 模型上下文不得重复发送完整PDF、网页正文或大体量历史JSON；完整原文、URL、内部技术ID、Skill加载记录和执行轨迹独立保存。正式Markdown不显示Fact/Metric/Source/Evidence等技术编号。
 - `SkillRuntime`应把实际加载的`SKILL.md` instructions提供给集成层，由高层Tool向DeepSeek投影紧凑`skill_method`，不得只记录“已加载”事件却不让模型取得专业研究方法。股权图本地绝对路径不得进入模型上下文；顶层来源文件保留S01/S10下载和解析路径及`runtime_status=parsed`。
-- 单个Skill、网页或章节失败不应丢弃其他成果。搜索超时、鉴权和参数错误返回结构化失败；单个格式错误章节只跳过该章并保留其他有效章节。存在可交付模型正文或确定性产物时返回`PARTIAL_SUCCESS`并标明缺失模块；模型整体失败或全部最小结构无法解析时保留数据、图表、来源和轨迹，只生成“报告未完成”说明，不以Python模板补写。
-- 完整Live的`SUCCESS`要求两个Skill和六章均完成，并且轨迹至少包含一次证据提取事件且取得事实或候选；只有搜索或抓取记录、没有可用证据时不得标记成功。`--confirm-live`授权一次受控任务，但该任务的Agent Loop可能包含多次模型请求，CLI帮助必须明确提示。
+- 单个网页、章节或财务Skill失败不应丢弃其他成果。ownership仍必须尝试执行并记录状态，但其资料不完整、绘图失败或图片缺失只导致跳过股权图，不阻断其他章节和整体交付。搜索超时、鉴权和参数错误返回结构化失败；单个格式错误章节只跳过该章并保留其他有效章节。模型整体失败或全部最小结构无法解析时保留数据、图表、来源和轨迹，只生成“报告未完成”说明，不以Python模板补写。
+- 完整Live的`SUCCESS`要求两个Skill均已尝试、financial Skill成功、六章均完成，并且轨迹至少包含一次证据提取事件且取得事实或候选；ownership的成功/部分成功/失败只决定可选股权图。只有搜索或抓取记录、没有可用证据时不得标记成功。`--confirm-live`授权一次受控任务，但该任务的Agent Loop可能包含多次模型请求，CLI帮助必须明确提示。
 - V2.5首次完整DeepSeek+百度Live已执行一次并为`PARTIAL_SUCCESS`：双Skill和六章正文成功，但外部网页原文与证据提取未完成。搜索子预算、候选降级和报告分析边界已完成离线修复；新的Live仍需DeepSeek与百度搜索各自独立的显式确认，失败后不得自动扩大预算或重复付费调用。
 - V2.5离线实现、Mock产物与全量回归已经完成：同一根主Agent轨迹实际规划并调用两个Skill及V1.5检索Tools，六章正文、股权图和财务表均已交付且正式Markdown不显示技术ID。离线Mock只证明编排、容错和交付机制；首次完整Live为`PARTIAL_SUCCESS`，修复后的完整复测仍待用户单独授权，尚未完成最终验收。
 
@@ -84,9 +81,9 @@
 | U29 | 行业与财务联动 | DeepSeek读取V2.3结构化财务上下文，分析行业/竞争/政策与收入、毛利、存货、现金流等指标的可能关系；财务数值仍由Python提供和计算 |
 | U30 | 行业报告交付 | Markdown正文来自DeepSeek且覆盖趋势、竞争、政策、企业影响、授信风险和尽调问题；后台独立保存研究上下文、来源与执行轨迹，单个来源失败允许部分成功 |
 | U31 | 完整任务双Skill调度 | 单次完整研究任务的执行轨迹证明主Agent先后选择并加载`ownership-structure`和`financial-analysis`，调用各自高层Tool；SkillRegistry仍只登记两个Skill |
-| U32 | 跨模块综合分析 | 第五章正文来自DeepSeek，并把经营、股权/治理、行业政策和财务中的至少两个维度关联分析；不是Python模板或子报告机械拼接 |
-| U33 | 模块部分失败 | 任一Skill、网页或章节失败时保留其他成功模块、图表和数据，以`PARTIAL_SUCCESS`交付并明确缺失项；全部正文失败时只标记未完成 |
-| U34 | 完整Markdown交付 | `credit_research_report.md`包含六章、股权图、必要财务表和针对性尽调问题；正文不显示技术ID，后台来源和轨迹仍可追溯 |
+| U32 | 跨模块综合分析 | 第五章正文来自DeepSeek，并把经营、行业政策和财务中的至少两个维度关联分析；不是Python模板或子报告机械拼接 |
+| U33 | 模块部分失败 | 财务Skill、网页或章节失败时保留其他成功模块、图表和数据并按完成范围降级；ownership失败或无图时只跳过图形区块，其他完整章节仍可正常交付；全部正文失败时只标记未完成 |
+| U34 | 完整Markdown交付 | `credit_research_report.md`包含六章、必要财务表、针对性尽调问题，以及实际生成时的股权图和中性图注；正文不显示技术ID，后台来源和轨迹仍可追溯 |
 | U35 | 紧凑上下文与统一预算 | 模型输入不嵌入完整PDF/网页，两个Skill和检索Tools受同一运行时轮次/Tool预算约束；预算耗尽后使用已有成果降级交付 |
 | U36 | 完整Live安全边界 | DeepSeek与百度搜索Live分别需要密钥、模式开关和显式确认；缺少任一确认时在外部请求前停止，Mock不得创建真实请求 |
 
@@ -98,7 +95,7 @@
 - `AnalysisFinding`: category(`fact`/`calculated`/`risk_signal`/`hypothesis`/`missing_info`), title, explanation, evidence_ids, confidence_note?.
 - `DueDiligenceQuestion`: priority, module, question, reason, requested_document?, related_evidence_ids.
 - `IndustryResearchContext`: identity, business_context, financial_context, retrieved_sources, source_failures, policy_metadata, research_limits；只保存模型研究所需的紧凑上下文，不重复嵌入完整网页或PDF。
-- `CompleteResearchContext`: identity, fundamentals, skill_plan, ownership_snapshot?, financial_snapshot?, industry_evidence?, period_alignment, module_status, context_stats；只向模型提供完整报告写作所需的紧凑结构化内容。
+- `CompleteResearchContext`: identity, fundamentals, skill_plan, ownership_snapshot?, financial_snapshot?, industry_evidence?, period_alignment, module_status, context_stats；后台保留完整ownership产物，主模型只接收其绘图状态；其他字段只提供完整报告写作所需的紧凑结构化内容。
 - `CompleteExecutionTrace`: planned_skills, executed_skills, skill_calls, module_status, module_errors, tool_calls, usage, budget_limits, delivered_topics, missing_topics, artifact_paths。
 - `ResearchReport`: identity, as_of_date, chapters, findings, questions, sources, limitations.
 

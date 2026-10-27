@@ -70,9 +70,9 @@ def test_mock_agent_autonomously_calls_search_fetch_extract_and_has_no_api_cost(
     assert trace["search_api_requests"] == 0
     assert trace["estimated_search_cost_cny"] == 0
     assert trace["budget_limits"] == {
-        "max_search_rounds": 10,
-        "max_search_calls": 10,
-        "max_search_requests": 10,
+        "max_search_rounds": 15,
+        "max_search_calls": 15,
+        "max_search_requests": 15,
         "max_results_per_request": 5,
         "max_fetches": 20,
         "max_extractions": 20,

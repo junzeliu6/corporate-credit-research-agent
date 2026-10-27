@@ -344,20 +344,20 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--max-search-rounds",
         type=int,
-        default=10,
-        help="V1.5最多检索轮次；同一模型响应内并行搜索计一轮，默认10",
+        default=15,
+        help="V1.5最多检索轮次；同一模型响应内并行搜索计一轮，默认15",
     )
     parser.add_argument(
         "--max-search-calls",
         type=int,
-        default=10,
-        help="V1.5最多search_web Function Tool调用次数，默认10",
+        default=15,
+        help="V1.5最多search_web Function Tool调用次数，默认15",
     )
     parser.add_argument(
         "--max-search-requests",
         type=int,
-        default=10,
-        help="单次任务最多真实百度搜索API请求数，默认10；缓存命中不计费请求",
+        default=15,
+        help="单次任务最多真实百度搜索API请求数，默认15；缓存命中不计费请求",
     )
     parser.add_argument(
         "--max-search-results",

@@ -101,7 +101,7 @@
 - 官方可靠披露和Python确定性计算属于“已核验”；单一来源、搜索候选、冲突信息或分析假设属于“未核验”，应使用“可能/需进一步核实”等措辞；完全无来源内容不得作为企业事实输出。疑似Prompt Injection继续隔离。
 - 单个网页403/404、超时或正文不足会记录失败来源和未核验Candidate，并允许Agent继续读取其他来源。存在失败来源、单一来源、候选或冲突时，运行结果标记为`partial_success`而不是整体失败。
 - 中文段落召回使用研究主题及同义表达（如核心业务、产品群、营业收入、营销模式和学术推广）；验证码、登录墙、Access Denied与反爬占位页不会登记为有效正文。
-- 单任务默认最多10轮检索、10次`search_web`、10次真实搜索API请求、5条/次、20次抓取、20次证据提取、60次总Function Tool调用和70个Agent轮次。所有限制由Python计数；第10轮允许、第11轮拒绝。预算耗尽后停止新增工具并保留已有Fact/Candidate、检索记录和可信度状态；这些确定性资料不是正式分析正文，正式文字仍需由DeepSeek生成或明确标记未完成。
+- 单任务默认最多15轮检索、15次`search_web`、15次真实搜索API请求、5条/次、20次抓取、20次证据提取、60次总Function Tool调用和70个Agent轮次。所有限制由Python计数；第15轮允许、第16轮拒绝。上述数量是上限而非目标，资料充分时应提前停止；预算耗尽后保留已有Fact/Candidate、检索记录和可信度状态并按允许工具继续收尾。这些确定性资料不是正式分析正文，正式文字仍需由DeepSeek生成或明确标记未完成。
 - 完整网页保存在本地；Tool只返回受限摘要、相关段落和必要来源信息，重复查询与网页复用缓存。内部ID可用于运行时关联，但不要求DeepSeek在正式正文中返回或展示。
 - 默认LLM和搜索都是Mock；两者Live必须分别选择、配置密钥和显式确认。日常测试不会发送真实百度或DeepSeek请求；已获用户逐次授权的Live验收另行记录。
 
@@ -138,10 +138,11 @@
 - V2.5不新增Agent角色或第三个Skill。完整/综合授信任务通过多Skill计划同时选择`ownership-structure`和`financial-analysis`，行业研究继续由同一主Agent调用V1.5的`search_web`、`fetch_source`和`extract_evidence`。
 - 两个Skill高层Tool只允许模型提交已解析ticker；主年报、比较年报、PDF/JSON路径、Skill名称和输出目录由Python Runtime绑定。所有模块共享同一上市主体，财务比较保持FY2024/FY2025合并口径，股权数据保留实际披露基准日。
 - `SkillRuntime`返回实际加载的`SKILL.md` instructions，高层Tool向模型投影紧凑`skill_method`；这使专业方法真正进入运行上下文，同时避免发送整份Skill文本。股权图本地绝对路径不发送模型，S01/S10下载与解析路径只在后台来源文件中以`runtime_status=parsed`保留。
-- DeepSeek负责企业背景与股权、经营、行业政策、财务、综合授信风险和尽调问题六章正文。第五章必须关联至少两个研究维度；Python只插入股权图和确定性财务表格，不改写模型章节，也不拼接旧模板报告。
+- DeepSeek负责企业基本情况、经营、行业政策、财务、综合授信风险和尽调问题六章正文。第一章按时间顺序写到研究日，重点覆盖成立背景、改制/上市、重大事件与里程碑、业务演变或转型、当前行业/产业链定位以及上下游角色；第二章再展开经营模式，第三章再展开行业与政策，避免重复。第五章至少关联经营、行业政策和财务中的两个维度。Python只插入可用的股权图和确定性财务表格，不改写模型章节，也不拼接旧模板报告。
+- `ownership-structure`仍在后台加载并执行来源、比例与绘图规则，完整股权数据和失败诊断继续保存在结构化产物/轨迹中；主模型只接收图形状态，不再撰写常规股东、控制关系、比例完整性或国资性质分析。图片存在时报告只插入股权图及中性图注；资料不完整或未生成图片时直接跳过图形区块，不阻断其他章节。只有获得明确原文支持的控制权变更、资金占用、重大关联交易、股权质押等重大治理风险事件，才可在综合风险或尽调问题中审慎提及。
 - 单个Skill、网页或章节失败时保留其他成功成果并返回`PARTIAL_SUCCESS`；搜索超时、鉴权和参数错误转换为结构化失败，单个格式错误章节被跳过而不丢弃有效章节。模型整体失败时保留结构化数据、图表、来源和轨迹并明确报告未完成，不用Python模板补写专业分析。
 - 核心产物为`credit_research_report.md`、`credit_research_context.json`、`credit_research_sources.json`、`credit_research_execution_trace.json`、模型草稿/交付状态和股权SVG/PNG。正式Markdown不显示Fact/Metric/Source/Evidence等技术ID，后台产物仍可审计。
-- Live只有在两个Skill和六章均完成、并且至少发生一次证据提取且得到事实或候选时才可标记`SUCCESS`。V2.5定向测试`69 passed in 5.62s`、全量回归`263 passed in 15.08s`；离线Mock在同一根轨迹中完成2次Skill调用、9次Tool调用和10次Mock模型请求，真实外部搜索请求为0。2026-10-23完整Live完成6次DeepSeek请求、10次Tool调用和6次百度真实搜索，并交付六章正文；但唯一网页读取返回HTTP 412，未取得外部原文或形成外部Fact，因此结果为`PARTIAL_SUCCESS`。详细结果见`V2_5_LIVE_TEST_STATUS.md`。
+- Live仍要求模型尝试调用两个Skill并交付六章，财务Skill、外部检索原文及证据是完整状态门槛；ownership模块无论成功、部分成功或失败，都只影响可选股权图，不再单独阻断其他章节或整体交付。V2.5历史定向测试`69 passed in 5.62s`、全量回归`263 passed in 15.08s`；后续最新测试结果以测试记录为准。2026-10-23完整Live完成6次DeepSeek请求、10次Tool调用和6次百度真实搜索，并交付六章正文；但唯一网页读取返回HTTP 412，未取得外部原文或形成外部Fact，因此结果为`PARTIAL_SUCCESS`。详细结果见`V2_5_LIVE_TEST_STATUS.md`。
 - Live后已离线修复关键失败路径：局部搜索预算耗尽不再禁止读取/提取已有候选，已有候选优先于新增付费搜索，单页403/404/412后返回剩余候选；Tool结果新增股权、单品、两期趋势、流动资产归因和营运资金边界，Markdown不再显示内部错误码。修复后专项回归`105 passed in 6.79s`、全量回归`275 passed in 15.78s`，本轮未调用真实API。
 - 2026-10-26第二次完整Live中，DeepSeek请求28次、Function Tool调用29次、百度实际搜索6次；两个Skill均成功，5份政府网页原文形成20条事实和44条证据，模型生成6章及18个尽调问题。严格JSON解析因`"十五五"`内部双引号未转义而失败；解析器现仅对此类可确定内部引号作保守修复，截断或其他结构错误仍拒绝。保存草稿已离线恢复为`credit_research_report_recovered.md`，恢复过程网络请求为0；详细记录见`V2_5_LIVE_TEST_STATUS.md`。
 - 后续网页完整Live正常完成600秒超时配置下的模型与Tool链路，但模型在唯一完整`json`代码块前添加简短交付说明，旧解析器因此拒绝已完整结束的六章草稿。解析器现允许不超过200字符的前言加唯一闭合`json`代码块，并继续拒绝多个代码块、未闭合、截断、超长前言或尾随正文；本轮按用户要求只验证已保存原始草稿可解析，不恢复Markdown或Word，也不再次调用API。
@@ -150,7 +151,7 @@
 
 - **V3.1A 报告展示**：安全发现`data/`下的完整研究运行和仓库内V2.5 Mock样例；优先展示`credit_research_report_recovered.md`，但保留原始失败状态并显示“已离线恢复，需复核”，不会把恢复版静默标成成功。
 - Markdown报告支持按二级标题切换“全文/章节”；股权PNG优先、SVG降级并由`st.image`单独展示；财务科目变动和Python已计算比率直接读取`financial_metrics.json`，界面不重新计算或改写分析。
-- **V3.1B Agent连接**：输入企业名称/股票代码、自定义任务并选择完整、股权、财务、行业或确定性基本面模式；`ui_service.py`只构造白名单argv，通过`sys.executable -m credit_research_agent.cli`且`shell=False`调用现有入口。完整/行业Live分别要求DeepSeek和百度确认，股权/财务要求DeepSeek确认；基本面模式不调用模型。网页发起的LLM Live统一使用600秒单次请求超时及0次SDK自动重试，以容纳长正文并避免超时后的重复付费请求；该上限不是整项任务时限。网页完整Live另外固定使用30轮、40次总Tool、搜索轮次/调用次数/真实请求数均为6、10次网页读取和10次证据提取的隐藏预算，其他模式不受影响。
+- **V3.1B Agent连接**：输入企业名称/股票代码、自定义任务并选择完整、股权、财务、行业或确定性基本面模式；`ui_service.py`只构造白名单argv，通过`sys.executable -m credit_research_agent.cli`且`shell=False`调用现有入口。完整/行业Live分别要求DeepSeek和百度确认，股权/财务要求DeepSeek确认；基本面模式不调用模型。网页发起的LLM Live统一使用600秒单次请求超时及0次SDK自动重试，以容纳长正文并避免超时后的重复付费请求；该上限不是整项任务时限。网页完整Live隐藏预算现为70轮、60次总Tool、搜索轮次/调用次数/真实请求数均为15、20次网页读取和20次证据提取，其他模式不受影响；资料充分时Agent应提前停止，不要求用完预算。
 - 每次运行写入`data/streamlit_runs/<run_id>/`独立目录；模型不能通过界面覆盖来源编号、Skill、本地路径或任意CLI参数。页面只显示API Key是否已配置，不读取或输出密钥值。
 - **V3.1C 任务状态**：独立后台Worker把请求和状态写入任务目录；页面刷新或关闭不会重新调用CLI，重新打开后可从磁盘恢复队列、运行、成功、部分成功或失败状态。幂等键、运行中任务锁和跨浏览器会话的项目级原子Live锁阻止重复调用；并发时只有一个标签页/会话可以启动Live。Worker完成、启动/请求校验失败或陈旧任务收敛时释放锁。意外断电或崩溃后PID已不存在的`running`任务，以及超过60秒仍未启动的`queued`任务，会自动收敛为失败并保留已有产物。Windows使用`OpenProcess/GetExitCodeProcess`只读探测PID，只有POSIX使用`os.kill(pid, 0)`，避免误终止Worker；损坏或空Live锁仅在确认不存在其他活动Live任务时自动清理并原子重试。轻量`ui_progress.jsonl`只记录阶段、模型轮次、Tool名称和Token计数等安全字段，不保存密钥、网页正文或模型上下文；完整研究继续以既有`credit_research_execution_trace.json`和交付状态为审计依据。
 - 完整研究和股权、财务、行业三个单项Runtime均复用同一个脱敏`progress_sink`，页面显示实际模型及Tool事件，不以固定进度条代替执行轨迹。
@@ -199,7 +200,7 @@ python -m credit_research_agent 600998.SH `
 
 ## V3.3C/D 通用披露提取与完整研究接入
 
-- `fundamental_disclosures.py`从当前企业已完成主体/文件绑定的官方年报中召回发展历史、主营业务、经营模式和主要产品明确披露，保留页码与证据，不读取`fundamentals_seeds.json`。
+- `fundamental_disclosures.py`从当前企业已完成主体/文件绑定的官方年报中召回发展历史、主营业务、经营模式和主要产品明确披露，保留页码与证据，不读取`fundamentals_seeds.json`。历史召回覆盖成立/上市、更名改制、已完成并购重组、业务转型、重大项目投产和发展里程碑，最多保留8条可定位事实；“计划、拟、预计”等前瞻事项不会被误记为已发生历史。
 - `ownership_disclosures.py`读取前十大股东表及年报明确披露的控股股东/实际控制人，复用现有ownership模型、比例校验和Graphviz。前十大股东不是完整名册；不足100%时默认输出部分图并标记`formal_ready=false`，不凭差额生成具体股东。
 - `company_scope.py`对银行、证券、保险等特殊报表企业设置保守门禁；只有业务特征和金融机构特有报表科目共同支持时才排除，不根据公司名称猜测。
 - `generic_research.py`保持`ownership-structure`和`financial-analysis`的既有Tool名称，只把执行器替换为当前企业的动态年报/结构化数据；CLI完整研究新增`--auto-prepare`，并向Integrated Runtime注入任务级`SourceCatalog`。
@@ -561,8 +562,8 @@ python -m credit_research_agent "002603.SZ" `
   --llm-mode live --confirm-live `
   --search-mode live --confirm-search-live `
   --max-agent-turns 70 --max-tool-calls 60 `
-  --max-search-rounds 10 --max-search-calls 10 `
-  --max-search-requests 10 --max-search-results 5 `
+  --max-search-rounds 15 --max-search-calls 15 `
+  --max-search-requests 15 --max-search-results 5 `
   --max-source-fetches 20 --max-extract-calls 20
 ```
 
@@ -879,6 +880,8 @@ V3.2 Word结构转换、中文正文、标题层级、列表编号重启、财�
 V3.3A动态主体、沪深官方Provider、记录级缓存、年报全文/摘要/修订筛选、任务级来源、跨企业目录、PDF主体复核及CLI早返回：新增`34 passed`；定向相关回归`80 passed in 4.38s`；最新完整离线回归`387 passed in 18.32s`
 V3.3B合并三表定位、核心科目、单位/币种证据/期间/口径、空值/负数、列歧义、非人民币、来源主体、追溯调整、CLI、现有财务计算及Skill上下文兼容：最终完整离线回归`420 passed in 19.13s`
 V3.3C/D通用基本面、前十大股东及控制关系、非金融范围门禁、任务级来源、双Skill执行器、`--auto-prepare`和Streamlit完整研究接入；九州通修复后Live已交付六章，工业富联Live已生成六章完整首对象并离线恢复Markdown/Word。最新完整离线回归`449 passed in 75.75s`
+
+报告内容优化新增第一章历史/里程碑/业务演变/企业定位与产业链召回、ownership模型可见数据最小化及无图非阻断、网页完整Live的15次搜索上限。定向回归分别为`40 passed`和`57 passed`，最新全量离线回归为`457 passed in 87.12s`；本轮未调用真实DeepSeek或百度API。
 ```
 
 网络请求使用离线假响应测试，因此日常 `pytest` 不依赖巨潮资讯、百度搜索或 DeepSeek 是否可访问。

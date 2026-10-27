@@ -228,15 +228,34 @@ def test_search_budget_enforces_requests_results_and_supplemental_rounds(tmp_pat
     }
 
 
-def test_v15_default_budget_allows_tenth_round_and_blocks_eleventh() -> None:
+def test_v15_default_budget_allows_fifteenth_round_and_blocks_sixteenth() -> None:
     budget = SearchBudget()
 
-    for round_id in range(1, 11):
+    for round_id in range(1, 16):
         budget.record_search_round(round_id)
-    assert budget.search_rounds == 10
+    assert budget.search_rounds == 15
     with pytest.raises(SearchError) as exc_info:
-        budget.record_search_round(11)
+        budget.record_search_round(16)
     assert exc_info.value.code == "search_round_limit_exceeded"
+
+
+def test_v15_default_budget_allows_fifteenth_search_and_blocks_sixteenth() -> None:
+    budget = SearchBudget()
+
+    for index in range(15):
+        query = SearchQuery(query=f"检索主题-{index}")
+        budget.check_query(query, cache_hit=False, external_request=True)
+        budget.record_search(cache_hit=False, external_request=True)
+    assert budget.search_tool_calls == 15
+    assert budget.search_api_requests == 15
+
+    with pytest.raises(SearchError) as exc_info:
+        budget.check_query(
+            SearchQuery(query="第16次检索"),
+            cache_hit=False,
+            external_request=True,
+        )
+    assert exc_info.value.code == "search_call_limit_exceeded"
 
 
 def test_all_tool_types_share_hard_total_budget() -> None:
@@ -253,8 +272,8 @@ def test_all_tool_types_share_hard_total_budget() -> None:
 def test_v15_default_individual_tool_budgets() -> None:
     budget = SearchBudget()
 
-    assert budget.max_search_calls == 10
-    assert budget.max_search_requests == 10
+    assert budget.max_search_calls == 15
+    assert budget.max_search_requests == 15
     assert budget.max_fetches == 20
     assert budget.max_extractions == 20
     assert budget.max_total_tool_calls == 60
