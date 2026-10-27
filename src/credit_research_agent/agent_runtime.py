@@ -657,9 +657,18 @@ def build_ownership_snapshot_from_artifacts(
 
     graph = _json_load(Path(graph_path))
     validation = _json_load(Path(validation_path))
+    dataset: Mapping[str, Any] = {}
+    dataset_path = artifacts.get("dataset_path")
+    if dataset_path:
+        try:
+            loaded_dataset = _json_load(Path(dataset_path))
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            loaded_dataset = {}
+        if isinstance(loaded_dataset, Mapping):
+            dataset = loaded_dataset
     nodes = {
         str(item["node_id"]): item
-        for item in graph.get("nodes", [])
+        for item in [*dataset.get("nodes", []), *graph.get("nodes", [])]
         if item.get("node_id") and item.get("name")
     }
 
@@ -690,7 +699,10 @@ def build_ownership_snapshot_from_artifacts(
         )
 
     control_relationships: List[Dict[str, Any]] = []
-    for relationship in graph.get("control_relationships", []):
+    control_source = dataset.get("control_relationships") or graph.get(
+        "control_relationships", []
+    )
+    for relationship in control_source:
         control_relationships.append(
             {
                 "subjects": [
@@ -702,6 +714,7 @@ def build_ownership_snapshot_from_artifacts(
                 ),
                 "relation_type": relationship.get("relation_type"),
                 "as_of_date": relationship.get("as_of_date")
+                or dataset.get("as_of_date")
                 or graph.get("as_of_date"),
                 "verification_status": relationship.get("status"),
                 "note": relationship.get("note"),
@@ -731,30 +744,27 @@ def build_ownership_snapshot_from_artifacts(
             "description": item.get("description"),
             "reason": item.get("reason"),
         }
-        for item in graph.get("missing_information", [])
+        for item in (
+            dataset.get("missing_information")
+            or graph.get("missing_information", [])
+        )
     ]
 
     limitations: List[str] = []
-    dataset_path = artifacts.get("dataset_path")
-    if dataset_path:
-        try:
-            dataset = _json_load(Path(dataset_path))
-        except (OSError, UnicodeError, json.JSONDecodeError):
-            dataset = {}
-        if isinstance(dataset, Mapping):
-            limitations.extend(str(item) for item in dataset.get("limitations", []))
+    if dataset:
+        limitations.extend(str(item) for item in dataset.get("limitations", []))
     limitations.extend(str(item) for item in graph.get("warnings", []))
     # 同一限制可能同时来自原始数据集和展示图；保持原顺序去重。
     limitations = list(dict.fromkeys(limitations))
 
-    identity = graph.get("identity", {})
+    identity = dataset.get("identity") or graph.get("identity", {})
     return {
         "subject": {
             "legal_name": identity.get("legal_name"),
             "short_name": identity.get("short_name"),
             "ticker": identity.get("ticker"),
         },
-        "as_of_date": graph.get("as_of_date"),
+        "as_of_date": dataset.get("as_of_date") or graph.get("as_of_date"),
         "formal_ready": bool(graph.get("formal_ready")),
         "ownership_relations": ownership_relations,
         "control_relationships": control_relationships,

@@ -115,6 +115,39 @@ def test_complete_live_uses_conservative_hidden_budget() -> None:
         assert command.argv[option_index + 1] == value
 
 
+def test_complete_command_accepts_unregistered_a_share_and_enables_auto_prepare() -> None:
+    """新企业只需合法A股代码；前端只做离线语法路由，主数据校验由CLI启动阶段执行。"""
+
+    command = build_mock_command(
+        PROJECT_ROOT,
+        _request(
+            ResearchMode.COMPLETE,
+            company="600998.SH",
+            confirm_deepseek_live=False,
+            confirm_baidu_live=False,
+        ),
+        run_id="dynamic-jiuzhoutong",
+        python_executable="python-test",
+    )
+
+    assert command.argv[:4] == (
+        "python-test",
+        "-m",
+        "credit_research_agent.cli",
+        "600998.SH",
+    )
+    assert "--auto-prepare" in command.argv
+    assert "--annual-report-count" in command.argv
+    assert command.argv[command.argv.index("--annual-report-count") + 1] == "2"
+    assert command.argv[command.argv.index("--onboarding-dir") + 1] == str(
+        command.run_dir / "onboarding"
+    )
+    assert command.artifact_dir == command.run_dir / "CN-A-SSE-600998"
+    # 动态完整研究的Source ID由运行时绑定，不把演示公司S01/S10透传给CLI。
+    assert "--agent-source" not in command.argv
+    assert "--financial-comparison-source" not in command.argv
+
+
 @pytest.mark.parametrize(
     "mode",
     [ResearchMode.OWNERSHIP, ResearchMode.FINANCIAL, ResearchMode.INDUSTRY],
@@ -196,7 +229,7 @@ def test_invalid_run_id_and_unknown_company_are_rejected() -> None:
             _request(ResearchMode.COMPLETE),
             run_id="../escape",
         )
-    with pytest.raises(ValueError, match="无法唯一识别"):
+    with pytest.raises(UiServiceError, match="6位A股代码"):
         build_live_command(
             PROJECT_ROOT,
             _request(ResearchMode.COMPLETE, company="虚构企业"),

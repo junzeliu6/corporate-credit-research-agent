@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections import defaultdict
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
@@ -44,6 +45,31 @@ class FinancialBuildError(RuntimeError):
     def __init__(self, code: str, message: str) -> None:
         super().__init__(message)
         self.code = code
+
+
+def _financial_period_sort_key(period: str) -> Tuple[int, int, str]:
+    """为财务期间提供稳定排序；标准 ``FY2025`` 按年度数值排序。"""
+
+    match = re.fullmatch(r"FY(\d{4})", period.strip(), flags=re.IGNORECASE)
+    if match:
+        return (1, int(match.group(1)), period)
+    return (0, 0, period)
+
+
+def sort_financial_periods(periods: Iterable[str]) -> List[str]:
+    """去重并排序财务期间，供提取、计算和报告层共享。"""
+
+    return sorted(
+        {period for period in periods if period},
+        key=_financial_period_sort_key,
+    )
+
+
+def latest_financial_period(periods: Iterable[str]) -> Optional[str]:
+    """返回最新可用财务期间；没有期间时返回 ``None``。"""
+
+    ordered = sort_financial_periods(periods)
+    return ordered[-1] if ordered else None
 
 
 class FinancialStatement(str, Enum):
@@ -585,9 +611,14 @@ def calculate_change(
 def validate_financial_facts(
     facts: Sequence[FinancialFact],
     *,
-    required_periods: Sequence[str] = ("FY2024", "FY2025"),
+    required_periods: Optional[Sequence[str]] = None,
 ) -> Tuple[List[NormalizedFinancialFact], FinancialValidationResult]:
     """校验单位、口径、主体及跨报告重复值，并形成可比事实。"""
+
+    if required_periods is None:
+        required_periods = tuple(
+            sort_financial_periods(fact.period for fact in facts)[-2:]
+        )
 
     issues: List[FinancialValidationIssue] = []
     grouped: Dict[Tuple[str, FinancialItem, str, str, EntityScope], List[FinancialFact]] = (
@@ -698,7 +729,9 @@ def calculate_financial_metrics(
         by_item[fact.item].append(fact)
     metrics: List[FinancialMetric] = []
     for item in sorted(by_item, key=lambda value: value.value):
-        rows = sorted(by_item[item], key=lambda row: row.period)
+        rows = sorted(
+            by_item[item], key=lambda row: _financial_period_sort_key(row.period)
+        )
         for prior, current in zip(rows, rows[1:]):
             absolute, yoy, kind = calculate_change(current.value, prior.value)
             reasons: List[str] = []
@@ -744,7 +777,7 @@ def calculate_financial_ratios(
     """计算授信报告常用比率；缺少分子或分母时不强算。"""
 
     lookup = {(fact.item, fact.period): fact for fact in facts}
-    periods = sorted({fact.period for fact in facts})
+    periods = sort_financial_periods(fact.period for fact in facts)
     specifications = (
         ("资产负债率", FinancialItem.TOTAL_LIABILITIES, FinancialItem.TOTAL_ASSETS),
         ("流动比率", FinancialItem.CURRENT_ASSETS, FinancialItem.CURRENT_LIABILITIES),
@@ -811,8 +844,11 @@ def build_financial_risk_flags(
     """输出观察信号，不把信号直接写成风险结论或经营原因。"""
 
     flags: List[FinancialRiskFlag] = []
+    latest_metric_period = latest_financial_period(
+        metric.current_period for metric in metrics
+    )
     for metric in rank_material_changes(metrics):
-        if metric.current_period != "FY2025":
+        if metric.current_period != latest_metric_period:
             continue
         topic = f"{metric.item_label}重大变动"
         yoy_text = (
@@ -890,15 +926,19 @@ def build_financial_risk_flags(
                 )
             )
     lookup = {(fact.item, fact.period): fact for fact in facts}
-    profit = lookup.get((FinancialItem.NET_PROFIT, "FY2025"))
-    cash_flow = lookup.get((FinancialItem.OPERATING_CASH_FLOW, "FY2025"))
+    latest_fact_period = latest_financial_period(fact.period for fact in facts)
+    profit = lookup.get((FinancialItem.NET_PROFIT, latest_fact_period))
+    cash_flow = lookup.get((FinancialItem.OPERATING_CASH_FLOW, latest_fact_period))
     if profit and cash_flow and profit.value != 0 and cash_flow.value * profit.value < 0:
         flags.append(
             FinancialRiskFlag(
                 flag_id=f"RF{len(flags) + 1:03d}",
                 severity="attention",
                 topic="利润与经营现金流方向不一致",
-                observation="FY2025净利润与经营活动现金流量净额符号相反，需核查利润现金保障程度。",
+                observation=(
+                    f"{latest_fact_period}净利润与经营活动现金流量净额符号相反，"
+                    "需核查利润现金保障程度。"
+                ),
                 supporting_fact_ids=sorted(
                     set(profit.supporting_fact_ids + cash_flow.supporting_fact_ids)
                 ),
@@ -1046,12 +1086,15 @@ def extract_change_explanations(
 
     # 净利润由负转正没有一条年报原文给出完整归因。这里仅把收入、成本和毛利率
     # 的确定性变化组合成支持性推断，并明确保留“非完整因果解释”的边界。
+    latest_priority_period = latest_financial_period(
+        item.current_period for item in priority_items
+    )
     priority_profit = next(
         (
             item
             for item in priority_items
             if item.item is FinancialItem.NET_PROFIT
-            and item.current_period == "FY2025"
+            and item.current_period == latest_priority_period
         ),
         None,
     )
@@ -1362,7 +1405,14 @@ class FinancialBuilder:
 
         financial_facts = normalize_financial_items(raw_facts, evidence, seeds)
 
-        normalized, validation = validate_financial_facts(financial_facts)
+        available_periods = sort_financial_periods(
+            fact.period for fact in financial_facts
+        )
+        required_periods = tuple(available_periods[-2:])
+        normalized, validation = validate_financial_facts(
+            financial_facts,
+            required_periods=required_periods,
+        )
         if not validation.is_valid:
             messages = "；".join(
                 issue.message
@@ -1381,10 +1431,13 @@ class FinancialBuilder:
             raise FinancialBuildError("duplicate_fact_id", "财务事实及原因事实编号重复")
         if len({item.evidence_id for item in all_evidence}) != len(all_evidence):
             raise FinancialBuildError("duplicate_evidence_id", "财务证据及原因证据编号重复")
+        latest_metric_period = latest_financial_period(
+            item.current_period for item in metrics
+        )
         priority_items = [
             item
             for item in rank_material_changes(metrics)
-            if item.current_period == "FY2025"
+            if item.current_period == latest_metric_period
         ]
         explanations, inferences, hypotheses = extract_change_explanations(
             priority_items,
@@ -1443,7 +1496,9 @@ def render_financial_data_appendix(bundle: FinancialResearchBundle) -> str:
     """
 
     facts = {(item.item, item.period): item for item in bundle.normalized_facts}
-    periods = ["FY2023", "FY2024", "FY2025"]
+    periods = sort_financial_periods(
+        item.period for item in bundle.normalized_facts
+    )
     table_items = [
         FinancialItem.MONETARY_FUNDS,
         FinancialItem.ACCOUNTS_RECEIVABLE,
@@ -1464,8 +1519,8 @@ def render_financial_data_appendix(bundle: FinancialResearchBundle) -> str:
         "",
         "## 可比财务事实",
         "",
-        "| 项目 | FY2023 | FY2024 | FY2025 | 来源 |",
-        "|---|---:|---:|---:|---|",
+        "| 项目 | " + " | ".join(periods) + " | 来源 |",
+        "|---|" + "|".join("---:" for _ in periods) + "|---|",
     ]
     for item in table_items:
         values: List[str] = []
@@ -1481,10 +1536,13 @@ def render_financial_data_appendix(bundle: FinancialResearchBundle) -> str:
         lines.append(f"| {ITEM_LABELS[item]} | {' | '.join(values)} | {source_text} |")
 
     lines.extend(["", "## 重大变动（阈值：同比绝对值≥20%）", ""])
+    latest_metric_period = latest_financial_period(
+        metric.current_period for metric in bundle.metrics
+    )
     material = [
         metric
         for metric in rank_material_changes(bundle.metrics)
-        if metric.current_period == "FY2025"
+        if metric.current_period == latest_metric_period
     ]
     if material:
         for metric in material:
@@ -1500,8 +1558,9 @@ def render_financial_data_appendix(bundle: FinancialResearchBundle) -> str:
         lines.append("- 当前已提取项目未触发重大变动阈值。")
 
     lines.extend(["", "## 财务比率", ""])
+    ratio_periods = set(periods[-2:])
     for ratio in bundle.ratios:
-        if ratio.period in {"FY2024", "FY2025"}:
+        if ratio.period in ratio_periods:
             lines.append(
                 f"- {ratio.period} {ratio.name}：{ratio.value_percent}%（{ratio.formula}）"
             )

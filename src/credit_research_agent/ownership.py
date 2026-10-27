@@ -1321,10 +1321,16 @@ def build_ownership_graph(
     )
 
 
-def ownership_graph_to_dot(graph: OwnershipGraph) -> str:
-    """生成简洁的 Graphviz DOT；边只表达“股东持有企业股份”。"""
+def ownership_graph_to_dot(
+    graph: OwnershipGraph, *, allow_incomplete: bool = False
+) -> str:
+    """生成简洁的 Graphviz DOT；边只表达“股东持有企业股份”。
 
-    if not graph.formal_ready:
+    ``allow_incomplete`` 只供 V3.3 通用年报路径输出明确标记为“部分”的图形。
+    既有正式图入口保持严格校验，默认行为没有变化。
+    """
+
+    if not graph.formal_ready and not allow_incomplete:
         raise OwnershipBuildError(
             "ownership_not_formal_ready",
             "股权比例完整性校验未通过，不能生成正式股权结构图",
@@ -1612,13 +1618,18 @@ def render_ownership_graph(
     output_path: Path,
     *,
     require_graphviz: bool = False,
+    allow_incomplete: bool = False,
 ) -> OwnershipRenderResult:
-    """输出 DOT、SVG 与 PNG；正式输出前必须通过逐分支比例校验。"""
+    """输出 DOT、SVG 与 PNG；正式输出前必须通过逐分支比例校验。
+
+    当 ``allow_incomplete`` 为真时，调用方必须在图外说明这是部分披露图，且
+    ``graph.formal_ready`` 仍保持 ``False``；该开关不会伪造100%完整性结论。
+    """
 
     output_path = Path(output_path)
     if output_path.suffix.lower() != ".svg":
         raise OwnershipBuildError("unsupported_render_format", "V1.2 仅支持 SVG 输出")
-    if not graph.formal_ready:
+    if not graph.formal_ready and not allow_incomplete:
         raise OwnershipBuildError(
             "ownership_not_formal_ready",
             "股权比例完整性校验未通过，不能生成正式股权结构图",
@@ -1626,7 +1637,10 @@ def render_ownership_graph(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     dot_path = output_path.with_suffix(".dot")
     png_path = output_path.with_suffix(".png")
-    dot_path.write_text(ownership_graph_to_dot(graph), encoding="utf-8")
+    dot_path.write_text(
+        ownership_graph_to_dot(graph, allow_incomplete=allow_incomplete),
+        encoding="utf-8",
+    )
     executable = shutil.which("dot")
     if executable:
         for format_name, destination in (("svg", output_path), ("png", png_path)):

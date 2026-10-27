@@ -2,7 +2,7 @@
 
 企业授信研究Agent（Corporate Credit Research Agent）是一个面向银行对公场景的学习型项目：从上市公司公开披露出发，逐步构建可追溯的企业研究辅助 Agent。
 
-当前代码版本已完成 **V3.2：Word 报告导出**；需求基线为 **v5**。V3.1在V2.5单主Agent、双Skill与百度检索链路之上增加一层薄前端，V3.2继续复用同一任务目录和既有Markdown正文，把标题、段落、列表、表格及本地图表确定性转换为排版规范的`.docx`。历史报告和新完成任务均可在Streamlit中下载Word；CLI也提供同一导出内核。导出过程不重新调用DeepSeek或百度、不重写分析文字，并以研究任务目录作为路径安全边界。Live调用仍需用户在网页中分别确认DeepSeek与百度搜索，CLI/Runtime保留第二层门禁。本项目不是授信审批系统，不给出授信额度、贷款定价或具有审批效力的结论。
+当前代码版本已完成 **V3.3A—D 的离线实现**：沪深A股动态主体识别、官方年报准备、通用基本面/股权/财务提取，以及既有双Skill、完整Agent和Streamlit的自动资料准备链路；需求基线为 **v5**。V3.1/V3.2的任务管理、报告展示和Word导出继续复用。V3.3E目前已完成九州通和工业富联两家新企业网页Live：九州通正常交付六章报告；工业富联的DeepSeek首个JSON已包含六章和16项尽调问题，但尾随自我修正伪JSON导致原在线交付失败，现已离线恢复Markdown/Word并修复生产解析器。工业富联部分股权与财务提取仍为部分成功，独立盲测、北交所及更多公司版式尚未验证。当前可准确声明的是“沪深A股非金融企业通用接入架构已实现并通过两家新企业Live验证”，不能表述为所有A股均已兼容。Live调用仍需用户在网页中分别确认DeepSeek与百度搜索，CLI/Runtime保留第二层门禁。本项目不是授信审批系统，不给出授信额度、贷款定价或具有审批效力的结论。
 
 ## V0.1—V0.4 已实现
 
@@ -169,6 +169,55 @@
 - UI调用强制Markdown、图片和DOCX都位于经任务管理确认的`run_dir`，拒绝任意路径读取和跨任务混用；下载大小也受限制。
 - 真实V2.5以岭药业恢复报告已导出为16页A4 Word，包含1张股权图、2个财务表和48个标题。因本机内置LibreOffice不可用，使用Microsoft Word 2021导出PDF并逐页检查；未发现明显表格溢出、图片变形、标题断裂或中文乱码。V3.2专项回归`31 passed in 5.83s`，项目完整离线回归`344 passed in 19.13s`；详见`V3_2_STATUS.md`。
 
+## V3.3A 通用企业识别与官方年报准备
+
+- `security_master.py`通过巨潮统一证券代码索引，并结合深交所公司列表或上交所股票列表核实沪深A股的公司全称、简称、交易所、板块和巨潮`orgId`。代码前缀只负责路由，最终身份必须命中官方记录；错误交易所后缀、ticker或`entity_id`会被拒绝。
+- `SecurityMasterCache`按每一条公司的实际获取时间判断`fresh/refreshed/stale`，而不是用整个缓存文件的写入时间替其他公司“续期”。刷新失败只在已有缓存时显式降级；未知公司不会回退到以岭药业数据。
+- `annual_reports.py`从官方公告响应中选择年报全文，排除摘要、英文版、问询函、更正公告、审计报告及非官方PDF；同一年度明确修订版优先，同时保留被替代版本的排除原因。PDF URL必须来自公告响应，不能由公告编号或日期猜测。
+- 每个企业使用`data/onboarding/<entity_id>/`独立保存身份、发现缓存、任务级`sources.json`、下载和解析文件。任务内可各自使用`S01/S02`，但目录与`entity_id`强绑定，避免跨企业同名来源或缓存覆盖。
+- 下载继续复用V0的HTTPS、官方域名、重定向、大小、PDF文件头、SHA-256和失败记录；解析继续复用物理页码文本接口。下载后会从PDF前20页复核公司名称、证券代码和报告年度，不匹配的文件不得进入后续提取。
+- 新增`--resolve-company`、`--discover-annual-reports`和`--prepare-company`三个独立CLI动作。它们不初始化DeepSeek、百度搜索或业务Skill；完整Agent/Streamlit现已通过V3.3D的`--auto-prepare`复用这些动态数据。
+- 首版正式支持沪深A股；北交所仅保留路由和明确错误，银行、保险、证券及港美股不属于本阶段验收范围。巨潮/交易所网页内部查询没有稳定、版本化的开放API契约，运行时保留官方来源、缓存状态和失败信息，不绕过验证码或访问控制。
+- V3.3A新增34项离线测试，定向相关回归`80 passed in 4.38s`，最终完整离线回归`387 passed in 18.32s`。测试使用假响应且真实DeepSeek/百度请求为0；另以新CLI完成九州通官方只读冒烟，正确选择FY2025/FY2024全文为任务内`S01/S02`并排除摘要。单文件准备验证进一步下载FY2025年报全文并解析`346`页，身份、代码和期间校验均通过。官方元数据、实际发现和准备结果摘要分别见`examples/v3_3a_official_metadata_samples.json`、`examples/v3_3a_jiuzhoutong_discovery.json`、`examples/v3_3a_jiuzhoutong_prepare_summary.json`，详细状态见`V3_3_STATUS.md`。
+
+## V3.3B 通用合并财务报表提取
+
+- `financial_statements.py`消费V3.3A已核验的逐页年报文本，严格定位合并资产负债表、利润表和现金流量表，排除摘要、母公司报表及附注同名行；全程不联网、不调用LLM。
+- 首版结构化16项授信重点科目，保留PDF物理页码、原文、期间、原始单位及人民币元值；币种只接受表头明确披露或年报会计政策核实的人民币，并保存核实依据。随后复用现有同比、财务比率和风险信号计算；破折号和单边空值保持缺失，不补零。
+- 非人民币、未绑定企业的来源、期间列无法唯一确定和三列金额歧义会显式失败或降级。跨年报冲突只有在较新年报明确标注“调整后/重述”时才采用较新比较值，并保留原始冲突审计记录。
+- `build_generic_financial_artifacts`生成事实、证据、指标、比率、风险信号、校验和数据附录；通过`skill_context_paths()`与现有`financial-analysis`上下文兼容。它不生成Python专业分析正文，附注原因自动提取仍待后续完善。
+- 新CLI动作：
+
+```powershell
+python -m credit_research_agent 600998.SH `
+  --extract-financial-statements --annual-report-count 1 `
+  --security-master-cache data/cache/security_master.json `
+  --onboarding-dir data/onboarding
+```
+
+- 九州通FY2025真实年报结果为`success`：三表齐全、32条标准化期间事实、16项同比指标和8项比率；以岭药业不同版式也可提取，短期借款两期为空时正确返回`partial_success`且未补零。完整离线回归`420 passed in 19.13s`，DeepSeek和百度请求均为0。精简真实结果见`examples/v3_3b_jiuzhoutong_financial_summary.json`，详细状态见`V3_3_STATUS.md`。
+
+## V3.3C/D 通用披露提取与完整研究接入
+
+- `fundamental_disclosures.py`从当前企业已完成主体/文件绑定的官方年报中召回发展历史、主营业务、经营模式和主要产品明确披露，保留页码与证据，不读取`fundamentals_seeds.json`。
+- `ownership_disclosures.py`读取前十大股东表及年报明确披露的控股股东/实际控制人，复用现有ownership模型、比例校验和Graphviz。前十大股东不是完整名册；不足100%时默认输出部分图并标记`formal_ready=false`，不凭差额生成具体股东。
+- `company_scope.py`对银行、证券、保险等特殊报表企业设置保守门禁；只有业务特征和金融机构特有报表科目共同支持时才排除，不根据公司名称猜测。
+- `generic_research.py`保持`ownership-structure`和`financial-analysis`的既有Tool名称，只把执行器替换为当前企业的动态年报/结构化数据；CLI完整研究新增`--auto-prepare`，并向Integrated Runtime注入任务级`SourceCatalog`。
+- Streamlit“完整企业授信研究”现在接受沪深A股证券代码，后台先准备官方资料，再运行原主Agent、双Skill、检索、Markdown和Word链路。新企业单项研究模式仍使用旧静态目录，首版应选择完整研究。
+- 九州通真实缓存验证得到7条基本面事实、32条标准化财务期间事实，以及10名前十大股东（披露比例合计64.92%）；其离线Mock完整报告用于验证系统编排，不代表DeepSeek真实研究结论。
+
+### 当前实际支持范围
+
+| 类型 | 状态 |
+|---|---|
+| 上交所/深交所A股非金融企业 | 通用架构已接入；网页Live已验证九州通和工业富联，但部分复杂版式仍会降级 |
+| 北交所 | 仅保留代码路由，官方全称适配未完成并显式拒绝 |
+| 银行、证券、保险 | 当前非金融财务管线不支持 |
+| 港股、美股及其他证券 | 不属于本阶段范围 |
+| 新企业Live | 九州通已正常交付；工业富联六章草稿已零网络恢复，股权和部分财务科目为部分成功 |
+
+原`companies.json`、`sources.json`及各类公司专属Seeds继续作为回归fixture/历史演示数据保存；`--auto-prepare`生产路径不会在新企业数据缺失时回退这些文件。详细审计见`SINGLE_COMPANY_DEPENDENCY_AUDIT.md`，最新状态见`V3.5_STATUS.md`。
+
 ## v5 文档与 Skill 规范
 
 - `SKILLS_SPEC.md`：两个 Skill 的跨模块接口、运行时集成约束和验收矩阵。
@@ -194,7 +243,14 @@ corporate-credit-research-agent/
 │  │  └─ sources.json        # 官方来源与年报种子目录
 │  ├─ company.py             # 企业精确识别与显式错误处理
 │  ├─ models.py              # CompanyIdentity / SourceRecord
-│  ├─ sources.py             # 只读来源目录
+│  ├─ sources.py             # 来源目录读取、筛选、合并与任务级原子持久化
+│  ├─ security_master.py     # V3.3A官方证券主数据、缓存与动态企业识别
+│  ├─ annual_reports.py      # V3.3A年报发现、选择、来源登记和下载解析编排
+│  ├─ financial_statements.py # V3.3B合并三表定位、通用核心科目提取与Skill数据产物
+│  ├─ company_scope.py       # V3.3非金融企业适用范围的保守门禁
+│  ├─ fundamental_disclosures.py # V3.3C通用基本面披露提取
+│  ├─ ownership_disclosures.py # V3.3C前十大股东、控制关系与部分图适配
+│  ├─ generic_research.py    # V3.3D任务资料准备与双Skill通用执行器
 │  ├─ documents.py           # 下载结果与 V0.3 解析接口契约
 │  ├─ downloader.py          # 受控下载、缓存、哈希与失败记录
 │  ├─ evidence.py            # 事实/证据构建、交叉校验和引用渲染
@@ -239,7 +295,12 @@ corporate-credit-research-agent/
 │  ├─ v1_3_runtime/          # V1.3真实Tool调用的独立制品
 │  ├─ v1_4_report/           # V1.4历史MVP Markdown样例（不代表V2.3正式LLM报告）
 │  ├─ v1_5_mock/             # V1.5离线检索轨迹与证据链样例
-│  └─ v2_4_industry_mock/    # V2.4离线行业报告、上下文、来源与执行轨迹
+│  ├─ v2_4_industry_mock/    # V2.4离线行业报告、上下文、来源与执行轨迹
+│  ├─ v3_3a_official_metadata_samples.json # 四家公司官方元数据审计摘要
+│  ├─ v3_3a_jiuzhoutong_discovery.json # 九州通正式CLI发现摘要
+│  ├─ v3_3a_jiuzhoutong_prepare_summary.json # 九州通下载、解析与身份复核摘要
+│  ├─ v3_3b_jiuzhoutong_financial_summary.json # 九州通真实三表提取精简结果
+│  └─ v3_3c_jiuzhoutong_generic_research_summary.json # 九州通通用基本面/股权/财务摘要
 ├─ tests/
 │  ├─ integration/test_yiling_fundamentals.py
 │  ├─ integration/test_yiling_ownership.py
@@ -271,6 +332,9 @@ corporate-credit-research-agent/
 │  ├─ test_ui_progress.py    # V3.1脱敏进度事件
 │  ├─ test_word_export.py    # V3.2标题、列表、表格、图片、排版与路径边界
 │  ├─ test_cli_v32.py        # V3.2 CLI本地导出且不创建外部客户端
+│  ├─ test_security_master.py # V3.3A跨企业主数据与缓存
+│  ├─ test_annual_reports.py # V3.3A年报筛选、隔离与PDF主体复核
+│  ├─ test_cli_v33a.py       # V3.3A独立CLI且不初始化LLM/搜索
 │  ├─ integration/test_word_export_existing_reports.py # 既有V2.5与V3.1 Mock报告导出
 │  └─ test_cli.py
 ├─ streamlit_app.py          # 项目根Streamlit启动入口
@@ -284,6 +348,7 @@ corporate-credit-research-agent/
 ├─ V2_5_STATUS.md
 ├─ V3_1_STATUS.md
 ├─ V3_2_STATUS.md
+├─ V3_3_STATUS.md
 └─ ROADMAP.md
 ```
 
@@ -323,11 +388,13 @@ python -m pytest -q
 浏览器打开Streamlit显示的本地地址后：
 
 1. “历史报告”可直接加载此前V2.5报告、股权图和财务表，不检查密钥，也不发送网络请求。
-2. “新建研究”输入`以岭药业`、`002603`或`002603.SZ`，选择研究模式并修改任务。
+2. “新建研究”选择“完整企业授信研究”，输入六位沪深A股代码或`.SH/.SZ`代码。任意新企业名称尚不保证首次解析，单项研究模式仍主要面向已登记历史企业。
 3. 只有Live模式所需密钥已经配置、用户勾选相应费用确认后，“启动研究”才可用。
 4. 完整/行业研究会分别经过DeepSeek与百度搜索双确认；股权/财务只确认DeepSeek；确定性基本面提取不调用LLM。
 5. 运行产物保存在`data/streamlit_runs/`，完成后可在同一页面或“历史报告”重新打开。
 6. 有效报告旁显示“下载 Word 报告”；第一次点击时在同一任务目录本地生成DOCX，之后在Markdown未变化时直接复用，不会重新调用Agent或外部API。
+
+九州通与工业富联的新企业网页Live已经执行。后续盲测应选择此前未参与开发的沪深非金融A股，输入其标准证券代码并分别确认DeepSeek与百度搜索Live；系统会先核验官方主体并准备年报，再调用两个既有Skill和检索Tools。页面出现`PARTIAL_SUCCESS`时应按实际完成模块验收，不得视为全部成功。
 
 页面只是现有CLI/Agent Runtime的调用与展示层；报告正文仍由DeepSeek撰写，Python继续负责数据、计算、图表、Markdown组装和Word结构转换。历史报告查看及Word下载不会触发API；任务恢复和去重见`V3_1_STATUS.md`，Word导出边界见`V3_2_STATUS.md`。
 
@@ -344,7 +411,39 @@ python -m pytest -q
 
 省略`--word-output`时默认输出为Markdown同名`.docx`；报告包含股权章节时建议显式提供任务目录内的PNG。`--word-output`与`--word-image`只能和`--export-word`共同使用。
 
-安装后可通过名称或代码识别企业：
+V3.3A可直接识别新A股代码并准备官方年报。以下动作不会调用DeepSeek或百度；首次解析新代码或显式刷新时会低频访问官方证券/公告页面：
+
+```powershell
+# 只解析官方主体并写入/复用本地主数据缓存
+python -m credit_research_agent 600998.SH --resolve-company
+
+# 发现并登记最近两份年报全文，不下载PDF
+python -m credit_research_agent 600998.SH --discover-annual-reports `
+  --onboarding-dir data/onboarding
+
+# 发现、下载、逐页解析，并再次核对PDF主体/代码/年度
+python -m credit_research_agent 600998.SH --prepare-company `
+  --annual-report-count 2 `
+  --onboarding-dir data/onboarding
+```
+
+`--refresh-official-data`会忽略未过期主数据和年报发现缓存；不要在普通离线测试中使用。V3.3A的`prepare-company`只交付身份、来源和PDF文本，不会运行以岭药业专属Seeds。
+
+完整研究通用入口会继续进入既有Agent Runtime；以下命令只示范调用方式，不会在文档更新时执行：
+
+```powershell
+python -m credit_research_agent 600998.SH `
+  --run-complete-research "请对九州通（600998.SH）开展完整企业授信研究。" `
+  --auto-prepare --annual-report-count 2 `
+  --onboarding-dir data/v35_jiuzhoutong/onboarding `
+  --complete-dir data/v35_jiuzhoutong `
+  --llm-mode live --confirm-live `
+  --search-mode live --confirm-search-live
+```
+
+Live命令会产生DeepSeek和百度费用，必须由用户再次明确授权后运行。开发和离线验证阶段使用Mock；原有Seeds不参与上述通用生产路径。
+
+既有V0—V3.2入口仍可通过名称或代码识别已登记企业：
 
 ```powershell
 credit-research-agent "以岭药业"
@@ -777,11 +876,14 @@ V2.5初始完整离线回归：263 passed in 15.08s；首次Live后稳定性修�
 V3.1历史产物、受控命令、Live门禁、后台Worker、启动/校验失败回写、跨平台只读PID探测、陈旧任务收敛、幂等提交、跨会话原子Live锁及损坏锁恢复、状态恢复、路径安全与完整/单项Runtime脱敏进度：43 passed in 4.83s
 V3.1完整离线回归：321 passed in 16.03s；后台Mock端到端生成六章报告且刷新恢复未重复启动，真实DeepSeek/百度请求均为0
 V3.2 Word结构转换、中文正文、标题层级、列表编号重启、财务表、股权PNG、图片比例、缺图/远程图/路径越界、图表缓存失效、历史任务隔离、Live优先默认选择及CLI无外部客户端：专项`31 passed in 5.83s`；网页Live解析与隐藏预算定向回归`24 passed in 4.20s`；最新完整离线回归`353 passed in 16.75s`
+V3.3A动态主体、沪深官方Provider、记录级缓存、年报全文/摘要/修订筛选、任务级来源、跨企业目录、PDF主体复核及CLI早返回：新增`34 passed`；定向相关回归`80 passed in 4.38s`；最新完整离线回归`387 passed in 18.32s`
+V3.3B合并三表定位、核心科目、单位/币种证据/期间/口径、空值/负数、列歧义、非人民币、来源主体、追溯调整、CLI、现有财务计算及Skill上下文兼容：最终完整离线回归`420 passed in 19.13s`
+V3.3C/D通用基本面、前十大股东及控制关系、非金融范围门禁、任务级来源、双Skill执行器、`--auto-prepare`和Streamlit完整研究接入；九州通修复后Live已交付六章，工业富联Live已生成六章完整首对象并离线恢复Markdown/Word。最新完整离线回归`449 passed in 75.75s`
 ```
 
 网络请求使用离线假响应测试，因此日常 `pytest` 不依赖巨潮资讯、百度搜索或 DeepSeek 是否可访问。
 
 ## 下一阶段
 
-V3.1A历史报告展示、V3.1B既有Agent Runtime连接、V3.1C持久化后台任务及V3.2 Word报告导出均已完成。下一步为V3.3项目整理；按用户安排，完成V3后再扩展通用上市公司Agent。未经授权不自动调用或重试DeepSeek、百度等付费服务。
+V3.3A—D已完成“动态主体 → 官方年报 → 通用基本面/股权/财务 → 双Skill → 完整Agent/Streamlit”的离线接入。V3.3E当前为部分完成：九州通和工业富联网页Live均已验证通用路径，工业富联报告已从保存的完整首对象零网络恢复；下一步是使用此前未参与开发的沪深非金融公司盲测，并增量修复工业富联暴露的多行英文股东名称、净利润和经营现金流表格定位问题。北交所及金融企业需单独适配。未经授权不自动调用或重试DeepSeek、百度等付费服务。项目整理仍顺延至V3.4。
 

@@ -387,6 +387,47 @@ def test_analysis_context_contains_data_but_not_internal_ids(tmp_path: Path) -> 
     assert set(schema["due_diligence_questions"][0]) == {"question"}
 
 
+def test_analysis_context_and_tables_use_latest_available_periods(tmp_path: Path) -> None:
+    result = _fake_skill_result(tmp_path)
+    metrics_path = Path(result.artifacts["metrics_path"])
+    metrics_payload = json.loads(metrics_path.read_text(encoding="utf-8"))
+    for metric in metrics_payload["metrics"]:
+        metric["prior_period"] = "FY2025"
+        metric["current_period"] = "FY2026"
+    metrics_payload["ratios"] = [
+        {
+            "ratio_id": "FR001",
+            "name": "资产负债率",
+            "period": period,
+            "value_percent": value,
+            "formula": "负债合计/资产总计*100%",
+            "supporting_fact_ids": [],
+        }
+        for period, value in (("FY2025", "40.00"), ("FY2026", "42.00"))
+    ]
+    metrics_path.write_text(
+        json.dumps(metrics_payload, ensure_ascii=False), encoding="utf-8"
+    )
+
+    payload = _build_financial_analysis_context(result)
+    assert payload["analysis_periods"] == {
+        "available": ["FY2025", "FY2026"],
+        "comparison": ["FY2025", "FY2026"],
+        "latest": "FY2026",
+    }
+    assert {item["current_period"] for item in payload["metrics"]} == {"FY2026"}
+    draft = parse_financial_narrative_draft(
+        json.dumps(_simple_draft(), ensure_ascii=False)
+    )
+    report = render_llm_financial_report(draft, payload, model_mode="live")
+    assert report.startswith(
+        "# 石家庄以岭药业股份有限公司（002603.SZ）2026年度财务分析"
+    )
+    assert "| 比率 | FY2025 | FY2026 | 计算口径 |" in report
+    assert "FY2025 未取得 | FY2026 未取得" in report
+    assert "FY2024 未取得" not in report
+
+
 def test_parser_accepts_simplified_and_legacy_drafts_without_id_contract() -> None:
     simplified = parse_financial_narrative_draft(
         json.dumps(_simple_draft(), ensure_ascii=False)

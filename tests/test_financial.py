@@ -14,9 +14,12 @@ from credit_research_agent.financial import (
     FinancialStatement,
     ReasonablenessStatus,
     assess_reasonableness,
+    build_financial_risk_flags,
     calculate_change,
     calculate_financial_metrics,
     extract_change_explanations,
+    latest_financial_period,
+    sort_financial_periods,
     validate_financial_facts,
 )
 from credit_research_agent.models import (
@@ -82,6 +85,32 @@ def test_below_twenty_percent_does_not_trigger_without_other_exception() -> None
 
     assert metric.yoy_percent == Decimal("19.99")
     assert metric.requires_deep_analysis is False
+
+
+def test_financial_periods_and_latest_risk_flags_are_not_bound_to_fy2025() -> None:
+    assert sort_financial_periods(["FY2026", "FY2024", "FY2025", "FY2025"]) == [
+        "FY2024",
+        "FY2025",
+        "FY2026",
+    ]
+    assert latest_financial_period(["FY2024", "FY2026", "FY2025"]) == "FY2026"
+
+    normalized, validation = validate_financial_facts(
+        [
+            _fact("F201", FinancialItem.INVENTORY, "FY2025", "100"),
+            _fact("F202", FinancialItem.INVENTORY, "FY2026", "130"),
+        ]
+    )
+    metrics = calculate_financial_metrics(normalized)
+    flags = build_financial_risk_flags(metrics, normalized)
+
+    assert validation.required_coverage[FinancialItem.INVENTORY.value] == {
+        "FY2025": True,
+        "FY2026": True,
+    }
+    assert metrics[0].current_period == "FY2026"
+    assert any("FY2026" in flag.observation for flag in flags)
+    assert all("FY2025净利润" not in flag.observation for flag in flags)
 
 
 def test_zero_base_and_sign_change_do_not_use_naive_growth_wording() -> None:

@@ -14,6 +14,12 @@ from credit_research_agent.agent_runtime import (
     AgentRuntimeError,
     CreditResearchAgentRuntime,
 )
+from credit_research_agent.annual_reports import (
+    AnnualReportDiscovery,
+    AnnualReportDiscoveryError,
+    CninfoAnnualReportProvider,
+    CompanyOnboardingService,
+)
 from credit_research_agent.company import CompanyResolutionError, CompanyResolver
 from credit_research_agent.downloader import DownloadError, OfficialPdfDownloader
 from credit_research_agent.evidence import EvidenceBuildError, build_evidence_artifacts
@@ -25,6 +31,15 @@ from credit_research_agent.financial import (
 )
 from credit_research_agent.financial_agent_runtime import (
     FinancialResearchAgentRuntime,
+)
+from credit_research_agent.financial_statements import (
+    FinancialStatementExtractionError,
+    build_generic_financial_artifacts,
+)
+from credit_research_agent.generic_research import (
+    GenericResearchPreparationError,
+    build_generic_skill_runtime,
+    prepare_generic_research_inputs,
 )
 from credit_research_agent.industry_agent_runtime import (
     IndustryResearchAgentRuntime,
@@ -53,6 +68,12 @@ from credit_research_agent.search import (
     SearchError,
     SearchMode,
     load_baidu_search_config,
+)
+from credit_research_agent.security_master import (
+    DynamicCompanyResolver,
+    OfficialAshareSecurityMasterProvider,
+    SecurityMasterCache,
+    SecurityMasterError,
 )
 from credit_research_agent.skill_runtime import SkillRuntime, SkillRuntimeError
 from credit_research_agent.skills import (
@@ -101,10 +122,28 @@ def _find_project_root() -> Path:
     )
 
 
+def _build_dynamic_company_resolver(cache_path: Path) -> DynamicCompanyResolver:
+    """构造V3.3A动态主体解析器；保留薄工厂以便离线测试替换网络Provider。"""
+
+    provider = OfficialAshareSecurityMasterProvider()
+    cache = SecurityMasterCache(Path(cache_path), provider)
+    return DynamicCompanyResolver(cache)
+
+
+def _build_company_onboarding_service() -> CompanyOnboardingService:
+    """构造V3.3A年报准备服务；不会初始化LLM、搜索或Skill Runtime。"""
+
+    discovery = AnnualReportDiscovery(CninfoAnnualReportProvider())
+    return CompanyOnboardingService(discovery)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="credit-research-agent",
-        description="企业授信研究Agent V2.5：单主Agent集成基本面、双Skill、行业检索与完整报告。",
+        description=(
+            "企业授信研究Agent V3.3：保留V2.5完整研究，并新增沪深A股非金融企业的"
+            "动态主体识别、官方年报准备、通用披露提取与完整研究接入。"
+        ),
     )
     parser.add_argument("company", help="上市公司名称、证券代码或带交易所后缀的代码")
     parser.add_argument(
@@ -181,6 +220,29 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="MARKDOWN_PATH",
         help="把既有Markdown研究报告本地转换为Word；不会调用LLM或搜索API",
     )
+    action_group.add_argument(
+        "--resolve-company",
+        action="store_true",
+        help="V3.3A：通过官方证券主数据识别A股主体；不会调用LLM或百度搜索",
+    )
+    action_group.add_argument(
+        "--discover-annual-reports",
+        action="store_true",
+        help="V3.3A：识别主体并发现官方年度报告全文，仅登记来源、不下载PDF",
+    )
+    action_group.add_argument(
+        "--prepare-company",
+        action="store_true",
+        help="V3.3A：识别主体、发现并下载解析官方年报；不运行业务Skill",
+    )
+    action_group.add_argument(
+        "--extract-financial-statements",
+        action="store_true",
+        help=(
+            "V3.3B：准备官方年报并提取合并三表授信重点科目；"
+            "只生成确定性数据，不调用LLM或百度搜索"
+        ),
+    )
     parser.add_argument(
         "--skill-source",
         metavar="SOURCE_ID",
@@ -200,6 +262,14 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="SOURCE_ID",
         default="S01",
         help="--run-complete-research绑定的主年报来源，默认S01；模型不可覆盖",
+    )
+    parser.add_argument(
+        "--auto-prepare",
+        action="store_true",
+        help=(
+            "V3.3：在完整研究前动态识别企业、准备官方年报并使用通用提取器；"
+            "不读取公司专属Seeds"
+        ),
     )
     parser.add_argument(
         "--llm-mode",
@@ -325,6 +395,29 @@ def build_parser() -> argparse.ArgumentParser:
         "--cache-dir",
         default="data/cache",
         help="下载缓存目录，默认 data/cache",
+    )
+    parser.add_argument(
+        "--security-master-cache",
+        default="data/cache/security_master.json",
+        help="V3.3A官方证券主数据缓存，默认 data/cache/security_master.json",
+    )
+    parser.add_argument(
+        "--onboarding-dir",
+        default="data/onboarding",
+        help="V3.3A主体、任务级来源和年报准备产物目录",
+    )
+    parser.add_argument(
+        "--annual-report-count",
+        type=int,
+        choices=range(1, 6),
+        default=2,
+        metavar="1-5",
+        help="V3.3A准备最近几个可比年度的年报全文，默认2",
+    )
+    parser.add_argument(
+        "--refresh-official-data",
+        action="store_true",
+        help="V3.3A忽略未过期主数据/年报发现缓存并重新访问官方站点",
     )
     parser.add_argument(
         "--force-download",
@@ -482,12 +575,148 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     if progress_sink is not None:
         progress_sink.write("cli_started", "CLI 已启动并准备解析研究任务")
-    resolver = CompanyResolver.from_default_catalog()
 
+    v33_data_action = bool(
+        args.resolve_company
+        or args.discover_annual_reports
+        or args.prepare_company
+        or args.extract_financial_statements
+    )
+    if v33_data_action:
+        try:
+            dynamic_resolver = _build_dynamic_company_resolver(
+                Path(args.security_master_cache)
+            )
+            resolution = dynamic_resolver.resolve_with_metadata(
+                args.company,
+                force_refresh=args.refresh_official_data,
+            )
+            output: Dict[str, Any] = {
+                "company": _as_dict(resolution.identity),
+                "dynamic_resolution": _as_dict(resolution),
+                "external_llm_requests": 0,
+                "external_search_requests": 0,
+            }
+            if args.resolve_company:
+                print(json.dumps(output, ensure_ascii=False, indent=2))
+                return 0
+            onboarding_service = _build_company_onboarding_service()
+            onboarding = onboarding_service.prepare(
+                resolution,
+                Path(args.onboarding_dir),
+                report_count=args.annual_report_count,
+                force_refresh=args.refresh_official_data,
+                discover_only=bool(args.discover_annual_reports),
+            )
+            if args.extract_financial_statements:
+                if not onboarding.prepared_reports:
+                    output["onboarding"] = {
+                        "status": onboarding.status,
+                        "failures": [_as_dict(item) for item in onboarding.failures],
+                        "manifest_path": str(onboarding.manifest_path),
+                    }
+                    output["financial_statement_error"] = {
+                        "code": "no_prepared_annual_report",
+                        "message": "没有通过下载、解析及主体复核的官方年报，无法提取财务报表",
+                    }
+                    print(json.dumps(output, ensure_ascii=False, indent=2))
+                    return 16
+                source_inputs = [
+                    FinancialSourceInput(
+                        source=item.source,
+                        download=item.download,
+                        summary_path=item.extraction.summary_path,
+                        pages_path=item.extraction.pages_path,
+                    )
+                    for item in onboarding.prepared_reports
+                ]
+                financial_artifacts = build_generic_financial_artifacts(
+                    identity=resolution.identity,
+                    source_inputs=source_inputs,
+                    output_dir=Path(args.onboarding_dir),
+                )
+                output["onboarding"] = {
+                    "status": onboarding.status,
+                    "prepared_source_ids": [
+                        item.source.source_id for item in onboarding.prepared_reports
+                    ],
+                    "failures": [_as_dict(item) for item in onboarding.failures],
+                    "manifest_path": str(onboarding.manifest_path),
+                }
+                output["financial_statements"] = _as_dict(financial_artifacts)
+                print(json.dumps(output, ensure_ascii=False, indent=2))
+                return (
+                    16
+                    if financial_artifacts.status.value == "failed"
+                    else 0
+                )
+            output["onboarding"] = _as_dict(onboarding)
+            print(json.dumps(output, ensure_ascii=False, indent=2))
+            return 0 if onboarding.status != "failed" else 15
+        except (
+            CompanyResolutionError,
+            SecurityMasterError,
+            AnnualReportDiscoveryError,
+            FinancialStatementExtractionError,
+        ) as exc:
+            print(
+                json.dumps(
+                    {
+                        (
+                            "financial_statement_error"
+                            if isinstance(exc, FinancialStatementExtractionError)
+                            else "onboarding_error"
+                        ): {
+                            "code": getattr(exc, "code", "company_resolution_failed"),
+                            "message": str(exc),
+                        },
+                        "external_llm_requests": 0,
+                        "external_search_requests": 0,
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+            return 16 if isinstance(exc, FinancialStatementExtractionError) else 15
+
+    if args.auto_prepare and not args.run_complete_research:
+        print(
+            json.dumps(
+                {
+                    "onboarding_error": {
+                        "code": "auto_prepare_requires_complete_research",
+                        "message": "--auto-prepare 当前只与 --run-complete-research 配合使用",
+                    }
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 15
+
+    dynamic_resolution = None
     try:
-        company = resolver.resolve(args.company)
-    except CompanyResolutionError as exc:
-        print(json.dumps({"error": str(exc)}, ensure_ascii=False, indent=2))
+        if args.auto_prepare:
+            dynamic_resolution = _build_dynamic_company_resolver(
+                Path(args.security_master_cache)
+            ).resolve_with_metadata(
+                args.company,
+                force_refresh=args.refresh_official_data,
+            )
+            company = dynamic_resolution.identity
+        else:
+            company = CompanyResolver.from_default_catalog().resolve(args.company)
+    except (CompanyResolutionError, SecurityMasterError) as exc:
+        print(
+            json.dumps(
+                {
+                    "error": str(exc),
+                    "error_code": getattr(exc, "code", "company_resolution_failed"),
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
         return 2
 
     output: Dict[str, Any] = {"company": _as_dict(company)}
@@ -662,6 +891,52 @@ def main(argv: Optional[List[str]] = None) -> int:
                 }
                 print(json.dumps(output, ensure_ascii=False, indent=2))
                 return 11
+    generic_preparation = None
+    if args.auto_prepare:
+        assert dynamic_resolution is not None
+        try:
+            onboarding = _build_company_onboarding_service().prepare(
+                dynamic_resolution,
+                Path(args.onboarding_dir),
+                report_count=args.annual_report_count,
+                force_refresh=args.refresh_official_data,
+            )
+            generic_preparation = prepare_generic_research_inputs(
+                onboarding=onboarding,
+                output_dir=Path(args.complete_dir),
+            )
+            catalog = generic_preparation.source_catalog
+            source = generic_preparation.source
+            result = generic_preparation.primary_report.download
+            artifacts = generic_preparation.primary_report.extraction
+            output["dynamic_onboarding"] = {
+                "status": onboarding.status,
+                "manifest_path": str(onboarding.manifest_path),
+                "source_catalog_path": str(generic_preparation.source_catalog_path),
+                "primary_source_id": source.source_id,
+                "comparison_source_ids": [
+                    item.source.source_id
+                    for item in generic_preparation.comparison_inputs
+                ],
+                "scope_status": generic_preparation.scope.status.value,
+                "fundamentals_path": str(
+                    generic_preparation.fundamentals.fundamentals_path
+                ),
+                "uses_company_specific_seeds": False,
+            }
+        except (
+            AnnualReportDiscoveryError,
+            GenericResearchPreparationError,
+            FinancialStatementExtractionError,
+            EvidenceBuildError,
+        ) as exc:
+            output["onboarding_error"] = {
+                "code": getattr(exc, "code", "generic_research_preparation_failed"),
+                "message": str(exc),
+            }
+            print(json.dumps(output, ensure_ascii=False, indent=2))
+            return 15
+
     requested_source_id = (
         (
             args.skill_source
@@ -673,6 +948,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             )
         )
         if (args.run_skill or args.run_agent or args.run_complete_research)
+        and not args.auto_prepare
         else (
             args.download_source
             or args.parse_source
@@ -1251,7 +1527,14 @@ def main(argv: Optional[List[str]] = None) -> int:
                 print(json.dumps(output, ensure_ascii=False, indent=2))
                 return 13
         try:
-            if args.complete_fundamentals_path:
+            if generic_preparation is not None:
+                fundamentals_path = (
+                    generic_preparation.fundamentals.fundamentals_path
+                )
+                output["complete_fundamentals"] = _as_dict(
+                    generic_preparation.fundamentals
+                )
+            elif args.complete_fundamentals_path:
                 fundamentals_path = Path(args.complete_fundamentals_path)
                 if not fundamentals_path.is_file():
                     raise EvidenceBuildError(
@@ -1273,32 +1556,35 @@ def main(argv: Optional[List[str]] = None) -> int:
                 )
 
             comparison_inputs: List[FinancialSourceInput] = []
-            for comparison_source_id in args.financial_comparison_source or ["S10"]:
-                if comparison_source_id == source.source_id:
-                    continue
-                comparison_source = catalog.get(comparison_source_id)
-                if comparison_source.entity_id not in (None, company.entity_id):
-                    raise FinancialBuildError(
-                        "comparison_source_entity_mismatch",
-                        f"可比来源 {comparison_source_id} 不属于 {company.ticker}",
+            if generic_preparation is not None:
+                comparison_inputs.extend(generic_preparation.comparison_inputs)
+            else:
+                for comparison_source_id in args.financial_comparison_source or ["S10"]:
+                    if comparison_source_id == source.source_id:
+                        continue
+                    comparison_source = catalog.get(comparison_source_id)
+                    if comparison_source.entity_id not in (None, company.entity_id):
+                        raise FinancialBuildError(
+                            "comparison_source_entity_mismatch",
+                            f"可比来源 {comparison_source_id} 不属于 {company.ticker}",
+                        )
+                    comparison_download = OfficialPdfDownloader().download(
+                        comparison_source,
+                        Path(args.cache_dir),
+                        force=args.force_download,
                     )
-                comparison_download = OfficialPdfDownloader().download(
-                    comparison_source,
-                    Path(args.cache_dir),
-                    force=args.force_download,
-                )
-                comparison_extraction = extract_to_artifacts(
-                    comparison_download,
-                    Path(args.parsed_dir),
-                )
-                comparison_inputs.append(
-                    FinancialSourceInput(
-                        source=comparison_source,
-                        download=comparison_download,
-                        summary_path=comparison_extraction.summary_path,
-                        pages_path=comparison_extraction.pages_path,
+                    comparison_extraction = extract_to_artifacts(
+                        comparison_download,
+                        Path(args.parsed_dir),
                     )
-                )
+                    comparison_inputs.append(
+                        FinancialSourceInput(
+                            source=comparison_source,
+                            download=comparison_download,
+                            summary_path=comparison_extraction.summary_path,
+                            pages_path=comparison_extraction.pages_path,
+                        )
+                    )
             budget = SearchBudget(
                 max_search_rounds=args.max_search_rounds,
                 max_search_calls=args.max_search_calls,
@@ -1320,6 +1606,11 @@ def main(argv: Optional[List[str]] = None) -> int:
                 search_config,
                 search_provider_override=provider_override,
                 source_fetcher_override=fetcher_override,
+                skill_runtime_factory=(
+                    build_generic_skill_runtime
+                    if generic_preparation is not None
+                    else SkillRuntime
+                ),
                 **progress_runtime_kwargs,
             )
             complete_result = runtime.run_sync(
@@ -1336,6 +1627,11 @@ def main(argv: Optional[List[str]] = None) -> int:
                 confirmed_llm_live=args.confirm_live,
                 confirmed_search_live=args.confirm_search_live,
                 budget=budget,
+                source_catalog=(
+                    generic_preparation.source_catalog
+                    if generic_preparation is not None
+                    else None
+                ),
             )
             output["complete_research"] = _as_dict(complete_result)
         except (
@@ -1343,6 +1639,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             SearchError,
             EvidenceBuildError,
             FinancialBuildError,
+            GenericResearchPreparationError,
             SourceNotFoundError,
             DownloadError,
             PdfExtractionError,

@@ -78,10 +78,12 @@ class EvidenceStatus(str, Enum):
 class VerificationMethod(str, Enum):
     EXACT_TEXT_MATCH = "exact_text_match"
     SEARCH_SNIPPET = "search_snippet"
+    PDF_TABLE_EXTRACTION = "pdf_table_extraction"
+    NORMALIZED_PDF_TEXT = "normalized_pdf_text"
 
 
 class CompanyIdentity(BaseModel):
-    """经本地登记表唯一解析后的上市公司身份。"""
+    """由静态回归目录或官方证券主数据唯一解析后的上市公司身份。"""
 
     entity_id: str
     legal_name: str
@@ -93,6 +95,14 @@ class CompanyIdentity(BaseModel):
     country_of_incorporation: str
     entity_scope: EntityScope = EntityScope.CONSOLIDATED
     evidence_ids: List[str] = Field(default_factory=list)
+    # V3.3A 动态证券主数据字段均为可选，确保既有 V0 fixture 与接口保持兼容。
+    exchange_code: Optional[str] = None
+    listing_board: Optional[str] = None
+    listing_status: Optional[str] = None
+    listed_at: Optional[date] = None
+    external_org_id: Optional[str] = None
+    identity_source_url: Optional[AnyHttpUrl] = None
+    resolved_at: Optional[datetime] = None
 
     class Config:
         allow_mutation = False

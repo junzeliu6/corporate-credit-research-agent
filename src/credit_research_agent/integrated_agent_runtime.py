@@ -29,7 +29,7 @@ from agents import (
     Usage,
     function_tool,
 )
-from agents.exceptions import MaxTurnsExceeded
+from agents.exceptions import MaxTurnsExceeded, ModelBehaviorError
 from agents.testing import ModelStep, ScriptedModel, assistant_message, function_call
 from openai import AsyncOpenAI
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
@@ -114,6 +114,21 @@ COMPLETE_TOPIC_LABELS = {
     "due_diligence_and_missing_information": "第六章：待补充资料及尽调问题",
 }
 
+_MAX_INVALID_TOOL_ARGUMENT_RETRIES = 2
+_RETRIEVAL_TOOL_ARGUMENT_EXAMPLES: Dict[str, Dict[str, Any]] = {
+    SEARCH_WEB_TOOL: {
+        "query": "企业名称 行业政策",
+        "max_results": 5,
+        "domain_filter": [],
+        "recency": None,
+    },
+    FETCH_SOURCE_TOOL: {"url": "https://example.com/source"},
+    EXTRACT_EVIDENCE_TOOL: {
+        "source_handle": "DOC001",
+        "research_question": "待核实的研究问题",
+    },
+}
+
 
 COMPLETE_AGENT_INSTRUCTIONS = """你是银行企业授信研究主 Agent，负责对同一上市公司完成一份综合研究初稿。
 
@@ -130,12 +145,12 @@ COMPLETE_AGENT_INSTRUCTIONS = """你是银行企业授信研究主 Agent，负�
 10. 写作时必须遵守 runtime_context 及 Tool 返回的 reporting_constraints，并特别注意：
    - “其他未单列股东”只表示未知身份股东的合计比例；在未取得完整股东名册前，不得据此断言“无国资背景”“全部为民营/自然人持有”或判断这些股东的性质。
    - 没有单品收入、占比或盈利贡献时，不得写“高度依赖少数品种”“大单品驱动”或产品集中度高；只能列示年报确认的主要产品并说明集中度待核实。
-   - 当前财务比较只有 FY2024 与 FY2025 两期，不得把两期变化表述为“长期”“连续多年”或稳定趋势。
+   - 当前财务上下文通常只覆盖两个可比年度；不得把两期变化表述为“长期”“连续多年”或稳定趋势。
    - 不能仅凭货币资金增加就认定其是流动资产增长的主要来源；只能引用 Python 返回的增量贡献率。未覆盖全部流动资产科目时，不得把剩余增量归因给某个科目。
    - 没有完整应收、存货、应付、预付及其他经营性科目的变动桥接时，不得确定性声称“营运资金占用总体改善/收敛”；应说明只是局部指标信号并列出待核实项目。
    - 没有行业可比基准时，不得把毛利率定性为“高毛利”“行业领先”；可客观描述比率及同比百分点变化。
    - 销售收现比变动不能单独证明非现金结算、回款恶化或账期变化；这些只能作为待核实假设。
-11. 检索时，search_web 返回候选后应先 fetch_source 读取可信候选，再发起新搜索；单页失败后优先尝试 Tool 返回的 remaining_candidates。检索基础法律、长期政策或现行监管制度时默认 recency=null；若结果为0，应依次放宽时效、域名和关键词，不能同时收紧多个条件。搜索命中栏目/列表页时，应继续查找并读取具体政策详情页。预算耗尽后按第5条降级。
+11. 检索时，search_web 返回候选后应先 fetch_source 读取可信候选，再发起新搜索；单页失败后优先尝试 Tool 返回的 remaining_candidates。检索基础法律、长期政策或现行监管制度时默认 recency=null；若结果为0，应依次放宽时效、域名和关键词，不能同时收紧多个条件。搜索命中栏目/列表页时，应继续查找并读取具体政策详情页。所有 Function Tool 参数必须是严格 JSON：属性名和字符串使用半角双引号，内部引号必须转义，不得包含注释、Markdown 或额外文字。Tool 返回 invalid_tool_arguments 时，只按返回的 expected_arguments 修正格式后重试，不得改变研究事实；不允许继续重试时应使用已有成果完成报告。预算耗尽后按第5条降级。
 12. 最终只返回一个 JSON 对象：
 {
   "report_title": "标题",
@@ -146,6 +161,7 @@ COMPLETE_AGENT_INSTRUCTIONS = """你是银行企业授信研究主 Agent，负�
   "limitations": ["资料限制或未核验事项"]
 }
 六个 topic 为 company_background_and_ownership、operations_and_business_model、industry_and_policy、financial_analysis、integrated_credit_risk、due_diligence_and_missing_information。即使某模块失败，也应保留其余已经完成的章节并在 limitations 说明。
+输出前在内部完成格式检查；如果发现错误，直接修正这一个对象后再输出。禁止在对象前后添加解释、第二版 JSON、Markdown 代码围栏、`见上`、`同上`或`省略`占位，也不要添加约定字段之外的顶层字段。
 """
 
 
@@ -269,6 +285,7 @@ class CompleteResearchContext:
     candidate_fetch_required: bool = False
     degraded_reasons: List[str] = field(default_factory=list)
     module_snapshots: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    invalid_tool_argument_counts: Dict[str, int] = field(default_factory=dict)
 
 
 def _write_json(path: Path, payload: Any) -> Path:
@@ -362,9 +379,16 @@ def build_fundamental_snapshot(
     unified_profit_model_available = bool(
         fact_fields & {"profit_model", "unified_profit_model", "pricing_model"}
     ) and "统一盈利模式" not in missing_text
+    periods = sorted(
+        {
+            str(item.get("period"))
+            for item in facts
+            if item.get("period")
+        }
+    )
     return {
         "available": bool(facts),
-        "period": "FY2025",
+        "period": periods[-1] if periods else None,
         "statement_scope": identity.entity_scope.value,
         "facts": facts[:40],
         "missing_information": missing[:20],
@@ -388,9 +412,25 @@ def build_complete_research_context(
     identity: CompanyIdentity,
     fundamentals_path: Path,
     planned_skills: Sequence[str],
+    source: Optional[SourceRecord] = None,
+    comparison_inputs: Sequence[FinancialSourceInput] = (),
 ) -> Dict[str, Any]:
     """生成首轮紧凑上下文；两项Skill结果通过Tool按需返回。"""
 
+    fundamentals = build_fundamental_snapshot(fundamentals_path, identity)
+    financial_periods = sorted(
+        {
+            str(item.source.report_period)
+            for item in comparison_inputs
+            if item.source.report_period
+        }
+        | ({str(source.report_period)} if source and source.report_period else set())
+    )
+    ownership_as_of = None
+    if source and source.report_period:
+        matched_year = re.fullmatch(r"FY(20\d{2})", source.report_period)
+        if matched_year:
+            ownership_as_of = f"{matched_year.group(1)}-12-31"
     payload = {
         "schema_version": "2.5.0",
         "research_task": task,
@@ -401,12 +441,12 @@ def build_complete_research_context(
             "exchange": identity.exchange,
             "entity_scope": identity.entity_scope.value,
         },
-        "fundamentals": build_fundamental_snapshot(fundamentals_path, identity),
+        "fundamentals": fundamentals,
         "skill_plan": list(planned_skills),
         "period_alignment": {
-            "fundamentals": "FY2025",
-            "ownership": "2025-12-31",
-            "financial_comparison": ["FY2024", "FY2025"],
+            "fundamentals": fundamentals.get("period"),
+            "ownership": ownership_as_of,
+            "financial_comparison": financial_periods,
             "financial_scope": "consolidated",
         },
         "required_topics": list(COMPLETE_REQUIRED_TOPICS),
@@ -455,6 +495,7 @@ def _ownership_reporting_constraints(snapshot: Mapping[str, Any]) -> Dict[str, A
         for item in missing
     )
     return {
+        "formal_ready": bool(snapshot.get("formal_ready")),
         "complete_shareholder_register_available": complete_register_available,
         "unlisted_shareholder_residual_present": has_unlisted_residual,
         # 紧凑快照没有逐个机构股东的最终国资属性核验，即使直接股东名册完整，
@@ -462,6 +503,7 @@ def _ownership_reporting_constraints(snapshot: Mapping[str, Any]) -> Dict[str, A
         "state_ownership_assessment": "not_assessed",
         "may_conclude_absence_of_state_ownership": False,
         "interpretation_limits": [
+            "formal_ready=false时，股权图仅展示已披露关系，不得称为完整股权穿透或100%完整结构。",
             "残差聚合节点不披露具体股东身份或主体性质；完整股东名册缺失时，不得断言无国资背景或其余股东均为民营/自然人。",
             "实际控制、一致行动或最终控制关系不自动证明亲属、家族或其他未披露的人身关系。",
         ],
@@ -498,8 +540,16 @@ def _financial_reporting_constraints(snapshot: Mapping[str, Any]) -> Dict[str, A
     available_changes = {
         item: value for item, value in selected_changes.items() if value is not None
     }
+    comparison_periods = list(
+        (snapshot.get("scope") or {}).get("periods") or []
+    )
+    period_basis = (
+        f"{comparison_periods[-1]}减{comparison_periods[-2]}"
+        if len(comparison_periods) >= 2
+        else "当前可比期间"
+    )
     attribution: Dict[str, Any] = {
-        "basis": "FY2025减FY2024；仅覆盖快照中列示的部分流动资产科目",
+        "basis": f"{period_basis}；仅覆盖快照中列示的部分流动资产科目",
         "current_assets_absolute_change_cny": (
             str(current_assets_change) if current_assets_change is not None else None
         ),
@@ -522,7 +572,7 @@ def _financial_reporting_constraints(snapshot: Mapping[str, Any]) -> Dict[str, A
         )
 
     return {
-        "comparison_periods": ["FY2024", "FY2025"],
+        "comparison_periods": comparison_periods,
         "supports_long_term_trend_conclusion": False,
         "industry_gross_margin_benchmark_available": False,
         "complete_working_capital_bridge_available": False,
@@ -629,10 +679,42 @@ def _make_retrieval_tool_tolerant(tool: Any) -> Any:
     original_invoker = tool.on_invoke_tool
 
     async def invoke(tool_context: Any, raw_input: str) -> str:
+        context: CompleteResearchContext = tool_context.context
+        json_error: Optional[json.JSONDecodeError] = None
+        try:
+            parsed_input = json.loads(raw_input) if raw_input else {}
+            if not isinstance(parsed_input, dict):
+                raise ModelBehaviorError(
+                    f"Invalid JSON input for tool {tool.name}: expected a JSON object"
+                )
+        except json.JSONDecodeError as exc:
+            json_error = exc
+        except ModelBehaviorError as exc:
+            return _invalid_tool_arguments_result(
+                context,
+                tool_name=tool.name,
+                raw_input=raw_input,
+                error=exc,
+            )
+        if json_error is not None:
+            return _invalid_tool_arguments_result(
+                context,
+                tool_name=tool.name,
+                raw_input=raw_input,
+                error=json_error,
+            )
         try:
             return await original_invoker(tool_context, raw_input)
+        except ModelBehaviorError as exc:
+            if not str(exc).startswith("Invalid JSON input for tool"):
+                raise
+            return _invalid_tool_arguments_result(
+                context,
+                tool_name=tool.name,
+                raw_input=raw_input,
+                error=exc,
+            )
         except (SearchError, SourceFetchError, RetrievalRuntimeError) as exc:
-            context: CompleteResearchContext = tool_context.context
             try:
                 arguments = json.loads(raw_input)
             except (json.JSONDecodeError, TypeError):
@@ -668,6 +750,83 @@ def _make_retrieval_tool_tolerant(tool: Any) -> Any:
 
     tool.on_invoke_tool = invoke
     return tool
+
+
+def _invalid_tool_arguments_result(
+    context: CompleteResearchContext,
+    *,
+    tool_name: str,
+    raw_input: str,
+    error: Exception,
+) -> str:
+    """将模型的畸形 Function Calling 参数转成可恢复结果。
+
+    raw_input 可能包含检索内容，轨迹只保存长度、哈希和 JSON 定位信息，
+    不保存或回显原始参数。畸形调用仍计入总 Tool 预算，防止模型无限重试。
+    """
+
+    try:
+        context.budget.begin_tool_call(tool_name)
+        context.trace.tool_call_count = context.budget.total_tool_calls
+    except SearchError as budget_error:
+        return _budget_failure(
+            context,
+            tool_name=tool_name,
+            arguments={"input_status": "invalid_tool_arguments"},
+            error=budget_error,
+        )
+
+    attempt = context.invalid_tool_argument_counts.get(tool_name, 0) + 1
+    context.invalid_tool_argument_counts[tool_name] = attempt
+    retry_allowed = attempt <= _MAX_INVALID_TOOL_ARGUMENT_RETRIES
+    raw_bytes = raw_input.encode("utf-8", errors="replace")
+    diagnostic: Dict[str, Any] = {
+        "tool_name": tool_name,
+        "status": (
+            "invalid_arguments_retryable"
+            if retry_allowed
+            else "invalid_arguments_skipped"
+        ),
+        "error_code": "invalid_tool_arguments",
+        "attempt": attempt,
+        "raw_input_length": len(raw_input),
+        "raw_input_sha256": hashlib.sha256(raw_bytes).hexdigest(),
+    }
+    if isinstance(error, json.JSONDecodeError):
+        diagnostic["json_error"] = {
+            "line": error.lineno,
+            "column": error.colno,
+            "position": error.pos,
+        }
+    context.trace.tool_calls.append(diagnostic)
+
+    if not retry_allowed:
+        reason = f"{tool_name}:invalid_tool_arguments_repeated"
+        if reason not in context.degraded_reasons:
+            context.degraded_reasons.append(reason)
+
+    return json.dumps(
+        {
+            "status": "invalid_tool_arguments",
+            "error_code": "invalid_tool_arguments",
+            "tool_name": tool_name,
+            "attempt": attempt,
+            "retry_allowed": retry_allowed,
+            "expected_arguments": _RETRIEVAL_TOOL_ARGUMENT_EXAMPLES.get(tool_name, {}),
+            "message": (
+                "Function Tool参数不是符合Schema的严格JSON；"
+                "本次未执行Python Tool，也未发起外部请求。"
+            ),
+            "next_step": (
+                "仅修正JSON语法、字段和类型后重试一次；"
+                "参数前后不得添加Markdown、注释或解释。"
+                if retry_allowed
+                else "不要再调用该Tool；使用已完成的Skill、事实和来源撰写部分报告。"
+            ),
+        },
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
 
 
 def create_complete_research_tools() -> List[Any]:
@@ -741,7 +900,10 @@ def create_complete_research_tools() -> List[Any]:
                 result.selection.selected_skill, result.skill_instructions
             )
             context.module_snapshots["ownership"] = snapshot
-            context.trace.module_status["ownership"] = "success"
+            ownership_status = (
+                "success" if snapshot.get("formal_ready") else "partial_success"
+            )
+            context.trace.module_status["ownership"] = ownership_status
             context.trace.module_artifacts["ownership"] = dict(result.artifacts)
             if result.selection.selected_skill not in context.trace.executed_skills:
                 context.trace.executed_skills.append(result.selection.selected_skill)
@@ -754,7 +916,7 @@ def create_complete_research_tools() -> List[Any]:
                     "skill_sha256": result.trace.skill_sha256,
                     "python_tool": result.tool_name,
                     "skill_trace_path": str(result.trace_path),
-                    "status": "success",
+                    "status": ownership_status,
                 }
             )
             context.trace.tool_calls.append(
@@ -762,7 +924,7 @@ def create_complete_research_tools() -> List[Any]:
                     "tool_name": OWNERSHIP_FUNCTION_TOOL,
                     "model_arguments": arguments,
                     "runtime_bound": {"source_id": context.source.source_id},
-                    "status": "success",
+                    "status": ownership_status,
                 }
             )
             return json.dumps(snapshot, ensure_ascii=False, separators=(",", ":"))
@@ -788,7 +950,7 @@ def create_complete_research_tools() -> List[Any]:
     @function_tool(
         name_override=FINANCIAL_FUNCTION_TOOL,
         description_override=(
-            "加载financial-analysis Skill，提取和计算FY2024/FY2025财务事实、"
+            "加载financial-analysis Skill，提取和计算Runtime绑定可比年度的财务事实、"
             "同比、比率及披露原因。只填写已解析ticker；来源和文件由Python绑定。"
         ),
         strict_mode=True,
@@ -857,7 +1019,13 @@ def create_complete_research_tools() -> List[Any]:
                 result.selection.selected_skill, result.skill_instructions
             )
             context.module_snapshots["financial"] = snapshot
-            context.trace.module_status["financial"] = "success"
+            artifact_status = str(result.artifacts.get("status") or "success")
+            financial_status = (
+                artifact_status
+                if artifact_status in {"success", "partial_success", "failed"}
+                else "success"
+            )
+            context.trace.module_status["financial"] = financial_status
             context.trace.module_artifacts["financial"] = dict(result.artifacts)
             if result.selection.selected_skill not in context.trace.executed_skills:
                 context.trace.executed_skills.append(result.selection.selected_skill)
@@ -870,7 +1038,7 @@ def create_complete_research_tools() -> List[Any]:
                     "skill_sha256": result.trace.skill_sha256,
                     "python_tool": result.tool_name,
                     "skill_trace_path": str(result.trace_path),
-                    "status": "success",
+                    "status": financial_status,
                 }
             )
             context.trace.tool_calls.append(
@@ -883,7 +1051,7 @@ def create_complete_research_tools() -> List[Any]:
                             item.source.source_id for item in context.comparison_inputs
                         ],
                     },
-                    "status": "success",
+                    "status": financial_status,
                 }
             )
             return json.dumps(snapshot, ensure_ascii=False, separators=(",", ":"))
@@ -920,6 +1088,7 @@ def create_complete_research_tools() -> List[Any]:
 
 
 _MAX_JSON_PREAMBLE_CHARS = 200
+_MAX_REDUNDANT_JSON_TAIL_CHARS = 2_000
 _JSON_FENCE = "```"
 
 
@@ -1000,18 +1169,100 @@ def _repair_unescaped_inner_quotes(text: str) -> str:
     return "".join(repaired)
 
 
+def _is_complete_leading_report(payload: Any) -> bool:
+    """判断首个对象是否已是可独立交付的完整六章报告。
+
+    这个检查只用于处理模型在完整对象之后又追加自我修正说明的情形，
+    因而比正常的部分成功解析更严格：六个 topic 必须唯一齐全，且正文不能
+    是“见上/省略”一类占位内容。
+    """
+
+    if not isinstance(payload, Mapping):
+        return False
+    raw_sections = payload.get("sections")
+    if not isinstance(raw_sections, list) or len(raw_sections) != len(
+        COMPLETE_REQUIRED_TOPICS
+    ):
+        return False
+    topics: List[str] = []
+    for item in raw_sections:
+        if not isinstance(item, Mapping):
+            return False
+        topic = str(item.get("topic") or "").strip()
+        analysis = str(item.get("analysis_markdown") or "").strip()
+        if (
+            topic not in COMPLETE_REQUIRED_TOPICS
+            or len(analysis) < 50
+            or analysis in {"见上", "同上", "省略", "略"}
+        ):
+            return False
+        topics.append(topic)
+    return len(topics) == len(set(topics)) and set(topics) == set(
+        COMPLETE_REQUIRED_TOPICS
+    )
+
+
+def _contains_second_complete_report(tail: str) -> bool:
+    """检查尾随文本中是否存在另一个可解析的完整报告对象。"""
+
+    decoder = json.JSONDecoder()
+    for index, char in enumerate(tail):
+        if char != "{":
+            continue
+        try:
+            candidate, _ = decoder.raw_decode(tail[index:])
+        except json.JSONDecodeError:
+            continue
+        if _is_complete_leading_report(candidate):
+            return True
+    return False
+
+
+def _load_complete_report_before_redundant_tail(text: str) -> Any | None:
+    """保守提取“完整首对象 + 冗余自我修正尾部”中的首对象。
+
+    仅接受本次 Live 暴露的窄场景：输出必须直接以 JSON 对象开始；首对象
+    已包含六个非占位章节；尾部较短、无代码围栏，并明确是带“见上/省略”
+    占位的 JSON 自我修正说明。任何第二个完整报告、首对象截断或歧义代码块
+    仍然拒绝。
+    """
+
+    stripped = text.strip()
+    if not stripped.startswith("{") or _JSON_FENCE in stripped:
+        return None
+    try:
+        payload, end_index = json.JSONDecoder().raw_decode(stripped)
+    except json.JSONDecodeError:
+        return None
+    tail = stripped[end_index:].strip()
+    if (
+        not tail
+        or len(tail) > _MAX_REDUNDANT_JSON_TAIL_CHARS
+        or not tail.startswith(("上述 JSON", "以上 JSON"))
+        or not any(marker in tail for marker in ("最终提交", "规范 JSON"))
+        or not any(marker in tail for marker in ("见上", "同上", "省略"))
+        or not _is_complete_leading_report(payload)
+        or _contains_second_complete_report(tail)
+    ):
+        return None
+    return payload
+
+
 def _load_model_json(text: str) -> Any:
     stripped = _strip_json_fence(text)
     try:
         return json.loads(stripped)
     except json.JSONDecodeError as original_error:
         repaired = _repair_unescaped_inner_quotes(stripped)
-        if repaired == stripped:
-            raise
-        try:
-            return json.loads(repaired)
-        except json.JSONDecodeError:
-            raise original_error
+        if repaired != stripped:
+            try:
+                return json.loads(repaired)
+            except json.JSONDecodeError:
+                pass
+        recovered = _load_complete_report_before_redundant_tail(stripped)
+        if recovered is not None:
+            return recovered
+        raise original_error
 
 
 def parse_complete_narrative_draft(text: str) -> CompleteNarrativeDraft:
@@ -1177,9 +1428,20 @@ def render_financial_tables(snapshot: Optional[Mapping[str, Any]]) -> str:
         "",
         "金额单位：人民币亿元；同比由 Python 基于已核验年报数据计算。",
         "",
-        "| 科目 | FY2024 | FY2025 | 同比变化 |",
+        "| 科目 | 上期 | 本期 | 同比变化 |",
         "|---|---:|---:|---:|",
     ]
+    period_pairs = [
+        (
+            str(item.get("prior_period") or "上期"),
+            str(item.get("current_period") or "本期"),
+        )
+        for item in metrics
+        if isinstance(item, Mapping)
+    ]
+    if period_pairs:
+        prior_label, current_label = period_pairs[0]
+        lines[4] = f"| 科目 | {prior_label} | {current_label} | 同比变化 |"
     for item in metrics:
         if not isinstance(item, Mapping):
             continue
@@ -1331,8 +1593,9 @@ def restore_complete_report_from_saved_draft(
     """从已保存的 V2.5 模型草稿离线恢复 Markdown 报告。
 
     该入口不会创建模型或搜索客户端，也不会发起网络请求。原始模型输出保持
-    不变；当输出仅存在可确定修复的 JSON 内部引号错误时，复用正式解析器与
-    报告渲染器生成单独的恢复版文件，并保留原 Live 交付状态作为审计证据。
+    不变；当输出只存在正式解析器可保守处理的 JSON 格式问题时，复用正式
+    解析器与报告渲染器生成单独的恢复版文件，并保留原 Live 交付状态作为
+    审计证据。
     """
 
     saved_draft_path = Path(draft_path).resolve()
@@ -1445,7 +1708,7 @@ def restore_complete_report_from_saved_draft(
             "original_error_code": trace_payload.get("error_code"),
             "network_requests_during_recovery": 0,
             "llm_text_rewritten": False,
-            "parser_repair_scope": "unescaped_inner_quotes_only",
+            "parser_repair_scope": "conservative_complete_json_recovery",
             "raw_model_output_sha256": hashlib.sha256(
                 raw_model_output.encode("utf-8")
             ).hexdigest(),
@@ -1469,7 +1732,7 @@ def _default_mock_model(context: CompleteResearchContext) -> ScriptedModel:
 
     def final_step() -> ModelStep:
         payload = {
-            "report_title": "以岭药业企业授信研究（离线Mock）",
+            "report_title": f"{context.identity.short_name}企业授信研究（离线Mock）",
             "sections": [
                 {
                     "topic": "company_background_and_ownership",
@@ -1504,7 +1767,7 @@ def _default_mock_model(context: CompleteResearchContext) -> ScriptedModel:
             ],
             "due_diligence_questions": [
                 {"question": "请提供最新银行借款、授信额度及到期安排，核验年报未披露的短期借款情况。"},
-                {"question": "请说明核心产品适用的医保、集采及价格政策，并提供当前执行口径。"},
+                {"question": "请说明核心产品适用的行业准入、价格及监管政策，并提供当前执行口径。"},
             ],
             "limitations": ["离线Mock只验证V2.5系统编排，不代表真实研究结论。"],
         }
@@ -1523,9 +1786,9 @@ def _default_mock_model(context: CompleteResearchContext) -> ScriptedModel:
             if handle not in extracted_handles:
                 fetched = context.fetched_sources[handle]
                 question = (
-                    "医药中药行业政策监管实施时间适用范围和企业潜在影响"
+                    f"{context.identity.short_name} 所属行业政策监管实施时间适用范围和企业潜在影响"
                     if fetched.source_domain.endswith("gov.cn")
-                    else "以岭药业经营业务行业趋势竞争格局和授信风险"
+                    else f"{context.identity.short_name} 经营业务行业趋势竞争格局和授信风险"
                 )
                 return ModelStep(
                     output=[
@@ -1582,7 +1845,7 @@ def _default_mock_model(context: CompleteResearchContext) -> ScriptedModel:
                 function_call(
                     SEARCH_WEB_TOOL,
                     {
-                        "query": f"{context.identity.short_name} 中药行业 竞争格局 医保 集采 监管政策",
+                        "query": f"{context.identity.short_name} 主营业务 所属行业 竞争格局 监管政策",
                         "max_results": 5,
                         "domain_filter": [],
                         "recency": None,
@@ -1652,6 +1915,7 @@ class IntegratedCreditResearchAgentRuntime:
         confirmed_llm_live: bool = False,
         confirmed_search_live: bool = False,
         budget: Optional[SearchBudget] = None,
+        source_catalog: Optional[SourceCatalog] = None,
     ) -> CompleteResearchResult:
         if self.llm_config.mode is AgentMode.LIVE and not confirmed_llm_live:
             raise IntegratedRuntimeError(
@@ -1721,6 +1985,8 @@ class IntegratedCreditResearchAgentRuntime:
             identity=identity,
             fundamentals_path=fundamentals_path,
             planned_skills=planned_skills,
+            source=source,
+            comparison_inputs=comparison_inputs,
         )
         context_path = _write_json(output_dir / "credit_research_context.json", base_context)
 
@@ -1752,7 +2018,7 @@ class IntegratedCreditResearchAgentRuntime:
                 external_requests=self.search_config.mode is SearchMode.LIVE,
             )
             registry = RuntimeSourceRegistry(
-                SourceCatalog.from_default_catalog(),
+                source_catalog or SourceCatalog.from_default_catalog(),
                 entity_id=identity.entity_id,
                 output_path=output_dir / "runtime_sources.json",
             )

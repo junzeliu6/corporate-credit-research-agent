@@ -4,10 +4,19 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from credit_research_agent.streamlit_app import (
+    DEFAULT_TASK,
     _strip_local_image_links,
     preferred_history_run_path,
     split_report_sections,
 )
+
+
+def test_default_complete_research_task_is_company_and_period_neutral() -> None:
+    assert "以岭药业" not in DEFAULT_TASK
+    assert "002603" not in DEFAULT_TASK
+    assert "2025" not in DEFAULT_TASK
+    assert "股权结构" in DEFAULT_TASK
+    assert "财务" in DEFAULT_TASK
 
 
 def test_report_sections_include_full_text_and_each_chapter() -> None:

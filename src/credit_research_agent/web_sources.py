@@ -960,14 +960,10 @@ QUESTION_TERM_GROUPS: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
         (
             "政策",
             "监管",
-            "医保",
-            "药品目录",
-            "集中带量采购",
-            "集采",
-            "中医药",
-            "药品注册",
-            "药品生产",
-            "质量监管",
+            "监管要求",
+            "行业规范",
+            "准入",
+            "许可",
             "实施时间",
             "适用范围",
         ),
@@ -1012,11 +1008,6 @@ QUESTION_TERM_GROUPS: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
             "产品布局",
             "产品管线",
             "品种",
-            "药物",
-            "药品",
-            "制剂",
-            "胶囊",
-            "治疗",
         ),
     ),
     (
@@ -1031,7 +1022,6 @@ QUESTION_TERM_GROUPS: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
             "销售",
             "经销",
             "渠道",
-            "学术推广",
             "盈利模式",
         ),
     ),
@@ -1042,6 +1032,46 @@ QUESTION_TERM_GROUPS: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     (
         ("股权", "股东", "实际控制人", "控股股东"),
         ("股权", "股东", "实际控制人", "控股股东", "持股", "表决权"),
+    ),
+)
+
+
+# 行业术语只能在研究问题已经明确给出对应行业线索时扩展。过去把医药术语
+# 直接放进通用“政策/产品/经营模式”组，会让电子制造等非医药企业的网页
+# 召回无关的医保、集采和药品段落。
+CONTEXTUAL_QUESTION_TERM_GROUPS: tuple[
+    tuple[tuple[str, ...], tuple[str, ...]], ...
+] = (
+    (
+        (
+            "医药",
+            "制药",
+            "药品",
+            "药物",
+            "中药",
+            "中医药",
+            "医保",
+            "集采",
+            "带量采购",
+            "药品目录",
+            "胶囊",
+        ),
+        (
+            "医保",
+            "药品目录",
+            "集中带量采购",
+            "集采",
+            "中医药",
+            "药品注册",
+            "药品生产",
+            "质量监管",
+            "药物",
+            "药品",
+            "制剂",
+            "胶囊",
+            "治疗",
+            "学术推广",
+        ),
     ),
 )
 
@@ -1064,6 +1094,9 @@ def _question_tokens(question: str) -> List[str]:
     )
     tokens.extend(item for item in atomic_terms if item in normalized)
     for triggers, related_terms in QUESTION_TERM_GROUPS:
+        if any(item in normalized for item in triggers):
+            tokens.extend(related_terms)
+    for triggers, related_terms in CONTEXTUAL_QUESTION_TERM_GROUPS:
         if any(item in normalized for item in triggers):
             tokens.extend(related_terms)
     for part in re.split(r"[\s，。、；：:（）()《》/]+", normalized):

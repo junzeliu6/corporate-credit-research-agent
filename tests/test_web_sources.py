@@ -536,6 +536,32 @@ def test_saved_s06_wording_recalls_named_products_and_sales_model(tmp_path: Path
     assert any("专业化学术推广" in item.claim for item in operating.facts)
 
 
+def test_non_pharmaceutical_question_does_not_expand_pharmaceutical_terms() -> None:
+    from credit_research_agent.web_sources import _question_tokens
+
+    tokens = _question_tokens("工业富联主要产品、经营模式及行业政策监管适用范围")
+
+    assert {"主要产品", "经营模式", "政策", "监管", "适用范围"}.issubset(tokens)
+    assert not {
+        "医保",
+        "集采",
+        "中医药",
+        "药品注册",
+        "药品生产",
+        "药物",
+        "胶囊",
+        "学术推广",
+    }.intersection(tokens)
+
+
+def test_pharmaceutical_question_retains_contextual_pharmaceutical_terms() -> None:
+    from credit_research_agent.web_sources import _question_tokens
+
+    tokens = _question_tokens("医药企业主要产品和医保集采监管政策")
+
+    assert {"医保", "集采", "药品注册", "质量监管", "药品"}.issubset(tokens)
+
+
 def test_captcha_and_access_challenge_page_is_rejected(tmp_path: Path) -> None:
     fetcher = FixtureSourceFetcher(
         {

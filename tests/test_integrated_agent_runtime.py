@@ -255,6 +255,51 @@ def test_parser_accepts_short_preamble_before_unique_json_fence() -> None:
     assert draft.limitations == ['政策名称含有"十五五"字样，需复核。']
 
 
+def test_parser_accepts_complete_leading_report_before_placeholder_restatement() -> None:
+    payload = _draft_payload()
+    for index, section in enumerate(payload["sections"], start=1):
+        section["analysis_markdown"] = (
+            f"V25_LLM_SENTINEL：这是模型撰写的第{index}章完整专业分析，"
+            "包含企业事实、跨模块判断、资料限制和需要进一步核实的事项。"
+        )
+    payload["reporting_note"] = "模型误加的非契约字段"
+    complete_json = json.dumps(payload, ensure_ascii=False)
+    redundant_tail = """
+
+上述 JSON 中末尾多了一个非规范字段，最终提交版本以以下规范 JSON 为准（内容一致）：
+
+{
+  "report_title": "模型撰写的完整授信研究",
+  "sections": [
+    {"topic": "company_background_and_ownership", "heading": "第一章", "analysis_markdown": "见上"}
+  ],
+  "due_diligence_questions": [省略，同上],
+  "limitations": [省略，同上]
+}
+"""
+
+    draft = parse_complete_narrative_draft(complete_json + redundant_tail)
+
+    assert [item.topic for item in draft.sections] == list(COMPLETE_REQUIRED_TOPICS)
+    assert len(draft.due_diligence_questions) == 1
+    assert draft.sections[0].analysis_markdown.startswith("V25_LLM_SENTINEL")
+
+
+def test_parser_rejects_two_complete_report_objects() -> None:
+    payload = _draft_payload()
+    complete_json = json.dumps(payload, ensure_ascii=False)
+    model_output = (
+        complete_json
+        + "\n\n上述 JSON 需要修正，最终提交版本以以下规范 JSON 为准（内容一致）：\n\n"
+        + complete_json
+    )
+
+    with pytest.raises(IntegratedRuntimeError) as exc_info:
+        parse_complete_narrative_draft(model_output)
+
+    assert exc_info.value.code == "invalid_complete_narrative_json"
+
+
 def test_parser_rejects_ambiguous_or_incomplete_fenced_output() -> None:
     valid_json = json.dumps(
         _draft_payload([COMPLETE_REQUIRED_TOPICS[0]]),
@@ -1041,6 +1086,261 @@ def test_search_failure_keeps_both_skill_outputs_and_delivers_partial_report(
     )
     assert "离线夹具验证主Agent能够把经营、治理、行业和财务维度" in report
     assert result.ownership_svg_path is not None
+
+
+def test_malformed_search_tool_json_is_recoverable_and_does_not_call_provider(
+    tmp_path: Path,
+) -> None:
+    """第三方模型偶发输出畸形Function Calling时，应让模型修正而非终止整个报告。"""
+
+    fixture = load_industry_search_fixture()
+    provider, fetcher = build_mock_retrieval_dependencies(
+        fixture, clock=lambda: FIXED_TIME
+    )
+    first_url = "https://www.yiling.cn/v2-4-industry-mock"
+    malformed = (
+        '{"query":"以岭药业 "十五五" 行业政策","max_results":5,'
+        '"domain_filter":[],"recency":null}'
+    )
+    model = ScriptedModel(
+        [
+            ModelStep(
+                output=[
+                    function_call(
+                        OWNERSHIP_FUNCTION_TOOL,
+                        {"ticker": "002603.SZ"},
+                        call_id="ownership",
+                    )
+                ]
+            ),
+            ModelStep(
+                output=[
+                    function_call(
+                        FINANCIAL_FUNCTION_TOOL,
+                        {"ticker": "002603.SZ"},
+                        call_id="financial",
+                    )
+                ]
+            ),
+            ModelStep(
+                output=[
+                    function_call(
+                        SEARCH_WEB_TOOL,
+                        malformed,
+                        call_id="malformed-search",
+                    )
+                ]
+            ),
+            ModelStep(
+                output=[
+                    function_call(
+                        SEARCH_WEB_TOOL,
+                        {
+                            "query": "以岭药业 行业政策",
+                            "max_results": 5,
+                            "domain_filter": [],
+                            "recency": None,
+                        },
+                        call_id="corrected-search",
+                    )
+                ]
+            ),
+            ModelStep(
+                output=[
+                    function_call(
+                        FETCH_SOURCE_TOOL,
+                        {"url": first_url},
+                        call_id="fetch",
+                    )
+                ]
+            ),
+            ModelStep(
+                output=[
+                    function_call(
+                        EXTRACT_EVIDENCE_TOOL,
+                        {
+                            "source_handle": "DOC001",
+                            "research_question": "以岭药业主营业务和行业影响",
+                        },
+                        call_id="extract",
+                    )
+                ]
+            ),
+            ModelStep(
+                output=[
+                    assistant_message(json.dumps(_draft_payload(), ensure_ascii=False))
+                ]
+            ),
+        ]
+    )
+    source, download, summary_path, pages_path = _download(tmp_path, "S01")
+    comparison_source, comparison_download, comparison_summary, comparison_pages = _download(
+        tmp_path, "S10"
+    )
+    runtime = IntegratedCreditResearchAgentRuntime(
+        PROJECT_ROOT,
+        DeepSeekLLMConfig(
+            mode=AgentMode.MOCK,
+            max_turns=10,
+            max_tool_calls=20,
+            max_output_tokens=5000,
+        ),
+        BaiduSearchConfig(mode=SearchMode.MOCK),
+        model_override=model,
+        search_provider_override=provider,
+        source_fetcher_override=fetcher,
+        skill_runtime_factory=_ArtifactBackedSkillRuntime,
+        clock=lambda: FIXED_TIME,
+    )
+
+    result = runtime.run_sync(
+        task=FULL_TASK,
+        identity=_identity(),
+        source=source,
+        download=download,
+        summary_path=summary_path,
+        pages_path=pages_path,
+        comparison_inputs=[
+            FinancialSourceInput(
+                source=comparison_source,
+                download=comparison_download,
+                summary_path=comparison_summary,
+                pages_path=comparison_pages,
+            )
+        ],
+        fundamentals_path=FUNDAMENTALS_EXAMPLE_PATH,
+        output_dir=tmp_path / "malformed-search-recovered",
+        trace_output=tmp_path / "malformed-search-recovered-trace.json",
+        budget=SearchBudget(max_agent_turns=10, max_total_tool_calls=20),
+    )
+    trace = json.loads(result.trace_path.read_text(encoding="utf-8"))
+    report = result.report_path.read_text(encoding="utf-8")
+    invalid_calls = [
+        item
+        for item in trace["tool_calls"]
+        if item.get("error_code") == "invalid_tool_arguments"
+    ]
+
+    assert result.status is RetrievalStatus.PARTIAL_SUCCESS
+    assert result.module_status == {"ownership": "success", "financial": "success"}
+    assert provider.call_count == 1
+    assert len(trace["search_queries"]) == 1
+    assert trace["tool_call_count"] == 6
+    assert len(invalid_calls) == 1
+    assert invalid_calls[0]["status"] == "invalid_arguments_retryable"
+    assert invalid_calls[0]["json_error"]["position"] > 0
+    assert invalid_calls[0]["raw_input_length"] == len(malformed)
+    assert len(invalid_calls[0]["raw_input_sha256"]) == 64
+    assert "raw_input" not in invalid_calls[0]
+    assert "十五五" not in json.dumps(invalid_calls[0], ensure_ascii=False)
+    assert "V25_LLM_SENTINEL" in report
+
+
+def test_repeated_invalid_tool_arguments_are_bounded_and_report_can_finish(
+    tmp_path: Path,
+) -> None:
+    fixture = load_industry_search_fixture()
+    provider, fetcher = build_mock_retrieval_dependencies(
+        fixture, clock=lambda: FIXED_TIME
+    )
+    malformed_calls = [
+        '{"query":"未闭合",',
+        '["not", "an", "object"]',
+        '{"query":123,"max_results":"five","domain_filter":[],"recency":null}',
+    ]
+    model = ScriptedModel(
+        [
+            ModelStep(
+                output=[
+                    function_call(
+                        OWNERSHIP_FUNCTION_TOOL,
+                        {"ticker": "002603.SZ"},
+                        call_id="ownership",
+                    )
+                ]
+            ),
+            ModelStep(
+                output=[
+                    function_call(
+                        FINANCIAL_FUNCTION_TOOL,
+                        {"ticker": "002603.SZ"},
+                        call_id="financial",
+                    )
+                ]
+            ),
+            *[
+                ModelStep(
+                    output=[
+                        function_call(
+                            SEARCH_WEB_TOOL,
+                            arguments,
+                            call_id=f"bad-search-{index}",
+                        )
+                    ]
+                )
+                for index, arguments in enumerate(malformed_calls, start=1)
+            ],
+            ModelStep(
+                output=[
+                    assistant_message(json.dumps(_draft_payload(), ensure_ascii=False))
+                ]
+            ),
+        ]
+    )
+    source, download, summary_path, pages_path = _download(tmp_path, "S01")
+    comparison_source, comparison_download, comparison_summary, comparison_pages = _download(
+        tmp_path, "S10"
+    )
+    runtime = IntegratedCreditResearchAgentRuntime(
+        PROJECT_ROOT,
+        DeepSeekLLMConfig(
+            mode=AgentMode.MOCK,
+            max_turns=8,
+            max_tool_calls=8,
+            max_output_tokens=5000,
+        ),
+        BaiduSearchConfig(mode=SearchMode.MOCK),
+        model_override=model,
+        search_provider_override=provider,
+        source_fetcher_override=fetcher,
+        skill_runtime_factory=_ArtifactBackedSkillRuntime,
+        clock=lambda: FIXED_TIME,
+    )
+
+    result = runtime.run_sync(
+        task=FULL_TASK,
+        identity=_identity(),
+        source=source,
+        download=download,
+        summary_path=summary_path,
+        pages_path=pages_path,
+        comparison_inputs=[
+            FinancialSourceInput(
+                source=comparison_source,
+                download=comparison_download,
+                summary_path=comparison_summary,
+                pages_path=comparison_pages,
+            )
+        ],
+        fundamentals_path=FUNDAMENTALS_EXAMPLE_PATH,
+        output_dir=tmp_path / "malformed-search-bounded",
+        trace_output=tmp_path / "malformed-search-bounded-trace.json",
+        budget=SearchBudget(max_agent_turns=8, max_total_tool_calls=8),
+    )
+    trace = json.loads(result.trace_path.read_text(encoding="utf-8"))
+    invalid_calls = [
+        item
+        for item in trace["tool_calls"]
+        if item.get("error_code") == "invalid_tool_arguments"
+    ]
+
+    assert result.status is RetrievalStatus.PARTIAL_SUCCESS
+    assert provider.call_count == 0
+    assert trace["tool_call_count"] == 5
+    assert [item["attempt"] for item in invalid_calls] == [1, 2, 3]
+    assert invalid_calls[-1]["status"] == "invalid_arguments_skipped"
+    assert "search_web:invalid_tool_arguments_repeated" in result.limitations
+    assert "V25_LLM_SENTINEL" in result.report_path.read_text(encoding="utf-8")
 
 
 def test_invalid_model_output_preserves_diagnostics_without_python_analysis_fallback(

@@ -1,5 +1,12 @@
 """企业授信研究Agent核心包。"""
 
+from credit_research_agent.annual_reports import (
+    AnnualReportDiscovery,
+    AnnualReportDiscoveryResult,
+    CninfoAnnualReportProvider,
+    CompanyOnboardingResult,
+    CompanyOnboardingService,
+)
 from credit_research_agent.company import CompanyResolver
 from credit_research_agent.evidence import EvidenceBuilder
 from credit_research_agent.fundamentals import FundamentalsBuilder
@@ -21,6 +28,15 @@ from credit_research_agent.financial import (
 from credit_research_agent.financial_agent_runtime import (
     FinancialResearchAgentRuntime,
     restore_financial_report_from_saved_draft,
+)
+from credit_research_agent.financial_statements import (
+    FinancialStatementExtractionError,
+    FinancialStatementExtractionResult,
+    FinancialStatementExtractor,
+    GenericFinancialArtifacts,
+    StatementExtractionStatus,
+    build_generic_financial_artifacts,
+    parse_financial_amount,
 )
 from credit_research_agent.grounding import (
     CitableFact,
@@ -79,6 +95,13 @@ from credit_research_agent.search import (
     SearchResponse,
     SearchResult,
 )
+from credit_research_agent.security_master import (
+    DynamicCompanyResolver,
+    DynamicCompanyResolution,
+    OfficialAshareSecurityMasterProvider,
+    SecurityMasterCache,
+    SecurityMasterRecord,
+)
 from credit_research_agent.sources import SourceCatalog
 from credit_research_agent.skill_runtime import (
     SkillExecutionTrace,
@@ -94,8 +117,15 @@ from credit_research_agent.word_export import (
 )
 
 __all__ = [
+    "AnnualReportDiscovery",
+    "AnnualReportDiscoveryResult",
+    "CninfoAnnualReportProvider",
+    "CompanyOnboardingResult",
+    "CompanyOnboardingService",
     "CompanyIdentity",
     "CompanyResolver",
+    "DynamicCompanyResolver",
+    "DynamicCompanyResolution",
     "CitableFact",
     "AnalysisValidationStatus",
     "EvidenceBuilder",
@@ -108,6 +138,10 @@ __all__ = [
     "FinancialReasonablenessAssessment",
     "FinancialResearchAgentRuntime",
     "FinancialResearchBundle",
+    "FinancialStatementExtractionError",
+    "FinancialStatementExtractionResult",
+    "FinancialStatementExtractor",
+    "GenericFinancialArtifacts",
     "FundamentalResearchBundle",
     "FundamentalsBuilder",
     "InformationRetrievalRuntime",
@@ -136,6 +170,9 @@ __all__ = [
     "SearchRecency",
     "SearchResponse",
     "SearchResult",
+    "OfficialAshareSecurityMasterProvider",
+    "SecurityMasterCache",
+    "SecurityMasterRecord",
     "SkillExecutionTrace",
     "SkillLoader",
     "SkillRegistry",
@@ -144,10 +181,12 @@ __all__ = [
     "SourceCatalog",
     "SourceRecord",
     "StatementType",
+    "StatementExtractionStatus",
     "ValidatedAgentAnalysis",
     "assemble_report_artifacts",
     "build_report_artifacts",
     "build_financial_artifacts",
+    "build_generic_financial_artifacts",
     "assess_reasonableness",
     "build_ownership_graph",
     "build_evidence_bundle_grounding_catalog",
@@ -166,7 +205,8 @@ __all__ = [
     "WordExportResult",
     "export_markdown_report",
     "inspect_markdown_images",
+    "parse_financial_amount",
 ]
 
-__version__ = "3.2.0"
+__version__ = "3.3.0"
 

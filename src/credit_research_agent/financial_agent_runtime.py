@@ -49,7 +49,11 @@ from credit_research_agent.agent_runtime import (
     _write_trace,
 )
 from credit_research_agent.documents import DownloadResult
-from credit_research_agent.financial import FinancialSourceInput
+from credit_research_agent.financial import (
+    FinancialSourceInput,
+    latest_financial_period,
+    sort_financial_periods,
+)
 from credit_research_agent.llm_config import (
     AgentMode,
     DeepSeekLLMConfig,
@@ -259,10 +263,29 @@ def _build_financial_analysis_context_from_artifacts(
     sources_payload = _json_load(artifacts["sources_path"])
 
     all_metrics = metrics_payload.get("metrics", [])
+    available_periods = sort_financial_periods(
+        [
+            str(period)
+            for item in all_metrics
+            for period in (item.get("prior_period"), item.get("current_period"))
+            if period
+        ]
+        + [
+            str(item.get("period"))
+            for item in metrics_payload.get("ratios", [])
+            if item.get("period")
+        ]
+    )
+    latest_period = latest_financial_period(
+        str(item.get("current_period"))
+        for item in all_metrics
+        if item.get("current_period")
+    )
+    comparison_periods = available_periods[-2:]
     selected_metrics = [
         item
         for item in all_metrics
-        if item.get("current_period") == "FY2025"
+        if item.get("current_period") == latest_period
         and (
             item.get("item") in FOCUS_FINANCIAL_ITEMS
             or bool(item.get("requires_deep_analysis"))
@@ -273,7 +296,7 @@ def _build_financial_analysis_context_from_artifacts(
     ratios = [
         item
         for item in metrics_payload.get("ratios", [])
-        if item.get("period") in {"FY2024", "FY2025"}
+        if item.get("period") in set(comparison_periods)
     ]
 
     explanations = [
@@ -382,6 +405,11 @@ def _build_financial_analysis_context_from_artifacts(
 
     return {
         "identity": _without_internal_ids(facts_payload["identity"]),
+        "analysis_periods": {
+            "available": available_periods,
+            "comparison": comparison_periods,
+            "latest": latest_period,
+        },
         "focus_items": list(FOCUS_FINANCIAL_ITEMS),
         "metrics": [
             _without_internal_ids(_metric_with_display(item))
@@ -511,6 +539,7 @@ def build_financial_snapshot_from_artifacts(
     ]
 
     explanations = project(context.get("explanations"), explanation_fields)
+    period_scope = context.get("analysis_periods") or {}
     return {
         "company": {
             key: identity[key]
@@ -524,7 +553,8 @@ def build_financial_snapshot_from_artifacts(
             if key in identity
         },
         "scope": {
-            "periods": ["FY2024", "FY2025"],
+            "periods": list(period_scope.get("comparison") or []),
+            "latest_period": period_scope.get("latest"),
             "currency": "CNY",
             "amount_unit": "yuan",
             "statement_scope": identity.get("entity_scope", "consolidated"),
@@ -633,6 +663,17 @@ def _render_core_financial_tables(payload: Mapping[str, Any]) -> List[str]:
     metric_by_item = {
         str(metric.get("item")): metric for metric in payload.get("metrics", [])
     }
+    period_scope = payload.get("analysis_periods") or {}
+    comparison_periods = list(period_scope.get("comparison") or [])
+    if not comparison_periods:
+        comparison_periods = sort_financial_periods(
+            str(period)
+            for metric in payload.get("metrics", [])
+            for period in (metric.get("prior_period"), metric.get("current_period"))
+            if period
+        )[-2:]
+    prior_period = comparison_periods[-2] if len(comparison_periods) >= 2 else "上期"
+    current_period = comparison_periods[-1] if comparison_periods else "本期"
     table_order = (
         "operating_revenue",
         "net_profit",
@@ -683,7 +724,8 @@ def _render_core_financial_tables(payload: Mapping[str, Any]) -> List[str]:
     for item in table_order:
         if item not in metric_by_item:
             lines.append(
-                f"| {item_labels[item]} | FY2024 未取得 | FY2025 未取得 | — | — |"
+                f"| {item_labels[item]} | {prior_period} 未取得 | "
+                f"{current_period} 未取得 | — | — |"
             )
 
     ratio_by_name: Dict[str, Dict[str, Any]] = {}
@@ -692,30 +734,39 @@ def _render_core_financial_tables(payload: Mapping[str, Any]) -> List[str]:
             str(ratio.get("period", ""))
         ] = ratio
     if ratio_by_name:
+        ratio_periods = comparison_periods or sort_financial_periods(
+            period
+            for periods in ratio_by_name.values()
+            for period in periods
+            if period
+        )
         lines.extend(
             [
                 "",
                 "## 主要财务比率",
                 "",
-                "| 比率 | FY2024 | FY2025 | 计算口径 |",
-                "|---|---:|---:|---|",
+                "| 比率 | " + " | ".join(ratio_periods) + " | 计算口径 |",
+                "|---|" + "|".join("---:" for _ in ratio_periods) + "|---|",
             ]
         )
         for name, periods in ratio_by_name.items():
-            prior = periods.get("FY2024", {})
-            current = periods.get("FY2025", {})
-            prior_text = (
-                f"{prior['value_percent']}%"
-                if prior.get("value_percent") is not None
-                else "—"
+            values = []
+            for period in ratio_periods:
+                ratio = periods.get(period, {})
+                values.append(
+                    f"{ratio['value_percent']}%"
+                    if ratio.get("value_percent") is not None
+                    else "—"
+                )
+            formula = next(
+                (
+                    str(periods[period].get("formula"))
+                    for period in reversed(ratio_periods)
+                    if periods.get(period, {}).get("formula")
+                ),
+                "—",
             )
-            current_text = (
-                f"{current['value_percent']}%"
-                if current.get("value_percent") is not None
-                else "—"
-            )
-            formula = current.get("formula") or prior.get("formula") or "—"
-            lines.append(f"| {name} | {prior_text} | {current_text} | {formula} |")
+            lines.append(f"| {name} | {' | '.join(values)} | {formula} |")
     return lines
 
 
@@ -737,11 +788,11 @@ def _bound_financial_report_title(
         for metric in payload.get("metrics", [])
         if isinstance(metric, Mapping)
     ]
-    fiscal_years = sorted(
+    fiscal_years = [
         period[2:]
-        for period in periods
+        for period in sort_financial_periods(periods)
         if re.fullmatch(r"FY\d{4}", period)
-    )
+    ]
     year_text = f"{fiscal_years[-1]}年度" if fiscal_years else ""
     return f"{legal_name}（{ticker}）{year_text}财务分析——银行授信视角"
 
@@ -1013,7 +1064,14 @@ def _mock_narrative(context: FinancialAgentContext) -> str:
         if topic == "executive_summary":
             narrative = "【离线Mock哨兵】本段模拟 DeepSeek 的财务分析正文，仅用于验证" "模型原文不会被 Python 模板替换。"
         elif topic == "short_term_borrowings_and_debt_structure":
-            narrative = "FY2024及FY2025短期借款可比数据尚未取得，债务结构无法确认，" "需补充借款及授信明细。"
+            comparison_periods = list(
+                payload.get("analysis_periods", {}).get("comparison") or []
+            )
+            period_text = "及".join(comparison_periods) or "当前可比期间"
+            narrative = (
+                f"{period_text}短期借款可比数据尚未取得，债务结构无法确认，"
+                "需补充借款及授信明细。"
+            )
         elif topic == "cross_metric_analysis":
             labels = [
                 metric_by_item[item]["item_label"]

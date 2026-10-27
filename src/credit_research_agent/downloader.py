@@ -48,6 +48,8 @@ class DownloadConfig:
     allowed_domains: Sequence[str] = (
         "cninfo.com.cn",
         "szse.cn",
+        "sse.com.cn",
+        "bse.cn",
         "yiling.cn",
     )
     user_agent: str = "CorporateCreditResearchAgent/0.2 (public-disclosure-research)"

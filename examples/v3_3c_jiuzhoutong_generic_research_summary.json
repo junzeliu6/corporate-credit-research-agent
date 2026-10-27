@@ -1,0 +1,62 @@
+{
+  "schema_version": "3.3c.0",
+  "generated_from": "本机已缓存且完成主体、证券代码、报告期和SHA-256绑定校验的九州通FY2025官方年报全文",
+  "identity": {
+    "entity_id": "CN-A-SSE-600998",
+    "legal_name": "九州通医药集团股份有限公司",
+    "ticker": "600998.SH",
+    "exchange": "上海证券交易所"
+  },
+  "primary_source": {
+    "source_id": "S01",
+    "report_period": "FY2025",
+    "source_type": "annual_report",
+    "trusted_tier": 1
+  },
+  "company_scope": "supported_non_financial",
+  "fundamentals": {
+    "status": "success",
+    "fact_count": 7,
+    "evidence_count": 7,
+    "module_fact_counts": {
+      "development_history": 2,
+      "main_business": 1,
+      "operating_model": 2,
+      "main_products": 2
+    }
+  },
+  "ownership": {
+    "status": "partial_success",
+    "as_of_date": "2025-12-31",
+    "top_shareholder_count": 10,
+    "disclosed_percentage_total": "64.92",
+    "formal_ready": false,
+    "controlling_shareholders": [
+      "楚昌投资集团有限公司"
+    ],
+    "actual_controllers": [
+      "刘宝林"
+    ],
+    "limitations": [
+      "前十大股东不是完整股东名册，未生成虚构的其他股东或差额节点。",
+      "机构股东上层持股比例尚未全部取得，因此部分图不代表完整穿透。"
+    ]
+  },
+  "financial": {
+    "status": "success",
+    "periods": [
+      "FY2024",
+      "FY2025"
+    ],
+    "fact_count": 32,
+    "metric_count": 16,
+    "ratio_count": 8
+  },
+  "runtime": {
+    "uses_company_specific_seeds": false,
+    "deepseek_requests": 0,
+    "baidu_search_requests": 0,
+    "offline_complete_research_status": "partial_success",
+    "partial_reason": "股权公开披露只覆盖前十大股东，formal_ready=false"
+  }
+}

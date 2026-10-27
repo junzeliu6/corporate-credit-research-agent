@@ -21,6 +21,7 @@ from uuid import uuid4
 from dotenv import dotenv_values
 
 from credit_research_agent.company import CompanyResolver
+from credit_research_agent.security_master import SecurityMasterError, parse_a_share_code
 
 
 # 网页 Live 需要容纳长篇报告生成；这是单次模型请求的等待上限，不是整项任务时限。
@@ -220,7 +221,22 @@ def build_research_command(
     root = _validated_project_root(project_root)
     company_query = _clean_text(request.company, "企业名称或证券代码")
     task = _clean_text(request.task, "研究任务")
-    identity = CompanyResolver.from_default_catalog().resolve(company_query)
+    if request.mode is ResearchMode.COMPLETE:
+        try:
+            _ticker, _exchange_code, entity_id = parse_a_share_code(company_query)
+        except SecurityMasterError:
+            # 首版动态接入以代码为主；保留已登记演示企业的名称入口。
+            try:
+                entity_id = CompanyResolver.from_default_catalog().resolve(
+                    company_query
+                ).entity_id
+            except Exception as exc:
+                raise UiServiceError(
+                    "完整研究请输入6位A股代码；公司名称仅支持已登记的历史演示企业"
+                ) from exc
+    else:
+        identity = CompanyResolver.from_default_catalog().resolve(company_query)
+        entity_id = identity.entity_id
     _validate_source_id(request.source_id, "主来源")
     _validate_source_id(request.comparison_source_id, "比较来源")
 
@@ -234,7 +250,7 @@ def build_research_command(
     run_dir = (root / "data" / "streamlit_runs" / safe_run_id).resolve()
     allowed_root = (root / "data" / "streamlit_runs").resolve()
     _require_descendant(run_dir, allowed_root)
-    artifact_dir = (run_dir / identity.entity_id).resolve()
+    artifact_dir = (run_dir / entity_id).resolve()
     progress_path = (run_dir / "ui_progress.jsonl").resolve()
     log_path = (run_dir / "cli_output.log").resolve()
 
@@ -249,10 +265,13 @@ def build_research_command(
             [
                 "--run-complete-research",
                 task,
-                "--complete-source",
-                request.source_id,
-                "--financial-comparison-source",
-                request.comparison_source_id,
+                "--auto-prepare",
+                "--annual-report-count",
+                "2",
+                "--security-master-cache",
+                str(root / "data" / "cache" / "security_master.json"),
+                "--onboarding-dir",
+                str(run_dir / "onboarding"),
                 "--complete-dir",
                 str(run_dir),
                 "--complete-trace-output",

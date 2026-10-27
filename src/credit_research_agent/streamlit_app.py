@@ -8,6 +8,7 @@ from typing import Any, Optional
 from uuid import uuid4
 
 from credit_research_agent.company import CompanyResolutionError, CompanyResolver
+from credit_research_agent.security_master import SecurityMasterError, parse_a_share_code
 from credit_research_agent.ui_artifacts import (
     ArtifactAccessError,
     ReportDisplayStatus,
@@ -38,26 +39,26 @@ from credit_research_agent.word_export import WordExportError
 
 
 DEFAULT_TASK = (
-    "请研究以岭药业的企业背景、股权结构、经营情况、行业政策及财务状况，"
+    "请研究该上市公司的企业背景、股权结构、经营情况、行业政策及财务状况，"
     "并从银行授信角度撰写完整研究报告。"
 )
 HISTORY_SELECTION_KEY = "v32_selected_history_run"
 MODE_TASKS = {
     ResearchMode.COMPLETE: DEFAULT_TASK,
     ResearchMode.OWNERSHIP: (
-        "请分析以岭药业（002603.SZ）的股权结构，生成股权穿透图，"
+        "请分析该上市公司的股权结构，生成股权穿透图，"
         "并说明主要股东及实际控制关系。"
     ),
     ResearchMode.FINANCIAL: (
-        "请从银行授信角度分析以岭药业2025年的财务状况，重点分析收入、"
+        "请从银行授信角度分析该上市公司最新年度的财务状况，重点分析收入、"
         "应收账款、存货、债务结构和经营活动现金流，并提出尽调问题。"
     ),
     ResearchMode.INDUSTRY: (
-        "请研究以岭药业所处行业的发展趋势、竞争格局及政策监管环境，"
+        "请研究该上市公司所处行业的发展趋势、竞争格局及政策监管环境，"
         "并分析其对企业经营和授信风险的潜在影响。"
     ),
     ResearchMode.FUNDAMENTALS: (
-        "提取以岭药业的发展历史、主营业务、经营模式和主要产品。"
+        "提取该上市公司的发展历史、主营业务、经营模式和主要产品。"
     ),
 }
 MODE_LABELS = {
@@ -380,13 +381,31 @@ def _render_new_research(st: Any, project_root: Path) -> None:
     task = st.text_area("研究任务", height=120, key="v31_research_task")
 
     identity = None
-    try:
-        identity = CompanyResolver.from_default_catalog().resolve(company_query)
-        st.success(
-            f"已识别：{identity.legal_name}（{identity.ticker}，{identity.exchange}）"
-        )
-    except CompanyResolutionError as exc:
-        st.error(str(exc))
+    if mode is ResearchMode.COMPLETE:
+        try:
+            ticker, exchange_code, entity_id = parse_a_share_code(company_query)
+            identity = entity_id
+            st.success(
+                f"代码格式已通过：{ticker}（{exchange_code}）。启动后将从官方主数据核验公司身份并准备年报。"
+            )
+        except SecurityMasterError:
+            try:
+                registered = CompanyResolver.from_default_catalog().resolve(company_query)
+                identity = registered.entity_id
+                st.success(
+                    f"已识别历史演示企业：{registered.legal_name}（{registered.ticker}）"
+                )
+            except CompanyResolutionError:
+                st.error("完整研究请输入6位A股代码；公司名称目前仅支持已登记演示企业。")
+    else:
+        try:
+            registered = CompanyResolver.from_default_catalog().resolve(company_query)
+            identity = registered.entity_id
+            st.success(
+                f"已识别：{registered.legal_name}（{registered.ticker}，{registered.exchange}）"
+            )
+        except CompanyResolutionError as exc:
+            st.error(str(exc))
 
     confirm_llm = False
     confirm_search = False

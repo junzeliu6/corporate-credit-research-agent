@@ -5,6 +5,7 @@ V0.2 实现下载结果与下载器接口，PDF 文本与页码提取仍属于 V
 
 from __future__ import annotations
 
+import hashlib
 from datetime import date, datetime
 from enum import Enum
 from pathlib import Path
@@ -32,6 +33,54 @@ class DownloadResult(BaseModel):
     bytes_written: int = Field(ge=0)
     sha256: str
     from_cache: bool = False
+
+
+class DocumentBindingError(ValueError):
+    """来源目录、下载清单或本地文件不是同一份文档。"""
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+def validate_download_binding(
+    source: SourceRecord,
+    download: DownloadResult,
+    *,
+    verify_file_hash: bool = True,
+) -> None:
+    """校验任务来源与下载文件，防止跨企业复用同名 ``S01``。
+
+    Source ID 只是任务内编号，因此必须同时核对来源元数据与文件内容。调用方仍需
+    单独校验 ``source.entity_id`` 与当前研究主体。
+    """
+
+    comparisons = (
+        ("source_id", download.source_id, source.source_id),
+        ("source_title", download.source_title, source.title),
+        ("source_url", download.source_url, str(source.url)),
+        ("published_at", download.published_at, source.published_at),
+        ("report_period", download.report_period, source.report_period),
+    )
+    for field_name, actual, expected in comparisons:
+        if actual != expected:
+            raise DocumentBindingError(
+                "download_source_metadata_mismatch",
+                f"下载结果的 {field_name} 与来源目录不一致",
+            )
+    file_path = Path(download.file_path)
+    if not file_path.is_file():
+        raise DocumentBindingError("download_file_missing", "下载清单对应的本地文件不存在")
+    if verify_file_hash:
+        digest = hashlib.sha256()
+        with file_path.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        if digest.hexdigest() != download.sha256:
+            raise DocumentBindingError(
+                "download_file_hash_mismatch",
+                "本地PDF内容与下载清单哈希不一致",
+            )
 
 
 class DownloadFailureRecord(BaseModel):
