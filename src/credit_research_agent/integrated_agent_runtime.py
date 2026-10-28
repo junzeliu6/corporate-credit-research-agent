@@ -1177,6 +1177,27 @@ def _strip_json_fence(text: str) -> str:
     return stripped
 
 
+def _strip_short_preamble_before_bare_json(text: str) -> str:
+    """移除唯一裸 JSON 对象前的一句简短交付说明。
+
+    DeepSeek 偶尔不会使用 Markdown 代码围栏，而是在完整 JSON 对象前添加
+    一句“现在输出最终报告”。这里只移除不超过既有上限的前言，并把从首个
+    ``{`` 到输出末尾的全部内容交给后续 ``json.loads`` 严格解析。因此多个
+    对象、尾随正文、未闭合或截断 JSON 仍会被拒绝。
+    """
+
+    stripped = text.strip()
+    if stripped.startswith("{") or _JSON_FENCE in stripped:
+        return stripped
+    opening_index = stripped.find("{")
+    if opening_index <= 0:
+        return stripped
+    preamble = stripped[:opening_index].strip()
+    if not preamble or len(preamble) > _MAX_JSON_PREAMBLE_CHARS:
+        return stripped
+    return stripped[opening_index:].strip()
+
+
 def _repair_unescaped_inner_quotes(text: str) -> str:
     """保守修复模型 JSON 字符串中未转义的内部双引号。
 
@@ -1301,6 +1322,7 @@ def _load_complete_report_before_redundant_tail(text: str) -> Any | None:
 
 def _load_model_json(text: str) -> Any:
     stripped = _strip_json_fence(text)
+    stripped = _strip_short_preamble_before_bare_json(stripped)
     try:
         return json.loads(stripped)
     except json.JSONDecodeError as original_error:

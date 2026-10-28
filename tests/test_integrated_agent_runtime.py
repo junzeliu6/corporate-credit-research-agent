@@ -256,6 +256,35 @@ def test_parser_accepts_short_preamble_before_unique_json_fence() -> None:
     assert draft.limitations == ['政策名称含有"十五五"字样，需复核。']
 
 
+def test_parser_accepts_short_preamble_before_single_bare_json_object() -> None:
+    payload = _draft_payload()
+    model_output = (
+        "资料已经基本充分，现在输出最终研究报告。\n\n"
+        + json.dumps(payload, ensure_ascii=False)
+    )
+
+    draft = parse_complete_narrative_draft(model_output)
+
+    assert [item.topic for item in draft.sections] == list(COMPLETE_REQUIRED_TOPICS)
+    assert len(draft.due_diligence_questions) == 1
+
+
+def test_parser_rejects_ambiguous_or_incomplete_bare_json_after_preamble() -> None:
+    valid_json = json.dumps(_draft_payload(), ensure_ascii=False)
+    invalid_outputs = [
+        "说明\n" + valid_json + "\n" + valid_json,
+        "说明\n" + valid_json + "\n尾随正文",
+        '说明\n{"report_title":"未完成","sections":[',
+        "说" * 201 + "\n" + valid_json,
+    ]
+
+    for model_output in invalid_outputs:
+        with pytest.raises(IntegratedRuntimeError) as exc_info:
+            parse_complete_narrative_draft(model_output)
+
+        assert exc_info.value.code == "invalid_complete_narrative_json"
+
+
 def test_parser_accepts_complete_leading_report_before_placeholder_restatement() -> None:
     payload = _draft_payload()
     for index, section in enumerate(payload["sections"], start=1):

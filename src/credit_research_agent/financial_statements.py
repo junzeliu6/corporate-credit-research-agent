@@ -36,7 +36,9 @@ from credit_research_agent.financial import (
     FinancialResearchBundle,
     FinancialSourceInput,
     FinancialStatement,
+    FinancialValidationIssue,
     FinancialValidationResult,
+    IssueSeverity,
     build_financial_risk_flags,
     calculate_financial_metrics,
     calculate_financial_ratios,
@@ -86,6 +88,7 @@ class FinancialExtractionIssue(BaseModel):
     statement: Optional[FinancialStatement] = None
     item: Optional[FinancialItem] = None
     page_number: Optional[int] = None
+    period: Optional[str] = None
 
 
 class ExtractedStatementSection(BaseModel):
@@ -132,6 +135,7 @@ class ExtractedStatementRow(BaseModel):
     unit_multiplier: Decimal
     comparison_restated: bool = False
     extraction_status: str = "mapped"
+    layout_direction: str = "inline"
 
     class Config:
         json_encoders = {Decimal: lambda value: format(value, "f")}
@@ -234,9 +238,10 @@ ITEM_RULES: Tuple[_ItemRule, ...] = (
     _ItemRule(item=FinancialItem.TOTAL_ASSETS, statement=FinancialStatement.BALANCE_SHEET, aliases=("资产总计", "资产合计"), blockers=("流动资产合计", "流动资产总计", "非流动资产合计", "非流动资产总计")),
     _ItemRule(item=FinancialItem.CURRENT_LIABILITIES, statement=FinancialStatement.BALANCE_SHEET, aliases=("流动负债合计", "流动负债总计"), blockers=("非流动负债合计", "非流动负债总计")),
     _ItemRule(item=FinancialItem.TOTAL_LIABILITIES, statement=FinancialStatement.BALANCE_SHEET, aliases=("负债合计", "负债总计"), blockers=("流动负债合计", "流动负债总计", "非流动负债合计", "非流动负债总计", "负债和所有者权益")),
+    _ItemRule(item=FinancialItem.TOTAL_EQUITY, statement=FinancialStatement.BALANCE_SHEET, aliases=("所有者权益合计", "股东权益合计"), blockers=("归属于母公司", "少数股东")),
     _ItemRule(item=FinancialItem.OPERATING_REVENUE, statement=FinancialStatement.INCOME_STATEMENT, aliases=("营业收入",), blockers=("营业总收入",)),
     _ItemRule(item=FinancialItem.OPERATING_COST, statement=FinancialStatement.INCOME_STATEMENT, aliases=("营业成本",), blockers=("营业总成本",)),
-    _ItemRule(item=FinancialItem.NET_PROFIT, statement=FinancialStatement.INCOME_STATEMENT, aliases=("净利润",), blockers=("持续经营净利润", "终止经营净利润", "归属于母公司", "少数股东")),
+    _ItemRule(item=FinancialItem.NET_PROFIT, statement=FinancialStatement.INCOME_STATEMENT, aliases=("净利润",), blockers=("持续经营净利润", "终止经营净利润", "归属于母公司", "少数股东", "被合并方", "合并前实现的净利润")),
     _ItemRule(item=FinancialItem.OPERATING_CASH_FLOW, statement=FinancialStatement.CASH_FLOW_STATEMENT, aliases=("经营活动产生的现金流量净额",)),
     _ItemRule(item=FinancialItem.CASH_RECEIVED_FROM_SALES, statement=FinancialStatement.CASH_FLOW_STATEMENT, aliases=("销售商品提供劳务收到的现金",)),
 )
@@ -354,12 +359,19 @@ class FinancialStatementExtractor:
     """从 V3.3A 的逐页文本中确定性提取合并三表授信重点科目。"""
 
     def __init__(
-        self, *, clock: Optional[Callable[[], datetime]] = None, max_row_lines: int = 4
+        self,
+        *,
+        clock: Optional[Callable[[], datetime]] = None,
+        max_row_lines: int = 4,
+        balance_sheet_tolerance_units: Decimal = Decimal("1"),
     ) -> None:
         if max_row_lines < 1:
             raise ValueError("max_row_lines 必须为正数")
         self._clock = clock or (lambda: datetime.now(timezone.utc))
         self.max_row_lines = max_row_lines
+        if balance_sheet_tolerance_units < 0:
+            raise ValueError("balance_sheet_tolerance_units 不能为负数")
+        self.balance_sheet_tolerance_units = balance_sheet_tolerance_units
 
     def extract(
         self,
@@ -423,14 +435,26 @@ class FinancialStatementExtractor:
 
         rows, duplicate_issues = self._remove_conflicting_rows(rows)
         issues.extend(duplicate_issues)
+        quarantined_balance_sources, structure_issues = (
+            self._validate_balance_sheet_structure(rows)
+        )
+        issues.extend(structure_issues)
+        record_rows = [
+            row
+            for row in rows
+            if not (
+                row.statement is FinancialStatement.BALANCE_SHEET
+                and row.source_id in quarantined_balance_sources
+            )
+        ]
         raw_facts, evidence, financial_facts = self._build_records(
             identity=identity,
-            rows=rows,
+            rows=record_rows,
             source_hashes=source_hashes,
         )
         financial_facts, restatement_issues = self._select_authoritative_facts(
             financial_facts=financial_facts,
-            rows=rows,
+            rows=record_rows,
             sources=processed_sources,
         )
         issues.extend(restatement_issues)
@@ -441,6 +465,30 @@ class FinancialStatementExtractor:
         normalized, validation = validate_financial_facts(
             financial_facts,
             required_periods=tuple(periods[-2:]) if periods else (),
+        )
+        structural_validation_issues = [
+            FinancialValidationIssue(
+                code=issue.code,
+                severity=(
+                    IssueSeverity.ERROR
+                    if issue.severity is ExtractionIssueSeverity.ERROR
+                    else IssueSeverity.WARNING
+                ),
+                message=issue.message,
+                item=issue.item,
+                period=issue.period,
+            )
+            for issue in structure_issues
+        ]
+        validation = validation.copy(
+            update={
+                "is_valid": validation.is_valid
+                and not any(
+                    item.severity is IssueSeverity.ERROR
+                    for item in structural_validation_issues
+                ),
+                "issues": [*validation.issues, *structural_validation_issues],
+            }
         )
         metrics = calculate_financial_metrics(normalized)
         ratios = calculate_financial_ratios(normalized)
@@ -458,11 +506,15 @@ class FinancialStatementExtractor:
             statement for statement in FinancialStatement if statement not in found
         ]
         missing_required = bool(missing_information)
+        structure_unverified = any(
+            issue.code == "balance_sheet_equation_unverified" for issue in issues
+        )
         if not found or not financial_facts:
             status = StatementExtractionStatus.FAILED
         elif (
             missing_statements
             or missing_required
+            or structure_unverified
             or not validation.is_valid
             or any(issue.severity is ExtractionIssueSeverity.ERROR for issue in issues)
         ):
@@ -788,112 +840,323 @@ class FinancialStatementExtractor:
         section: ExtractedStatementSection,
         lines: Sequence[_LineRef],
     ) -> Tuple[List[ExtractedStatementRow], List[FinancialExtractionIssue]]:
+        """以科目标签为锚点绑定两期金额，拒绝跨科目猜测。
+
+        A 股年报的 PDF 文本阅读序并不统一：既可能是“科目→金额”，也可能
+        是“金额→科目”。旧实现从科目向后滑动多行，容易把下一科目的金额
+        绑定给当前科目。本实现先定位明确科目，再按本页/本表的一致布局方向
+        选择紧邻金额行；金额行只能消费一次，方向冲突则保留缺失而不猜测。
+        """
+
         rules = [rule for rule in ITEM_RULES if rule.statement is section.statement]
         found: Dict[FinancialItem, ExtractedStatementRow] = {}
         issues: List[FinancialExtractionIssue] = []
-        for index, start in enumerate(lines):
-            if _looks_like_page_noise(start.text):
+
+        def register_row(row: ExtractedStatementRow) -> None:
+            existing = found.get(row.item)
+            if existing is None:
+                found[row.item] = row
+            elif (
+                existing.current_value_cny != row.current_value_cny
+                or existing.prior_value_cny != row.prior_value_cny
+            ):
+                issues.append(
+                    FinancialExtractionIssue(
+                        code="duplicate_item_conflict",
+                        severity=ExtractionIssueSeverity.ERROR,
+                        message=f"{ITEM_LABELS[row.item]}在同一合并报表中出现冲突数值",
+                        source_id=section.source_id,
+                        statement=section.statement,
+                        item=row.item,
+                        page_number=row.page_number,
+                    )
+                )
+                found.pop(row.item, None)
+
+        # pdfplumber 的文本阅读序有时会把一个长科目拆成
+        # “名称前半段 → 两期金额 → 名称后半段”。这里只接受
+        # 严格的同页三行结构，且前后文本单独都不能构成已知科目，
+        # 防止把“归属于母公司所有者权益”的后缀误当成权益合计。
+        consumed_value_lines: set[Tuple[int, int]] = set()
+        consumed_label_indexes: set[int] = set()
+        for value_index, value_line in enumerate(lines):
+            value_matches = self._pure_value_line_matches(value_line.text)
+            if len(value_matches) != 2:
                 continue
-            for width in range(1, self.max_row_lines + 1):
-                window = list(lines[index : index + width])
-                if len(window) != width or any(item.page_number != start.page_number for item in window):
-                    break
-                combined = "\n".join(item.text for item in window)
-                amount_matches = list(_AMOUNT_TOKEN.finditer(combined))
-                label = _row_label(window, amount_matches) if len(amount_matches) >= 2 else combined
-                prefix_before_values = (
-                    combined[: amount_matches[-2].start()]
-                    if len(amount_matches) >= 2
-                    else combined
-                )
-                rule = _match_rule(
-                    label,
+            previous_index = self._adjacent_text_line(lines, value_index, step=-1)
+            following_index = self._adjacent_text_line(lines, value_index, step=1)
+            if previous_index is None or following_index is None:
+                continue
+            previous = lines[previous_index]
+            following = lines[following_index]
+            if (
+                _match_rule(
+                    previous.text,
                     section.statement,
-                    prefix_before_values=prefix_before_values,
+                    prefix_before_values=previous.text,
                 )
-                if rule is None or rule not in rules:
-                    continue
-                if len(amount_matches) < 2:
-                    if width < self.max_row_lines:
-                        continue
-                    issues.append(
-                        FinancialExtractionIssue(
-                            code="ambiguous_amount_columns",
-                            severity=ExtractionIssueSeverity.WARNING,
-                            message=f"{ITEM_LABELS[rule.item]}未唯一识别两期金额，不猜测空列",
-                            source_id=section.source_id,
-                            statement=section.statement,
-                            item=rule.item,
-                            page_number=start.page_number,
-                        )
-                    )
-                    break
-                value_matches = self._value_column_matches(combined, amount_matches)
-                if len(value_matches) != 2:
-                    if width < self.max_row_lines:
-                        continue
-                    issues.append(
-                        FinancialExtractionIssue(
-                            code="ambiguous_amount_columns",
-                            severity=ExtractionIssueSeverity.WARNING,
-                            message=f"{ITEM_LABELS[rule.item]}存在无法唯一对应期间的金额列",
-                            source_id=section.source_id,
-                            statement=section.statement,
-                            item=rule.item,
-                            page_number=start.page_number,
-                        )
-                    )
-                    break
-                values_by_period = {
-                    section.column_periods[0]: value_matches[0].group(),
-                    section.column_periods[1]: value_matches[1].group(),
-                }
-                current_raw = values_by_period[section.current_period]
-                prior_raw = values_by_period[section.prior_period]
-                current = parse_financial_amount(current_raw)
-                prior = parse_financial_amount(prior_raw)
-                row = ExtractedStatementRow(
+                is not None
+                or _match_rule(
+                    following.text,
+                    section.statement,
+                    prefix_before_values=following.text,
+                )
+                is not None
+            ):
+                continue
+            logical_label = previous.text + following.text
+            rule = _match_rule(
+                logical_label,
+                section.statement,
+                prefix_before_values=logical_label,
+            )
+            if rule is None or rule not in rules:
+                continue
+            values_by_period = {
+                section.column_periods[0]: value_matches[0].group(),
+                section.column_periods[1]: value_matches[1].group(),
+            }
+            current_raw = values_by_period[section.current_period]
+            prior_raw = values_by_period[section.prior_period]
+            current = parse_financial_amount(current_raw)
+            prior = parse_financial_amount(prior_raw)
+            register_row(
+                ExtractedStatementRow(
                     source_id=section.source_id,
                     statement=section.statement,
                     item=rule.item,
                     item_label=ITEM_LABELS[rule.item],
-                    original_label=label.replace("\n", " ").strip(),
-                    page_number=start.page_number,
-                    line_number=start.line_number,
-                    quote=_normalise_quote(window),
+                    original_label=logical_label.strip(),
+                    page_number=value_line.page_number,
+                    line_number=previous.line_number,
+                    quote=_normalise_quote([previous, value_line, following]),
                     current_period=section.current_period,
                     prior_period=section.prior_period,
                     current_raw_value=current_raw,
                     prior_raw_value=prior_raw,
-                    current_value_cny=(current * section.unit_multiplier if current is not None else None),
-                    prior_value_cny=(prior * section.unit_multiplier if prior is not None else None),
+                    current_value_cny=(
+                        current * section.unit_multiplier
+                        if current is not None
+                        else None
+                    ),
+                    prior_value_cny=(
+                        prior * section.unit_multiplier if prior is not None else None
+                    ),
                     currency=section.currency,
                     currency_basis=section.currency_basis,
                     original_unit=section.original_unit,
                     unit_multiplier=section.unit_multiplier,
                     comparison_restated=section.comparison_restated,
-                    extraction_status=("mapped" if current is not None and prior is not None else "incomplete"),
+                    extraction_status=(
+                        "mapped"
+                        if current is not None and prior is not None
+                        else "incomplete"
+                    ),
+                    layout_direction="split_label_around_values",
                 )
-                existing = found.get(rule.item)
-                if existing is None:
-                    found[rule.item] = row
-                elif (
-                    existing.current_value_cny != row.current_value_cny
-                    or existing.prior_value_cny != row.prior_value_cny
-                ):
+            )
+            consumed_value_lines.add(
+                (value_line.page_number, value_line.line_number)
+            )
+            consumed_label_indexes.update({previous_index, following_index})
+
+        anchors: List[Tuple[int, _ItemRule, List[re.Match[str]]]] = []
+        for index, line in enumerate(lines):
+            if (
+                index in consumed_label_indexes
+                or not line.text
+                or _looks_like_page_noise(line.text)
+            ):
+                continue
+            amount_matches = self._value_column_matches(
+                line.text, list(_AMOUNT_TOKEN.finditer(line.text))
+            )
+            rule = _match_rule(
+                line.text,
+                section.statement,
+                # 科目锚定阶段允许名称位于同行金额之后；金额归属由方向校验。
+                prefix_before_values=line.text,
+            )
+            if rule is not None and rule in rules:
+                anchors.append((index, rule, amount_matches))
+
+        page_votes: Dict[int, Dict[str, int]] = {}
+        for index, _rule, inline_matches in anchors:
+            if len(inline_matches) == 2:
+                continue
+            page_number = lines[index].page_number
+            previous = self._adjacent_value_line(lines, index, step=-1)
+            following = self._adjacent_value_line(lines, index, step=1)
+            votes = page_votes.setdefault(
+                page_number, {"values_before_label": 0, "label_before_values": 0}
+            )
+            if previous is not None and following is None:
+                votes["values_before_label"] += 1
+            elif following is not None and previous is None:
+                votes["label_before_values"] += 1
+
+        section_votes = {
+            direction: sum(votes[direction] for votes in page_votes.values())
+            for direction in ("values_before_label", "label_before_values")
+        }
+        section_direction = self._decide_layout_direction(section_votes)
+        page_directions: Dict[int, Optional[str]] = {}
+        for page_number in {line.page_number for line in lines}:
+            votes = page_votes.get(
+                page_number, {"values_before_label": 0, "label_before_values": 0}
+            )
+            local = self._decide_layout_direction(votes)
+            # PDF同一张表在换页后可能改变文本阅读序，所以本页有
+            # 唯一方向证据时优先采用本页；只有本页没有证据时才继承全表方向。
+            page_directions[page_number] = local or section_direction
+
+        for index, rule, inline_matches in anchors:
+            anchor = lines[index]
+            value_line_index: Optional[int] = None
+            value_matches = inline_matches
+            layout_direction = "inline"
+            if value_matches and len(value_matches) != 2:
+                # 同一科目行已经出现金额，但不是唯一的两期列。
+                # 这类情况不能改去绑定相邻行，否则会把“调整前/
+                # 调整后”三列表或单边空值错配给下一科目。
+                issues.append(
+                    FinancialExtractionIssue(
+                        code="ambiguous_amount_columns",
+                        severity=ExtractionIssueSeverity.WARNING,
+                        message=f"{ITEM_LABELS[rule.item]}存在无法唯一对应期间的金额列",
+                        source_id=section.source_id,
+                        statement=section.statement,
+                        item=rule.item,
+                        page_number=anchor.page_number,
+                    )
+                )
+                continue
+            if len(value_matches) != 2:
+                direction = page_directions.get(anchor.page_number)
+                if direction == "values_before_label":
+                    value_line_index = self._adjacent_value_line(lines, index, step=-1)
+                elif direction == "label_before_values":
+                    value_line_index = self._adjacent_value_line(lines, index, step=1)
+                if value_line_index is None:
                     issues.append(
                         FinancialExtractionIssue(
-                            code="duplicate_item_conflict",
-                            severity=ExtractionIssueSeverity.ERROR,
-                            message=f"{ITEM_LABELS[rule.item]}在同一合并报表中出现冲突数值",
+                            code="ambiguous_row_direction",
+                            severity=ExtractionIssueSeverity.WARNING,
+                            message=(
+                                f"{ITEM_LABELS[rule.item]}无法从同行或一致的相邻布局"
+                                "唯一绑定两期金额，已保持缺失"
+                            ),
                             source_id=section.source_id,
                             statement=section.statement,
                             item=rule.item,
-                            page_number=start.page_number,
+                            page_number=anchor.page_number,
                         )
                     )
-                    found.pop(rule.item, None)
-                break
+                    continue
+                value_line = lines[value_line_index]
+                if (
+                    direction == "values_before_label"
+                    and self._split_prefix_contains_blocker(
+                        lines,
+                        value_line_index=value_line_index,
+                        label_index=index,
+                        rule=rule,
+                    )
+                ):
+                    issues.append(
+                        FinancialExtractionIssue(
+                            code="blocked_split_label_context",
+                            severity=ExtractionIssueSeverity.WARNING,
+                            message=(
+                                f"{ITEM_LABELS[rule.item]}所在拆行上下文属于"
+                                "被排除的子项，已拒绝误绑"
+                            ),
+                            source_id=section.source_id,
+                            statement=section.statement,
+                            item=rule.item,
+                            page_number=anchor.page_number,
+                        )
+                    )
+                    continue
+                value_matches = self._value_column_matches(
+                    value_line.text, list(_AMOUNT_TOKEN.finditer(value_line.text))
+                )
+                layout_direction = direction
+            else:
+                value_line = anchor
+
+            if len(value_matches) != 2:
+                issues.append(
+                    FinancialExtractionIssue(
+                        code="ambiguous_amount_columns",
+                        severity=ExtractionIssueSeverity.WARNING,
+                        message=f"{ITEM_LABELS[rule.item]}存在无法唯一对应期间的金额列",
+                        source_id=section.source_id,
+                        statement=section.statement,
+                        item=rule.item,
+                        page_number=anchor.page_number,
+                    )
+                )
+                continue
+            value_line_key = (value_line.page_number, value_line.line_number)
+            if layout_direction != "inline" and value_line_key in consumed_value_lines:
+                issues.append(
+                    FinancialExtractionIssue(
+                        code="amount_line_reused",
+                        severity=ExtractionIssueSeverity.ERROR,
+                        message=f"{ITEM_LABELS[rule.item]}拟使用的金额行已绑定其他科目，已拒绝复用",
+                        source_id=section.source_id,
+                        statement=section.statement,
+                        item=rule.item,
+                        page_number=anchor.page_number,
+                    )
+                )
+                continue
+            consumed_value_lines.add(value_line_key)
+
+            values_by_period = {
+                section.column_periods[0]: value_matches[0].group(),
+                section.column_periods[1]: value_matches[1].group(),
+            }
+            current_raw = values_by_period[section.current_period]
+            prior_raw = values_by_period[section.prior_period]
+            current = parse_financial_amount(current_raw)
+            prior = parse_financial_amount(prior_raw)
+            evidence_lines = (
+                [anchor]
+                if value_line_index is None
+                else sorted([anchor, value_line], key=lambda item: item.line_number)
+            )
+            row = ExtractedStatementRow(
+                source_id=section.source_id,
+                statement=section.statement,
+                item=rule.item,
+                item_label=ITEM_LABELS[rule.item],
+                original_label=anchor.text.strip(),
+                page_number=anchor.page_number,
+                line_number=anchor.line_number,
+                quote=_normalise_quote(evidence_lines),
+                current_period=section.current_period,
+                prior_period=section.prior_period,
+                current_raw_value=current_raw,
+                prior_raw_value=prior_raw,
+                current_value_cny=(
+                    current * section.unit_multiplier if current is not None else None
+                ),
+                prior_value_cny=(
+                    prior * section.unit_multiplier if prior is not None else None
+                ),
+                currency=section.currency,
+                currency_basis=section.currency_basis,
+                original_unit=section.original_unit,
+                unit_multiplier=section.unit_multiplier,
+                comparison_restated=section.comparison_restated,
+                extraction_status=(
+                    "mapped" if current is not None and prior is not None else "incomplete"
+                ),
+                layout_direction=layout_direction,
+            )
+            register_row(row)
         for rule in rules:
             if rule.item not in found:
                 issues.append(
@@ -907,18 +1170,127 @@ class FinancialStatementExtractor:
                         page_number=section.start_page,
                     )
                 )
-        # 滑动窗口会在真正科目行之前经过“上一行金额 + 当前科目”组合。
-        # 若该科目稍后已由唯一两列成功解析，早期窗口的歧义只是搜索过程噪声，
-        # 不应进入最终审计结果；真正未解析的多列科目仍保留警告。
+        # 对已形成确定性行的科目，搜索阶段留下的方向/金额警告不再重复展示。
         issues = [
             issue
             for issue in issues
             if not (
-                issue.code == "ambiguous_amount_columns"
+                issue.code in {"ambiguous_amount_columns", "ambiguous_row_direction"}
                 and issue.item in found
             )
         ]
         return list(found.values()), issues
+
+    @staticmethod
+    def _decide_layout_direction(votes: Mapping[str, int]) -> Optional[str]:
+        before = int(votes.get("values_before_label", 0))
+        after = int(votes.get("label_before_values", 0))
+        if before > after:
+            return "values_before_label"
+        if after > before:
+            return "label_before_values"
+        return None
+
+    def _adjacent_value_line(
+        self, lines: Sequence[_LineRef], anchor_index: int, *, step: int
+    ) -> Optional[int]:
+        """返回同页紧邻的纯两金额行；不会跨过另一科目或页面。"""
+
+        page_number = lines[anchor_index].page_number
+        index = anchor_index + step
+        while 0 <= index < len(lines) and lines[index].page_number == page_number:
+            text = lines[index].text.strip()
+            if not text or _looks_like_page_noise(text):
+                index += step
+                continue
+            matches = self._value_column_matches(
+                text, list(_AMOUNT_TOKEN.finditer(text))
+            )
+            if len(matches) != 2:
+                return None
+            residual = text
+            for match in reversed(matches):
+                residual = residual[: match.start()] + residual[match.end() :]
+            if re.search(r"[A-Za-z\u4e00-\u9fff\d]", residual):
+                return None
+            return index
+        return None
+
+    def _pure_value_line_matches(self, text: str) -> List[re.Match[str]]:
+        """仅接受由两个期间金额组成的行。"""
+
+        matches = self._value_column_matches(
+            text, list(_AMOUNT_TOKEN.finditer(text))
+        )
+        if len(matches) != 2:
+            return []
+        residual = text
+        for match in reversed(matches):
+            residual = residual[: match.start()] + residual[match.end() :]
+        if re.search(r"[A-Za-z\u4e00-\u9fff\d]", residual):
+            return []
+        return matches
+
+    @staticmethod
+    def _adjacent_text_line(
+        lines: Sequence[_LineRef], anchor_index: int, *, step: int
+    ) -> Optional[int]:
+        """返回同页紧邻的纯文本行，不跨页或金额行。"""
+
+        page_number = lines[anchor_index].page_number
+        index = anchor_index + step
+        while 0 <= index < len(lines) and lines[index].page_number == page_number:
+            text = lines[index].text.strip()
+            if not text or _looks_like_page_noise(text):
+                index += step
+                continue
+            if _AMOUNT_TOKEN.search(text):
+                return None
+            return index
+        return None
+
+    def _split_prefix_contains_blocker(
+        self,
+        lines: Sequence[_LineRef],
+        *,
+        value_line_index: int,
+        label_index: int,
+        rule: _ItemRule,
+    ) -> bool:
+        """拒绝将拆行子项的后缀单独识别为总额。"""
+
+        prefix_index = value_line_index - 1
+        if prefix_index < 0:
+            return False
+        prefix = lines[prefix_index]
+        label = lines[label_index]
+        if prefix.page_number != label.page_number or prefix_index == label_index:
+            return False
+        previous_value_index = prefix_index - 1
+        if (
+            previous_value_index >= 0
+            and lines[previous_value_index].page_number == label.page_number
+            and len(
+                self._pure_value_line_matches(lines[previous_value_index].text)
+            )
+            == 2
+        ):
+            # “上一金额行 → 上一科目 → 当前金额 → 当前科目”
+            # 是标准 values-before-label 布局，不是拆行科目。
+            return False
+        # 前一文本行本身是另一个完整科目时，它只是前一行
+        # 的名称，不是当前科目的拆行前缀。
+        if (
+            _match_rule(
+                prefix.text,
+                rule.statement,
+                prefix_before_values=prefix.text,
+            )
+            is not None
+        ):
+            return False
+        context = _compact(prefix.text + label.text)
+        return any(_compact(marker) in context for marker in rule.blockers)
 
     @staticmethod
     def _value_column_matches(
@@ -962,6 +1334,189 @@ class FinancialStatementExtractor:
                 continue
             kept.append(values[0])
         return sorted(kept, key=lambda row: (row.source_id, row.page_number, row.line_number, row.item.value)), issues
+
+    def _validate_balance_sheet_structure(
+        self,
+        rows: Sequence[ExtractedStatementRow],
+    ) -> Tuple[set[str], List[FinancialExtractionIssue]]:
+        """校验资产负债表恒等式，并隔离无法验证的来源。
+
+        校验只使用同一来源、同一合并资产负债表中的原始抽取行。只要
+        ``资产总计 = 负债合计 + 所有者权益合计`` 无法验证或不成立，该
+        来源的资产负债表行就不能进入规范化事实、指标或模型上下文；利润表
+        和现金流量表仍可继续使用。容差根据资产、负债和权益三项原始披露
+        的金额单位与小数位计算，只兼容可解释的舍入差异。
+        """
+
+        by_source: Dict[str, List[ExtractedStatementRow]] = {}
+        for row in rows:
+            if row.statement is FinancialStatement.BALANCE_SHEET:
+                by_source.setdefault(row.source_id, []).append(row)
+
+        quarantined: set[str] = set()
+        issues: List[FinancialExtractionIssue] = []
+        equation_items = (
+            FinancialItem.TOTAL_ASSETS,
+            FinancialItem.TOTAL_LIABILITIES,
+            FinancialItem.TOTAL_EQUITY,
+        )
+        for source_id, source_rows in by_source.items():
+            dimensions = {
+                (
+                    row.current_period,
+                    row.prior_period,
+                    row.currency,
+                    row.currency_basis,
+                    row.original_unit,
+                    row.unit_multiplier,
+                    row.entity_scope,
+                )
+                for row in source_rows
+            }
+            if len(dimensions) != 1:
+                quarantined.add(source_id)
+                issues.append(
+                    FinancialExtractionIssue(
+                        code="balance_sheet_dimension_conflict",
+                        severity=ExtractionIssueSeverity.ERROR,
+                        message=(
+                            "同一来源的资产负债表行存在期间、币种、"
+                            "单位或报表口径冲突，已隔离该来源全部资产负债表事实"
+                        ),
+                        source_id=source_id,
+                        statement=FinancialStatement.BALANCE_SHEET,
+                    )
+                )
+                continue
+            lookup = {row.item: row for row in source_rows}
+            missing = [item for item in equation_items if item not in lookup]
+            if missing:
+                quarantined.add(source_id)
+                issues.append(
+                    FinancialExtractionIssue(
+                        code="balance_sheet_equation_unverified",
+                        severity=ExtractionIssueSeverity.WARNING,
+                        message=(
+                            "资产负债表缺少"
+                            + "、".join(ITEM_LABELS[item] for item in missing)
+                            + "，无法完成资产=负债+权益勾稽；该来源资产负债表事实已隔离"
+                        ),
+                        source_id=source_id,
+                        statement=FinancialStatement.BALANCE_SHEET,
+                    )
+                )
+                continue
+
+            source_has_error = False
+            for value_field, raw_field, period_field in (
+                ("current_value_cny", "current_raw_value", "current_period"),
+                ("prior_value_cny", "prior_raw_value", "prior_period"),
+            ):
+                period = str(getattr(lookup[FinancialItem.TOTAL_ASSETS], period_field))
+                values = {
+                    item: getattr(lookup[item], value_field)
+                    for item in equation_items
+                }
+                if any(value is None for value in values.values()):
+                    source_has_error = True
+                    issues.append(
+                        FinancialExtractionIssue(
+                            code="balance_sheet_equation_unverified",
+                            severity=ExtractionIssueSeverity.WARNING,
+                            message=(
+                                f"{period}资产负债表恒等式存在空值，无法完成勾稽；"
+                                "该来源资产负债表事实已隔离"
+                            ),
+                            source_id=source_id,
+                            statement=FinancialStatement.BALANCE_SHEET,
+                            period=period,
+                        )
+                    )
+                    continue
+                assets = values[FinancialItem.TOTAL_ASSETS]
+                liabilities = values[FinancialItem.TOTAL_LIABILITIES]
+                equity = values[FinancialItem.TOTAL_EQUITY]
+                assert assets is not None and liabilities is not None and equity is not None
+                tolerance = (
+                    sum(
+                        self._reported_amount_resolution(
+                            getattr(lookup[item], raw_field),
+                            lookup[item].unit_multiplier,
+                        )
+                        for item in equation_items
+                    )
+                    / Decimal("2")
+                    * self.balance_sheet_tolerance_units
+                )
+                difference = assets - liabilities - equity
+                if abs(difference) > tolerance:
+                    source_has_error = True
+                    issues.append(
+                        FinancialExtractionIssue(
+                            code="balance_sheet_equation_mismatch",
+                            severity=ExtractionIssueSeverity.ERROR,
+                            message=(
+                                f"{period}资产总计与负债合计加所有者权益合计相差"
+                                f"{format(difference, 'f')}元，超过允许容差"
+                                f"{format(tolerance, 'f')}元；该来源资产负债表事实已隔离"
+                            ),
+                            source_id=source_id,
+                            statement=FinancialStatement.BALANCE_SHEET,
+                            item=FinancialItem.TOTAL_ASSETS,
+                            period=period,
+                        )
+                    )
+
+                for component, total, code, label in (
+                    (
+                        FinancialItem.CURRENT_ASSETS,
+                        FinancialItem.TOTAL_ASSETS,
+                        "current_assets_exceed_total_assets",
+                        "流动资产合计超过资产总计",
+                    ),
+                    (
+                        FinancialItem.CURRENT_LIABILITIES,
+                        FinancialItem.TOTAL_LIABILITIES,
+                        "current_liabilities_exceed_total_liabilities",
+                        "流动负债合计超过负债合计",
+                    ),
+                ):
+                    component_row = lookup.get(component)
+                    if component_row is None:
+                        continue
+                    component_value = getattr(component_row, value_field)
+                    total_value = getattr(lookup[total], value_field)
+                    if (
+                        component_value is not None
+                        and total_value is not None
+                        and component_value > total_value + tolerance
+                    ):
+                        source_has_error = True
+                        issues.append(
+                            FinancialExtractionIssue(
+                                code=code,
+                                severity=ExtractionIssueSeverity.ERROR,
+                                message=f"{period}{label}，该来源资产负债表事实已隔离",
+                                source_id=source_id,
+                                statement=FinancialStatement.BALANCE_SHEET,
+                                item=component,
+                                period=period,
+                            )
+                        )
+
+            if source_has_error:
+                quarantined.add(source_id)
+        return quarantined, issues
+
+    @staticmethod
+    def _reported_amount_resolution(
+        raw_value: Optional[str], unit_multiplier: Decimal
+    ) -> Decimal:
+        """按披露小数位计算一个最小报表单位对应的人民币金额。"""
+
+        token = str(raw_value or "").strip().strip("()（）+-−－").replace(",", "")
+        decimal_places = len(token.rsplit(".", 1)[1]) if "." in token else 0
+        return unit_multiplier * (Decimal("10") ** (-decimal_places))
 
     @staticmethod
     def _build_records(

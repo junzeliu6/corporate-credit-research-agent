@@ -147,6 +147,103 @@ def _parse_shares(value: object) -> Optional[int]:
     return int(text)
 
 
+_AUXILIARY_SHARE_STATUS_MARKERS = frozenset({"质押", "冻结", "标记"})
+
+
+def _share_status_markers(row: ExtractedShareholderRow) -> frozenset[str]:
+    """返回股东表辅助状态行中的质押、冻结或标记类型。"""
+
+    markers: set[str] = set()
+    for raw_cell in row.raw_cells:
+        cell = _cell(raw_cell)
+        markers.update(
+            marker
+            for marker in _AUXILIARY_SHARE_STATUS_MARKERS
+            if marker in cell
+        )
+    return frozenset(markers)
+
+
+def _consolidate_shareholder_status_rows(
+    rows: Sequence[ExtractedShareholderRow],
+) -> List[ExtractedShareholderRow]:
+    """合并同一股东因质押/冻结辅助列而被 PDF 拆成的重复主行。
+
+    只在同名股东的持股比例、持股数量一致，股东性质没有冲突，且每条
+    重复行都有互不相同的辅助状态标记时合并。任何数值冲突或无法解释的
+    重复仍然报错，避免用无条件按名称去重掩盖真实披露冲突。
+    """
+
+    grouped: Dict[str, List[ExtractedShareholderRow]] = {}
+    order: List[str] = []
+    for row in rows:
+        key = _cell(row.name)
+        if key not in grouped:
+            grouped[key] = []
+            order.append(key)
+        grouped[key].append(row)
+
+    consolidated: List[ExtractedShareholderRow] = []
+    for key in order:
+        same_name_rows = grouped[key]
+        if len(same_name_rows) == 1:
+            consolidated.append(same_name_rows[0])
+            continue
+
+        percentages = {row.percentage for row in same_name_rows}
+        share_counts = {row.shares for row in same_name_rows}
+        page_numbers = {row.page_number for row in same_name_rows}
+        natures = {
+            _cell(row.shareholder_nature)
+            for row in same_name_rows
+            if _cell(row.shareholder_nature)
+        }
+        if len(percentages) != 1 or len(share_counts) != 1 or len(natures) > 1:
+            raise OwnershipDisclosureError(
+                "conflicting_shareholder_rows",
+                f"前十大股东表中同名股东 {same_name_rows[0].name} 的持股事实存在冲突",
+            )
+        if len(page_numbers) != 1:
+            raise OwnershipDisclosureError(
+                "duplicate_shareholder_rows",
+                f"前十大股东表中同名股东 {same_name_rows[0].name} 的跨页重复无法合并为单页证据",
+            )
+
+        status_signatures = [_share_status_markers(row) for row in same_name_rows]
+        if (
+            any(len(markers) != 1 for markers in status_signatures)
+            or len(set(status_signatures)) != len(status_signatures)
+        ):
+            raise OwnershipDisclosureError(
+                "duplicate_shareholder_rows",
+                f"前十大股东表中同名股东 {same_name_rows[0].name} 的重复行无法由辅助股份状态解释",
+            )
+
+        nature = next(
+            (
+                row.shareholder_nature
+                for row in same_name_rows
+                if _cell(row.shareholder_nature)
+            ),
+            None,
+        )
+        consolidated.append(
+            same_name_rows[0].copy(
+                update={
+                    "shareholder_nature": nature,
+                    "page_number": same_name_rows[0].page_number,
+                    # 保留每条原始状态行的完整单元格序列，供证据文件复核。
+                    "raw_cells": [
+                        cell
+                        for row in same_name_rows
+                        for cell in row.raw_cells
+                    ],
+                }
+            )
+        )
+    return consolidated
+
+
 def _year_end(source: SourceRecord) -> date:
     match = re.fullmatch(r"FY(20\d{2})", str(source.report_period or ""))
     if match is None:
@@ -350,12 +447,9 @@ def _extract_top_shareholders(
         raise OwnershipDisclosureError(
             "shareholder_table_extraction_failed", f"前十大股东表解析失败：{exc}"
         ) from exc
-    # 名称续页修复后再按名称去重；同一表中重复记录属于解析错误。
-    names = [_cell(item.name) for item in rows]
-    if len(names) != len(set(names)):
-        raise OwnershipDisclosureError(
-            "duplicate_shareholder_rows", "前十大股东表解析得到重复股东"
-        )
+    # 年报表格可能因“质押/冻结”辅助状态拆成多行；仅在持股事实完全一致、
+    # 状态类型互不相同时合并。其他同名重复仍作为解析冲突处理。
+    rows = _consolidate_shareholder_status_rows(rows)
     if len(rows) > 10:
         raise OwnershipDisclosureError(
             "too_many_top_shareholder_rows",

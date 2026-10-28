@@ -90,6 +90,7 @@ class FinancialItem(str, Enum):
     TOTAL_ASSETS = "total_assets"
     CURRENT_LIABILITIES = "current_liabilities"
     TOTAL_LIABILITIES = "total_liabilities"
+    TOTAL_EQUITY = "total_equity"
     OPERATING_REVENUE = "operating_revenue"
     OPERATING_COST = "operating_cost"
     NET_PROFIT = "net_profit"
@@ -109,6 +110,7 @@ ITEM_LABELS: Dict[FinancialItem, str] = {
     FinancialItem.TOTAL_ASSETS: "资产总计",
     FinancialItem.CURRENT_LIABILITIES: "流动负债合计",
     FinancialItem.TOTAL_LIABILITIES: "负债合计",
+    FinancialItem.TOTAL_EQUITY: "所有者权益合计",
     FinancialItem.OPERATING_REVENUE: "营业收入",
     FinancialItem.OPERATING_COST: "营业成本",
     FinancialItem.NET_PROFIT: "净利润",

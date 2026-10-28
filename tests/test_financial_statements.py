@@ -92,7 +92,8 @@ def _statement_pages(
                 f"短期借款 300.00 {prior_borrowings}\n"
                 "应付账款 900.00 800.00\n"
                 "流动负债合计 2,200.00 2,000.00\n"
-                "负债总计 4,000.00 3,800.00",
+                "负债总计 4,000.00 3,800.00\n"
+                "所有者权益合计 4,000.00 3,200.00",
                 "母公司资产负债表\n2025年12月31日\n"
                 f"单位：人民币{unit}\n"
                 "货币资金 999,999.00 888,888.00\n"
@@ -128,6 +129,33 @@ def _statement_pages(
         "附注中的同名科目不得冒充合并主表数据。"
     )
     return pages
+
+
+def _values_before_label_pages() -> list[str]:
+    """模拟 PDF 阅读序为“两期金额→科目名”的合并主表。"""
+
+    return [
+        "合并资产负债表\n2025年12月31日\n编制单位：九州通医药集团股份有限公司\n"
+        "单位：人民币元\n项目 2025年12月31日 2024年12月31日\n"
+        "11,807,695,171.46 6,527,717,310.58\n货币资金\n"
+        "3,963,090,283.54 3,395,150,530.43\n应收账款\n"
+        "766,002,809.14 761,184,010.69\n存货\n"
+        "20,000,000,000.00 14,000,000,000.00\n流动资产合计\n"
+        "1,264,831,784.07 1,423,870,401.22\n固定资产\n"
+        "44,428,668,050.23 38,924,497,999.89\n资产总计\n"
+        "887,661,029.95 846,505,137.61\n短期借款\n"
+        "1,081,200,076.36 1,044,518,434.13\n应付账款\n"
+        "5,000,000,000.00 5,100,000,000.00\n流动负债合计\n"
+        "13,208,915,558.28 13,474,077,625.00\n负债总计\n"
+        "所有者权益合计 31,219,752,491.95 25,450,420,374.89",
+        "合并利润表\n2025年度\n单位：人民币元\n项目 2025年度 2024年度\n"
+        "营业收入 30,000,000,000.00 25,000,000,000.00\n"
+        "营业成本 20,000,000,000.00 18,000,000,000.00\n"
+        "净利润 2,000,000,000.00 1,800,000,000.00",
+        "合并现金流量表\n2025年度\n单位：人民币元\n项目 2025年度 2024年度\n"
+        "销售商品、提供劳务收到的现金 32,000,000,000.00 27,000,000,000.00\n"
+        "经营活动产生的现金流量净额 3,000,000,000.00 2,000,000,000.00",
+    ]
 
 
 def _source_input(
@@ -297,6 +325,257 @@ def test_extracts_periods_split_labels_aliases_and_negative_values(
     assert _fact(result, FinancialItem.OPERATING_COST, "FY2025").value == Decimal("-2100.00")
     assert _fact(result, FinancialItem.NET_PROFIT, "FY2025").value == Decimal("-80.00")
     assert _fact(result, FinancialItem.OPERATING_CASH_FLOW, "FY2024").value == Decimal("-120.00")
+
+
+def test_values_before_labels_are_bound_to_the_correct_items(
+    tmp_path: Path,
+) -> None:
+    identity = _identity(
+        "002602",
+        legal_name="浙江世纪华通集团股份有限公司",
+        short_name="世纪华通",
+    )
+    source_input = _source_input(
+        tmp_path,
+        identity,
+        _values_before_label_pages(),
+    )
+
+    result = FinancialStatementExtractor().extract(
+        identity=identity,
+        source_inputs=[source_input],
+    )
+
+    assert _status_value(result) == "partial_success"
+    assert _fact(result, FinancialItem.MONETARY_FUNDS, "FY2025").value == Decimal(
+        "11807695171.46"
+    )
+    assert _fact(
+        result, FinancialItem.ACCOUNTS_RECEIVABLE, "FY2025"
+    ).value == Decimal("3963090283.54")
+    assert _fact(result, FinancialItem.INVENTORY, "FY2024").value == Decimal(
+        "761184010.69"
+    )
+    assert _fact(result, FinancialItem.TOTAL_ASSETS, "FY2025").value == Decimal(
+        "44428668050.23"
+    )
+    assert _fact(
+        result, FinancialItem.TOTAL_LIABILITIES, "FY2025"
+    ).value == Decimal("13208915558.28")
+    assert _fact(result, FinancialItem.TOTAL_EQUITY, "FY2025").value == Decimal(
+        "31219752491.95"
+    )
+    assert {
+        row.layout_direction
+        for row in result.rows
+        if row.statement is FinancialStatement.BALANCE_SHEET
+        and row.item is not FinancialItem.TOTAL_EQUITY
+    } == {"values_before_label"}
+    assert not [
+        issue
+        for issue in result.issues
+        if issue.code.startswith("balance_sheet_equation")
+    ]
+
+
+def test_split_label_around_values_preserves_full_label_context(
+    tmp_path: Path,
+) -> None:
+    identity = _identity()
+    pages = _statement_pages()
+    pages[2] = pages[2].replace(
+        "所有者权益合计 4,000.00 3,200.00",
+        "归属于母公司所有者权益\n3,500.00 2,800.00\n（或股东权益）合计\n"
+        "所有者权益（或股东权\n4,000.00 3,200.00\n益）合计",
+    )
+    source_input = _source_input(tmp_path, identity, pages)
+
+    result = FinancialStatementExtractor().extract(
+        identity=identity,
+        source_inputs=[source_input],
+    )
+
+    assert _fact(result, FinancialItem.TOTAL_EQUITY, "FY2025").value == Decimal(
+        "4000.00"
+    )
+    equity_row = next(
+        row for row in result.rows if row.item is FinancialItem.TOTAL_EQUITY
+    )
+    assert equity_row.layout_direction == "split_label_around_values"
+    assert "所有者权益（或股东权" in equity_row.quote
+    assert "益）合计" in equity_row.quote
+    assert equity_row.current_value_cny != Decimal("3500.00")
+    assert any(
+        issue.code == "blocked_split_label_context"
+        and issue.item is FinancialItem.TOTAL_EQUITY
+        for issue in result.issues
+    )
+
+
+def test_page_local_layout_direction_and_net_profit_narrative_filter(
+    tmp_path: Path,
+) -> None:
+    identity = _identity()
+    base_pages = _statement_pages(include_income=False)
+    income_pages = [
+        "合并利润表\n2025年度\n单位：人民币元\n项目 2025年度 2024年度\n"
+        "3,000.00 2,500.00\n其中：营业收入\n"
+        "2,100.00 1,700.00\n其中：营业成本",
+        "项目 2025年度 2024年度\n"
+        "五、净利润（净亏损以‘-’号填\n"
+        "80.00 60.00\n列）\n"
+        "本期发生同一控制下企业合并的，被合并方在合并前实现的"
+        "净利润为：0.00元，上期为：0.00元。",
+    ]
+    # 摘要+资产负债表三页后插入合并利润表，再进入现金流量表。
+    pages = [*base_pages[:4], *income_pages, *base_pages[4:]]
+    source_input = _source_input(tmp_path, identity, pages)
+
+    result = FinancialStatementExtractor().extract(
+        identity=identity,
+        source_inputs=[source_input],
+    )
+
+    assert _fact(result, FinancialItem.OPERATING_REVENUE, "FY2025").value == Decimal(
+        "3000.00"
+    )
+    assert _fact(result, FinancialItem.OPERATING_COST, "FY2025").value == Decimal(
+        "2100.00"
+    )
+    assert _fact(result, FinancialItem.NET_PROFIT, "FY2025").value == Decimal(
+        "80.00"
+    )
+    net_profit_row = next(
+        row for row in result.rows if row.item is FinancialItem.NET_PROFIT
+    )
+    assert net_profit_row.layout_direction == "label_before_values"
+    assert "被合并方" not in net_profit_row.quote
+
+
+def test_balance_sheet_mismatch_is_quarantined_but_other_statements_survive(
+    tmp_path: Path,
+) -> None:
+    identity = _identity()
+    pages = [
+        page.replace(
+            "所有者权益合计 4,000.00 3,200.00",
+            "所有者权益合计 3,900.00 3,200.00",
+        )
+        for page in _statement_pages()
+    ]
+    source_input = _source_input(tmp_path, identity, pages)
+
+    result = FinancialStatementExtractor().extract(
+        identity=identity,
+        source_inputs=[source_input],
+    )
+
+    assert _status_value(result) == "partial_success"
+    assert [
+        row for row in result.rows if row.statement is FinancialStatement.BALANCE_SHEET
+    ]
+    assert not [
+        fact
+        for fact in result.financial_facts
+        if fact.statement is FinancialStatement.BALANCE_SHEET
+    ]
+    assert _fact(result, FinancialItem.OPERATING_REVENUE, "FY2025").value == Decimal(
+        "3000.00"
+    )
+    assert _fact(result, FinancialItem.OPERATING_CASH_FLOW, "FY2025").value == Decimal(
+        "420.00"
+    )
+    mismatch = next(
+        issue
+        for issue in result.issues
+        if issue.code == "balance_sheet_equation_mismatch"
+    )
+    assert mismatch.period == "FY2025"
+    assert result.validation is not None and result.validation.is_valid is False
+
+
+def test_missing_equity_quarantines_unverified_balance_sheet(
+    tmp_path: Path,
+) -> None:
+    identity = _identity()
+    pages = [
+        page.replace("\n所有者权益合计 4,000.00 3,200.00", "")
+        for page in _statement_pages()
+    ]
+    source_input = _source_input(tmp_path, identity, pages)
+
+    result = FinancialStatementExtractor().extract(
+        identity=identity,
+        source_inputs=[source_input],
+    )
+
+    assert _status_value(result) == "partial_success"
+    assert not [
+        fact
+        for fact in result.financial_facts
+        if fact.statement is FinancialStatement.BALANCE_SHEET
+    ]
+    assert any(
+        issue.code == "balance_sheet_equation_unverified"
+        and "所有者权益合计" in issue.message
+        for issue in result.issues
+    )
+    assert result.validation is not None and result.validation.is_valid is True
+
+
+def test_balance_sheet_dimension_conflict_is_rejected_before_equation_check(
+    tmp_path: Path,
+) -> None:
+    identity = _identity()
+    source_input = _source_input(tmp_path, identity, _statement_pages())
+    extractor = FinancialStatementExtractor()
+    result = extractor.extract(identity=identity, source_inputs=[source_input])
+    conflicting_rows = [
+        row.copy(update={"prior_period": "FY2023"})
+        if row.item is FinancialItem.TOTAL_EQUITY
+        else row
+        for row in result.rows
+        if row.statement is FinancialStatement.BALANCE_SHEET
+    ]
+
+    quarantined, issues = extractor._validate_balance_sheet_structure(  # noqa: SLF001
+        conflicting_rows
+    )
+
+    assert quarantined == {"S01"}
+    assert [issue.code for issue in issues] == [
+        "balance_sheet_dimension_conflict"
+    ]
+
+
+def test_balance_sheet_rounding_tolerance_uses_reported_precision(
+    tmp_path: Path,
+) -> None:
+    identity = _identity()
+    pages = [
+        page.replace(
+            "所有者权益合计 4,000.00 3,200.00",
+            "所有者权益合计 3,999.99 3,200.00",
+        )
+        for page in _statement_pages(unit="万元")
+    ]
+    source_input = _source_input(tmp_path, identity, pages)
+
+    result = FinancialStatementExtractor().extract(
+        identity=identity,
+        source_inputs=[source_input],
+    )
+
+    # 三项均以0.01万元披露，单项0.005万元的舍入误差上限
+    # 可解释100元的勾稽差，但不会放宽到整1万元。
+    assert _fact(result, FinancialItem.TOTAL_ASSETS, "FY2025").value == Decimal(
+        "80000000.00"
+    )
+    assert not [
+        issue
+        for issue in result.issues
+        if issue.code == "balance_sheet_equation_mismatch"
+    ]
 
 
 def test_unit_wan_is_normalized_to_cny_without_losing_raw_unit(

@@ -163,6 +163,99 @@ def test_shareholder_display_name_repairs_chinese_pdf_wrap_but_keeps_english_spa
     assert disclosure_module._display_cell("UBS   AG") == "UBS AG"
 
 
+def _status_row(
+    *,
+    status: str,
+    percentage: str = "10.37",
+    shares: int = 764_045_593,
+    nature: str | None = "境内自然人",
+) -> ExtractedShareholderRow:
+    return ExtractedShareholderRow(
+        name="王佶",
+        shareholder_nature=nature,
+        shares=shares,
+        percentage=Decimal(percentage),
+        page_number=81,
+        raw_cells=[
+            "王佶",
+            nature or "",
+            f"{percentage}%",
+            f"{shares:,}",
+            status,
+            "754,627,848" if status == "质押" else "6,417,745",
+        ],
+    )
+
+
+def test_shareholder_status_rows_merge_only_when_core_holding_matches() -> None:
+    consolidated = disclosure_module._consolidate_shareholder_status_rows(
+        [_status_row(status="质押"), _status_row(status="冻结")]
+    )
+
+    assert len(consolidated) == 1
+    assert consolidated[0].name == "王佶"
+    assert consolidated[0].percentage == Decimal("10.37")
+    assert consolidated[0].shares == 764_045_593
+    assert "质押" in consolidated[0].raw_cells
+    assert "冻结" in consolidated[0].raw_cells
+    assert "754,627,848" in consolidated[0].raw_cells
+    assert "6,417,745" in consolidated[0].raw_cells
+
+
+@pytest.mark.parametrize(
+    "second_row",
+    [
+        _status_row(status="冻结", percentage="9.99"),
+        _status_row(status="冻结", shares=764_045_592),
+        _status_row(status="冻结", nature="境内非国有法人"),
+    ],
+)
+def test_shareholder_status_rows_reject_conflicting_holding_facts(
+    second_row: ExtractedShareholderRow,
+) -> None:
+    with pytest.raises(OwnershipDisclosureError) as exc_info:
+        disclosure_module._consolidate_shareholder_status_rows(
+            [_status_row(status="质押"), second_row]
+        )
+
+    assert exc_info.value.code == "conflicting_shareholder_rows"
+
+
+@pytest.mark.parametrize("duplicate_status", ["", "质押"])
+def test_shareholder_status_rows_reject_unexplained_duplicate(
+    duplicate_status: str,
+) -> None:
+    with pytest.raises(OwnershipDisclosureError) as exc_info:
+        disclosure_module._consolidate_shareholder_status_rows(
+            [_status_row(status="质押"), _status_row(status=duplicate_status)]
+        )
+
+    assert exc_info.value.code == "duplicate_shareholder_rows"
+
+
+def test_shareholder_status_rows_do_not_merge_different_shareholders() -> None:
+    other = _status_row(status="冻结").copy(update={"name": "测试股东乙"})
+
+    consolidated = disclosure_module._consolidate_shareholder_status_rows(
+        [_status_row(status="质押"), other]
+    )
+
+    assert [row.name for row in consolidated] == ["王佶", "测试股东乙"]
+
+
+def test_shareholder_status_rows_reject_cross_page_merge() -> None:
+    frozen_on_next_page = _status_row(status="冻结").copy(
+        update={"page_number": 82}
+    )
+
+    with pytest.raises(OwnershipDisclosureError) as exc_info:
+        disclosure_module._consolidate_shareholder_status_rows(
+            [_status_row(status="质押"), frozen_on_next_page]
+        )
+
+    assert exc_info.value.code == "duplicate_shareholder_rows"
+
+
 def _patch_table_extractors(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         disclosure_module,
