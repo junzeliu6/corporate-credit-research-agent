@@ -246,6 +246,12 @@ ITEM_RULES: Tuple[_ItemRule, ...] = (
     _ItemRule(item=FinancialItem.CASH_RECEIVED_FROM_SALES, statement=FinancialStatement.CASH_FLOW_STATEMENT, aliases=("销售商品提供劳务收到的现金",)),
 )
 
+# 年报合并资产负债表中，某些负债科目即使两期均无余额也会保留科目行，
+# PDF 文本因此只剩下科目名称。首版只对“短期借款”启用这一确定性规则：
+# 它是 financial-analysis 的必查科目，而且空白主表行在授信语义上与
+# “未找到该科目”不同。其他科目仍维持缺失，不扩大零值推断范围。
+_EXPLICIT_BLANK_ZERO_ITEMS = frozenset({FinancialItem.SHORT_TERM_BORROWINGS})
+
 
 _HEADING_PREFIX = r"(?:\d+|[一二三四五六七八九十]+)?[、.]?"
 _AMOUNT_TOKEN = re.compile(
@@ -526,7 +532,11 @@ class FinancialStatementExtractor:
 
         limitations = [
             "首版只结构化 financial-analysis Skill 所需的授信重点科目，不声称还原全部报表行。",
-            "仅接受合并报表中能够唯一识别两期列的金额；单边空值、列错位或歧义行不会被猜测为零。",
+            (
+                "仅接受合并报表中能够唯一识别两期列的金额；只有科目明确列示、"
+                "两期均空且主表上下文通过校验的短期借款按披露零余额处理，"
+                "单边空值、列错位或歧义行不会被猜测为零。"
+            ),
             "财务报表附注中的变化原因尚未在V3.3B自动提取，后续分析必须标明资料限制。",
         ]
         if any(section.comparison_restated for section in sections):
@@ -1038,6 +1048,39 @@ class FinancialStatementExtractor:
                 elif direction == "label_before_values":
                     value_line_index = self._adjacent_value_line(lines, index, step=1)
                 if value_line_index is None:
+                    if self._is_explicit_two_period_blank_row(
+                        section=section,
+                        lines=lines,
+                        anchor_index=index,
+                        rule=rule,
+                    ):
+                        context_lines = self._blank_row_evidence_lines(lines, index)
+                        register_row(
+                            ExtractedStatementRow(
+                                source_id=section.source_id,
+                                statement=section.statement,
+                                item=rule.item,
+                                item_label=ITEM_LABELS[rule.item],
+                                original_label=anchor.text.strip(),
+                                page_number=anchor.page_number,
+                                line_number=anchor.line_number,
+                                quote=_normalise_quote(context_lines),
+                                current_period=section.current_period,
+                                prior_period=section.prior_period,
+                                current_raw_value="0",
+                                prior_raw_value="0",
+                                current_value_cny=Decimal("0"),
+                                prior_value_cny=Decimal("0"),
+                                currency=section.currency,
+                                currency_basis=section.currency_basis,
+                                original_unit=section.original_unit,
+                                unit_multiplier=section.unit_multiplier,
+                                comparison_restated=section.comparison_restated,
+                                extraction_status="disclosed_blank_as_zero",
+                                layout_direction="explicit_blank_cells",
+                            )
+                        )
+                        continue
                     issues.append(
                         FinancialExtractionIssue(
                             code="ambiguous_row_direction",
@@ -1180,6 +1223,90 @@ class FinancialStatementExtractor:
             )
         ]
         return list(found.values()), issues
+
+    def _is_explicit_two_period_blank_row(
+        self,
+        *,
+        section: ExtractedStatementSection,
+        lines: Sequence[_LineRef],
+        anchor_index: int,
+        rule: _ItemRule,
+    ) -> bool:
+        """识别合并主表中“两期单元格均为空”的受控零余额行。
+
+        PDF 纯文本没有表格单元格坐标，不能仅凭出现科目名就补零。这里同时
+        要求：科目属于显式白名单、标签整行精确匹配、已定位两期合并资产
+        负债表、相邻位置没有可绑定金额，并且同页存在至少两个可验证的两期
+        数值主表行。缺行、单边金额、三列金额、附注或孤立文本均不会命中。
+        """
+
+        if (
+            section.statement is not FinancialStatement.BALANCE_SHEET
+            or section.entity_scope is not EntityScope.CONSOLIDATED
+            or rule.item not in _EXPLICIT_BLANK_ZERO_ITEMS
+            or len(section.column_periods) != 2
+        ):
+            return False
+        anchor = lines[anchor_index]
+        compact_anchor = _compact(anchor.text)
+        if compact_anchor not in {_compact(alias) for alias in rule.aliases}:
+            return False
+        if _AMOUNT_TOKEN.search(anchor.text):
+            # 单边金额或异常列绝不能解释为“两期均空”。
+            return False
+        if (
+            self._adjacent_value_line(lines, anchor_index, step=-1) is not None
+            or self._adjacent_value_line(lines, anchor_index, step=1) is not None
+        ):
+            return False
+
+        page_number = anchor.page_number
+        same_page_indexes = [
+            index
+            for index, line in enumerate(lines)
+            if line.page_number == page_number and index != anchor_index
+        ]
+        peer_rows = 0
+        nearby_table_evidence = False
+        for index in same_page_indexes:
+            line = lines[index]
+            matches = self._value_column_matches(
+                line.text, list(_AMOUNT_TOKEN.finditer(line.text))
+            )
+            if len(matches) != 2:
+                continue
+            peer_rule = _match_rule(
+                line.text,
+                section.statement,
+                prefix_before_values=line.text,
+            )
+            if peer_rule is None:
+                continue
+            peer_rows += 1
+            if abs(index - anchor_index) <= 20:
+                nearby_table_evidence = True
+        return peer_rows >= 2 and nearby_table_evidence
+
+    @staticmethod
+    def _blank_row_evidence_lines(
+        lines: Sequence[_LineRef], anchor_index: int
+    ) -> List[_LineRef]:
+        """保留空白科目及同页前后非空行，便于人工复核零值判定。"""
+
+        anchor = lines[anchor_index]
+        selected: List[_LineRef] = []
+        for step in (-1, 0, 1):
+            index = anchor_index + step
+            if not 0 <= index < len(lines):
+                continue
+            line = lines[index]
+            if (
+                line.page_number == anchor.page_number
+                and line.text.strip()
+                and not _looks_like_page_noise(line.text)
+            ):
+                selected.append(line)
+        return selected or [anchor]
 
     @staticmethod
     def _decide_layout_direction(votes: Mapping[str, int]) -> Optional[str]:

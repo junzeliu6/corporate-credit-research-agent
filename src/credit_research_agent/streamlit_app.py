@@ -107,6 +107,44 @@ def _strip_local_image_links(markdown: str) -> str:
     )
 
 
+def _render_markdown_with_ownership_image(
+    st: Any,
+    markdown: str,
+    ownership_image_path: Optional[Path],
+) -> None:
+    """在 Markdown 原位置用 ``st.image`` 渲染本地股权图。
+
+    Streamlit 的 Markdown 组件无法直接读取任务目录中的相对本地图片。这里仅
+    替换 ``ownership_structure`` 图片标记，其他 Markdown 原样交给 Streamlit，
+    从而让“研究报告”页签与下载版报告保持相同的章节顺序。
+    """
+
+    pattern = re.compile(
+        r"^\s*!\[[^\]]*\]\([^\n)]*ownership_structure\.(?:png|svg)\)\s*$",
+        flags=re.IGNORECASE | re.MULTILINE,
+    )
+    cursor = 0
+    matched = False
+    for match in pattern.finditer(markdown):
+        matched = True
+        leading_markdown = markdown[cursor : match.start()]
+        if leading_markdown.strip():
+            st.markdown(leading_markdown, unsafe_allow_html=False)
+        if ownership_image_path is not None:
+            st.image(
+                str(ownership_image_path),
+                caption="股权结构图",
+                width="stretch",
+            )
+        cursor = match.end()
+
+    trailing_markdown = markdown[cursor:]
+    if trailing_markdown.strip():
+        st.markdown(trailing_markdown, unsafe_allow_html=False)
+    elif not matched:
+        st.markdown(markdown, unsafe_allow_html=False)
+
+
 def split_report_sections(markdown: str) -> list[tuple[str, str]]:
     """按二级标题切分报告，为长篇授信报告提供章节导航。"""
 
@@ -187,14 +225,18 @@ def render_artifact(
                     key=f"{key_prefix}-download-docx-{abs(hash(str(artifact.run_dir)))}",
                 )
                 st.caption("Word 由当前 Markdown 与既有图表在本地转换，不会调用模型或搜索 API。")
-            sections = split_report_sections(_strip_local_image_links(report))
+            sections = split_report_sections(report)
             selected_section = st.selectbox(
                 "章节导航",
                 options=range(len(sections)),
                 format_func=lambda index: sections[index][0],
                 key=f"{key_prefix}-section-{abs(hash(str(artifact.run_dir)))}",
             )
-            st.markdown(sections[int(selected_section)][1], unsafe_allow_html=False)
+            _render_markdown_with_ownership_image(
+                st,
+                sections[int(selected_section)][1],
+                artifact.ownership_image_path,
+            )
         else:
             st.info("该运行尚未生成可展示的 Markdown 报告。")
     with graph_tab:

@@ -25,6 +25,7 @@ from credit_research_agent.models import (
 )
 from credit_research_agent.ownership import ControlRelationType
 from credit_research_agent.ownership_disclosures import (
+    ExtractedShareCapitalBasis,
     ExtractedShareholderRow,
     OwnershipDisclosureError,
     OwnershipDisclosureExtractor,
@@ -151,6 +152,36 @@ def _shareholders() -> list[ExtractedShareholderRow]:
     ]
 
 
+def _complete_shareholders() -> list[ExtractedShareholderRow]:
+    names = [
+        "测试控股集团",
+        "张三",
+        "李四",
+        "测试机构甲",
+        "测试自然人甲",
+        "测试机构乙",
+        "测试机构丙",
+        "测试自然人乙",
+        "测试自然人丙",
+        "测试机构丁",
+    ]
+    percentages = ["31.53", "20.81", "2.34", "1.78", "0.87", "0.74", "0.61", "0.57", "0.44", "0.44"]
+    shares = [315_300, 208_100, 23_400, 17_800, 8_700, 7_400, 6_100, 5_700, 4_400, 4_400]
+    return [
+        ExtractedShareholderRow(
+            name=name,
+            shareholder_nature=(
+                "境内自然人" if "自然人" in name or name in {"张三", "李四"} else "境内非国有法人"
+            ),
+            shares=share_count,
+            percentage=Decimal(percentage),
+            page_number=1,
+            raw_cells=[name, f"{share_count:,}", f"{percentage}%"],
+        )
+        for name, percentage, share_count in zip(names, percentages, shares)
+    ]
+
+
 def test_shareholder_display_name_repairs_chinese_pdf_wrap_but_keeps_english_space() -> None:
     assert (
         disclosure_module._display_cell("楚昌投资集团  有限公司")
@@ -161,6 +192,49 @@ def test_shareholder_display_name_repairs_chinese_pdf_wrap_but_keeps_english_spa
         == "狮龙国际集团(香港)有限公司"
     )
     assert disclosure_module._display_cell("UBS   AG") == "UBS AG"
+
+
+def test_extract_share_capital_basis_uses_same_date_with_chinese_spacing() -> None:
+    pages = {
+        2: ParsedPage(
+            page_number=2,
+            text="公司以 2025 年 12 月 31 日总股本 1,670,705,376 股为基数实施分配。",
+            char_count=55,
+            status=PageExtractionStatus.EXTRACTED,
+        )
+    }
+
+    result = disclosure_module._extract_share_capital_basis(
+        pages, as_of_date=date(2025, 12, 31)
+    )
+
+    assert result is not None
+    assert result.total_shares == 1_670_705_376
+    assert result.page_number == 2
+
+
+def test_extract_share_capital_basis_rejects_conflicting_same_date_values() -> None:
+    pages = {
+        2: ParsedPage(
+            page_number=2,
+            text="以2025年12月31日总股本1,000,000股为基数。",
+            char_count=30,
+            status=PageExtractionStatus.EXTRACTED,
+        ),
+        3: ParsedPage(
+            page_number=3,
+            text="截至2025年12月31日，公司总股本为1,000,001股。",
+            char_count=35,
+            status=PageExtractionStatus.EXTRACTED,
+        ),
+    }
+
+    with pytest.raises(OwnershipDisclosureError) as exc_info:
+        disclosure_module._extract_share_capital_basis(
+            pages, as_of_date=date(2025, 12, 31)
+        )
+
+    assert exc_info.value.code == "conflicting_total_share_capital"
 
 
 def _status_row(
@@ -294,6 +368,110 @@ def test_generic_ownership_keeps_partial_top_ten_without_residual(
     assert result.dataset.completeness_declarations == []
     assert all(item.name != "其他未单列股东" for item in result.dataset.nodes)
     assert all("以岭" not in item.name for item in result.dataset.nodes)
+
+
+def test_generic_ownership_uses_same_date_capital_and_combines_display_residual(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    identity = _identity()
+    source = _source(identity)
+    download, summary_path, pages_path = _write_inputs(tmp_path, identity, source)
+    _patch_table_extractors(monkeypatch)
+    monkeypatch.setattr(
+        disclosure_module,
+        "_extract_top_shareholders",
+        lambda _pdf_path, _pages: _complete_shareholders(),
+    )
+    monkeypatch.setattr(
+        disclosure_module,
+        "_extract_share_capital_basis",
+        lambda _pages, *, as_of_date: ExtractedShareCapitalBasis(
+            as_of_date=as_of_date,
+            total_shares=1_000_000,
+            page_number=1,
+            quote="以2025年12月31日总股本1,000,000股为基数",
+        ),
+    )
+
+    extraction, result = OwnershipDisclosureExtractor(clock=lambda: FIXED_NOW).extract(
+        identity=identity,
+        source=source,
+        download=download,
+        summary_path=summary_path,
+        pages_path=pages_path,
+    )
+
+    assert extraction.status is OwnershipDisclosureStatus.SUCCESS
+    assert extraction.total_ordinary_shares == 1_000_000
+    assert extraction.disclosed_top_shareholder_shares == 601_300
+    assert extraction.calculated_unlisted_shares == 398_700
+    assert len(result.dataset.ownership_edges) == 10
+    assert len(result.dataset.completeness_declarations) == 1
+    assert result.graph.formal_ready is True
+    other = next(
+        item
+        for item in result.graph.nodes
+        if item.name == "其他单一持股未超过25%的投资者（合计）"
+    )
+    assert other.ownership_percentage == Decimal("45.32")
+    direct_edges = [
+        item
+        for item in result.graph.edges
+        if item.target_node_id == identity.entity_id
+    ]
+    assert sum(item.percentage or Decimal("0") for item in direct_edges) == Decimal("100.00")
+    combined_edge = next(item for item in direct_edges if item.source_node_id == other.node_id)
+    assert any(value.startswith("RESIDUAL-EDGE::") for value in combined_edge.aggregated_from_edge_ids)
+
+
+def test_generic_display_keeps_non_control_institution_at_or_above_five_percent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    identity = _identity()
+    source = _source(identity)
+    download, summary_path, pages_path = _write_inputs(tmp_path, identity, source)
+    _patch_table_extractors(monkeypatch)
+    holders = _complete_shareholders()
+    holders[2] = holders[2].copy(
+        update={
+            "name": "测试重要机构",
+            "shareholder_nature": "境内非国有法人",
+            "percentage": Decimal("10.00"),
+            "shares": 100_000,
+        }
+    )
+    monkeypatch.setattr(
+        disclosure_module,
+        "_extract_top_shareholders",
+        lambda _pdf_path, _pages: holders,
+    )
+    monkeypatch.setattr(
+        disclosure_module,
+        "_extract_share_capital_basis",
+        lambda _pages, *, as_of_date: ExtractedShareCapitalBasis(
+            as_of_date=as_of_date,
+            total_shares=1_000_000,
+            page_number=1,
+            quote="以2025年12月31日总股本1,000,000股为基数",
+        ),
+    )
+
+    _extraction, result = OwnershipDisclosureExtractor(clock=lambda: FIXED_NOW).extract(
+        identity=identity,
+        source=source,
+        download=download,
+        summary_path=summary_path,
+        pages_path=pages_path,
+    )
+
+    institution = next(item for item in result.graph.nodes if item.name == "测试重要机构")
+    assert institution.ownership_percentage == Decimal("10.00")
+    other = next(
+        item
+        for item in result.graph.nodes
+        if item.name == "其他单一持股未超过25%的投资者（合计）"
+    )
+    assert other.ownership_percentage == Decimal("37.66")
 
 
 def test_generic_ownership_preserves_multiple_disclosed_controllers(

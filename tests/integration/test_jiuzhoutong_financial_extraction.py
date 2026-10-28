@@ -98,8 +98,9 @@ def test_yiling_real_annual_report_supports_different_statement_layout() -> None
         source_inputs=[source_input],
     )
 
-    # 以岭主表中的短期借款两期均为空，首版正确降级为部分成功且不补零。
-    assert result.status is StatementExtractionStatus.PARTIAL_SUCCESS
+    # 以岭合并资产负债表明确列示短期借款科目、两期金额栏均为空；
+    # 在同页主表结构和两期间表头均已核实后，确定性记录为披露零余额。
+    assert result.status is StatementExtractionStatus.SUCCESS
     assert set(result.statements_found) == set(FinancialStatement)
     assert {
         section.currency_basis for section in result.sections
@@ -108,8 +109,17 @@ def test_yiling_real_annual_report_supports_different_statement_layout() -> None
     assert lookup[(FinancialItem.OPERATING_REVENUE, "FY2025")].value == Decimal(
         "7830737438.74"
     )
-    assert not {
-        key for key in lookup if key[0] is FinancialItem.SHORT_TERM_BORROWINGS
-    }
+    assert lookup[(FinancialItem.SHORT_TERM_BORROWINGS, "FY2025")].value == Decimal(
+        "0"
+    )
+    assert lookup[(FinancialItem.SHORT_TERM_BORROWINGS, "FY2024")].value == Decimal(
+        "0"
+    )
+    blank_row = next(
+        row
+        for row in result.rows
+        if row.item is FinancialItem.SHORT_TERM_BORROWINGS
+    )
+    assert blank_row.extraction_status == "disclosed_blank_as_zero"
     assert not [item for item in result.issues if item.severity.value == "error"]
 

@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 from credit_research_agent.streamlit_app import (
     DEFAULT_TASK,
+    _render_markdown_with_ownership_image,
     _strip_local_image_links,
     preferred_history_run_path,
     split_report_sections,
@@ -41,6 +42,52 @@ def test_local_ownership_image_is_removed_from_markdown_only() -> None:
 
     assert "ownership_structure.svg" not in cleaned
     assert "股权分析正文" in cleaned
+
+
+class _FakeStreamlit:
+    def __init__(self) -> None:
+        self.markdown_calls: list[str] = []
+        self.image_calls: list[dict[str, object]] = []
+
+    def markdown(self, content: str, *, unsafe_allow_html: bool) -> None:
+        assert unsafe_allow_html is False
+        self.markdown_calls.append(content)
+
+    def image(self, path: str, *, caption: str, width: str) -> None:
+        self.image_calls.append({"path": path, "caption": caption, "width": width})
+
+
+def test_report_renders_local_ownership_image_at_markdown_position() -> None:
+    st = _FakeStreamlit()
+    image = Path("run/assets/ownership_structure.png")
+    report = (
+        "## 第一章\n\n企业历史。\n\n"
+        "### 股权结构图\n\n"
+        "![股权图](assets/ownership_structure.svg)\n\n"
+        "## 第二章\n\n经营情况。\n"
+    )
+
+    _render_markdown_with_ownership_image(st, report, image)
+
+    assert len(st.image_calls) == 1
+    assert st.image_calls[0] == {
+        "path": str(image),
+        "caption": "股权结构图",
+        "width": "stretch",
+    }
+    assert "企业历史" in st.markdown_calls[0]
+    assert "经营情况" in st.markdown_calls[1]
+    assert all("ownership_structure" not in item for item in st.markdown_calls)
+
+
+def test_report_without_ownership_marker_remains_single_markdown_block() -> None:
+    st = _FakeStreamlit()
+    report = "## 第一章\n\n企业历史。\n"
+
+    _render_markdown_with_ownership_image(st, report, None)
+
+    assert st.markdown_calls == [report]
+    assert st.image_calls == []
 
 
 def _history_run(name: str, *, is_live: bool, has_report: bool = True) -> SimpleNamespace:

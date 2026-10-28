@@ -327,6 +327,99 @@ def test_extracts_periods_split_labels_aliases_and_negative_values(
     assert _fact(result, FinancialItem.OPERATING_CASH_FLOW, "FY2024").value == Decimal("-120.00")
 
 
+def test_explicit_blank_short_term_borrowings_row_is_disclosed_zero(
+    tmp_path: Path,
+) -> None:
+    identity = _identity()
+    pages = [
+        page.replace("短期借款 300.00 200.00", "短期借款")
+        for page in _statement_pages()
+    ]
+    source_input = _source_input(tmp_path, identity, pages)
+
+    result = FinancialStatementExtractor().extract(
+        identity=identity,
+        source_inputs=[source_input],
+    )
+
+    assert _status_value(result) == "success"
+    assert _fact(
+        result, FinancialItem.SHORT_TERM_BORROWINGS, "FY2025"
+    ).value == Decimal("0")
+    assert _fact(
+        result, FinancialItem.SHORT_TERM_BORROWINGS, "FY2024"
+    ).value == Decimal("0")
+    row = next(
+        row
+        for row in result.rows
+        if row.item is FinancialItem.SHORT_TERM_BORROWINGS
+    )
+    assert row.extraction_status == "disclosed_blank_as_zero"
+    assert row.layout_direction == "explicit_blank_cells"
+    assert row.current_raw_value == row.prior_raw_value == "0"
+    assert not [
+        issue
+        for issue in result.issues
+        if issue.item is FinancialItem.SHORT_TERM_BORROWINGS
+    ]
+
+
+def test_missing_short_term_borrowings_row_is_not_invented_as_zero(
+    tmp_path: Path,
+) -> None:
+    identity = _identity()
+    pages = [
+        page.replace("\n短期借款 300.00 200.00", "")
+        for page in _statement_pages()
+    ]
+    source_input = _source_input(tmp_path, identity, pages)
+
+    result = FinancialStatementExtractor().extract(
+        identity=identity,
+        source_inputs=[source_input],
+    )
+
+    assert _status_value(result) == "partial_success"
+    assert not [
+        fact
+        for fact in result.financial_facts
+        if fact.item is FinancialItem.SHORT_TERM_BORROWINGS
+    ]
+    assert any(
+        issue.code == "financial_item_not_found"
+        and issue.item is FinancialItem.SHORT_TERM_BORROWINGS
+        for issue in result.issues
+    )
+
+
+def test_single_amount_short_term_borrowings_row_remains_ambiguous(
+    tmp_path: Path,
+) -> None:
+    identity = _identity()
+    pages = [
+        page.replace("短期借款 300.00 200.00", "短期借款 300.00")
+        for page in _statement_pages()
+    ]
+    source_input = _source_input(tmp_path, identity, pages)
+
+    result = FinancialStatementExtractor().extract(
+        identity=identity,
+        source_inputs=[source_input],
+    )
+
+    assert _status_value(result) == "partial_success"
+    assert not [
+        fact
+        for fact in result.financial_facts
+        if fact.item is FinancialItem.SHORT_TERM_BORROWINGS
+    ]
+    assert any(
+        issue.code == "ambiguous_amount_columns"
+        and issue.item is FinancialItem.SHORT_TERM_BORROWINGS
+        for issue in result.issues
+    )
+
+
 def test_values_before_labels_are_bound_to_the_correct_items(
     tmp_path: Path,
 ) -> None:

@@ -1,7 +1,8 @@
 """V3.3C 从官方年报表格构建通用、可追溯的股权数据。
 
-本模块不会读取 ``ownership_seeds.json``。前十大股东表只被视为部分披露，
-默认不计算“其他未单列股东”，也不把百分比大小自动解释为控制关系。
+本模块不会读取 ``ownership_seeds.json``。前十大股东表只被视为部分披露；
+只有同一报告明确给出报告期末总股本且精确股数可复核时，才计算匿名剩余股份，
+并且始终不把百分比大小自动解释为控制关系。
 """
 
 from __future__ import annotations
@@ -41,14 +42,19 @@ from credit_research_agent.models import (
     VerificationMethod,
 )
 from credit_research_agent.ownership import (
+    AggregationGroup,
     ControlRelationship,
     ControlRelationType,
     OwnershipArtifacts,
     OwnershipBuildError,
     OwnershipBuildResult,
+    OwnershipCompletenessDeclaration,
     OwnershipDataset,
     OwnershipDisplayConfig,
     OwnershipEdge,
+    OwnershipGraph,
+    OwnershipGraphEdge,
+    OwnershipGraphNode,
     OwnershipNode,
     OwnershipNodeType,
     OwnershipRelationType,
@@ -86,11 +92,14 @@ class ExtractedShareholderRow(BaseModel):
 
 
 class OwnershipDisclosureExtraction(BaseModel):
-    schema_version: str = "3.3c.0"
+    schema_version: str = "3.3c.1"
     status: OwnershipDisclosureStatus
     identity: CompanyIdentity
     source: SourceRecord
     as_of_date: date
+    total_ordinary_shares: Optional[int] = Field(default=None, ge=1)
+    disclosed_top_shareholder_shares: Optional[int] = Field(default=None, ge=0)
+    calculated_unlisted_shares: Optional[int] = Field(default=None, ge=0)
     top_shareholders: List[ExtractedShareholderRow] = Field(default_factory=list)
     controlling_shareholders: List[str] = Field(default_factory=list)
     actual_controllers: List[str] = Field(default_factory=list)
@@ -102,6 +111,15 @@ class GenericOwnershipArtifacts(OwnershipArtifacts):
     status: OwnershipDisclosureStatus
     formal_ready: bool
     extraction_path: Path
+
+
+class ExtractedShareCapitalBasis(BaseModel):
+    """同一报告期末可核验的普通股总股本分母。"""
+
+    as_of_date: date
+    total_shares: int = Field(ge=1)
+    page_number: int = Field(ge=1)
+    quote: str = Field(min_length=1)
 
 
 def _model_data(model: BaseModel) -> dict:
@@ -145,6 +163,75 @@ def _parse_shares(value: object) -> Optional[int]:
     if not re.fullmatch(r"\d+", text):
         return None
     return int(text)
+
+
+def _extract_share_capital_basis(
+    pages: Dict[int, object], *, as_of_date: date
+) -> Optional[ExtractedShareCapitalBasis]:
+    """提取明确绑定报告期末日期的总股本，拒绝无日期分母或冲突值。"""
+
+    date_pattern = (
+        rf"{as_of_date.year}\s*年\s*{as_of_date.month}\s*月\s*"
+        rf"{as_of_date.day}\s*日"
+    )
+    pattern = re.compile(
+        rf"(?:以|截至|于)?\s*{date_pattern}[^。；]{{0,40}}?"
+        rf"总股本\s*(?:为|：|:)?\s*([0-9][0-9,\s]*[0-9])\s*股"
+    )
+    candidates: List[ExtractedShareCapitalBasis] = []
+    for page_number, page in pages.items():
+        if getattr(page, "status", None) is not PageExtractionStatus.EXTRACTED:
+            continue
+        text = re.sub(r"\s+", " ", str(getattr(page, "text", ""))).strip()
+        for match in pattern.finditer(text):
+            total_shares = _parse_shares(match.group(1))
+            if total_shares is None or total_shares <= 0:
+                continue
+            quote = re.sub(r"\s+", " ", match.group(0)).strip()
+            candidates.append(
+                ExtractedShareCapitalBasis(
+                    as_of_date=as_of_date,
+                    total_shares=total_shares,
+                    page_number=page_number,
+                    quote=quote,
+                )
+            )
+    if not candidates:
+        return None
+    totals = {item.total_shares for item in candidates}
+    if len(totals) != 1:
+        raise OwnershipDisclosureError(
+            "conflicting_total_share_capital",
+            f"年报中{as_of_date.isoformat()}总股本存在冲突：{sorted(totals)}",
+        )
+    return sorted(candidates, key=lambda item: item.page_number)[0]
+
+
+def _top_ten_supports_calculated_residual(
+    holders: Sequence[ExtractedShareholderRow],
+    basis: ExtractedShareCapitalBasis,
+) -> bool:
+    """确认前十大精确股数与同日总股本可以安全形成匿名剩余份额。"""
+
+    if len(holders) != 10 or any(item.shares is None for item in holders):
+        return False
+    share_counts = [int(item.shares or 0) for item in holders]
+    if any(value < 0 for value in share_counts):
+        return False
+    if share_counts != sorted(share_counts, reverse=True):
+        return False
+    if sum(share_counts) > basis.total_shares:
+        raise OwnershipDisclosureError(
+            "top_shareholder_shares_exceed_capital",
+            "前十大股东持股数量合计超过同日总股本",
+        )
+    for row in holders:
+        assert row.shares is not None
+        calculated = Decimal(row.shares) * Decimal("100") / Decimal(basis.total_shares)
+        # 年报比例通常保留两位小数；仅允许正常披露舍入差。
+        if abs(calculated - row.percentage) > Decimal("0.01"):
+            return False
+    return True
 
 
 _AUXILIARY_SHARE_STATUS_MARKERS = frozenset({"质押", "冻结", "标记"})
@@ -530,6 +617,153 @@ def _node_type_from_nature(nature: Optional[str]) -> OwnershipNodeType:
     return OwnershipNodeType.GENERAL_INSTITUTION
 
 
+def _combine_other_direct_investors(
+    graph: OwnershipGraph,
+    dataset: OwnershipDataset,
+) -> OwnershipGraph:
+    """把既有小股东聚合节点与匿名计算剩余合并为一个展示节点。
+
+    只处理已有同日完整性声明且已通过100%校验的目标公司分支。原始前十大
+    边仍保留在 ``OwnershipDataset``；非聚合机构及关键主体继续单列。本函数
+    只改变 ``OwnershipGraph``。
+    """
+
+    if not graph.formal_ready or not dataset.completeness_declarations:
+        return graph
+    target_id = dataset.identity.entity_id
+    direct_graph_edges = [
+        edge
+        for edge in graph.edges
+        if edge.target_node_id == target_id
+        and edge.relation_type is OwnershipRelationType.EQUITY_OWNERSHIP
+    ]
+    group_by_edge = {
+        group.aggregate_edge_id: group for group in graph.aggregation_groups
+    }
+    combinable_categories = {
+        "natural_person",
+        "institution",
+        "calculated_residual",
+    }
+    combined_edges = [
+        edge
+        for edge in direct_graph_edges
+        if edge.edge_id in group_by_edge
+        and group_by_edge[edge.edge_id].category in combinable_categories
+    ]
+    kept_direct = [edge for edge in direct_graph_edges if edge not in combined_edges]
+    if not combined_edges or any(edge.percentage is None for edge in combined_edges):
+        return graph
+    capital_scopes = {edge.capital_scope for edge in combined_edges}
+    if len(capital_scopes) != 1:
+        return graph
+    capital_scope = next(iter(capital_scopes))
+    combined_percentage = sum(
+        (edge.percentage or Decimal("0") for edge in combined_edges), Decimal("0")
+    )
+    displayed_total = combined_percentage + sum(
+        (edge.percentage or Decimal("0") for edge in kept_direct), Decimal("0")
+    )
+    if abs(displayed_total - Decimal("100")) > graph.config.percentage_tolerance:
+        return graph
+
+    removed_node_ids = {edge.source_node_id for edge in combined_edges}
+    node_id = (
+        f"AGG::{target_id}::equity_ownership::other_investors_lte25::{capital_scope}"
+    )
+    edge_id = (
+        f"AGG-EDGE::{target_id}::equity_ownership::other_investors_lte25::{capital_scope}"
+    )
+    source_ids = sorted({value for edge in combined_edges for value in edge.source_ids})
+    evidence_ids = sorted(
+        {
+            value
+            for edge in combined_edges
+            for value in edge.evidence_ids
+        }
+    )
+    combined_groups = [group_by_edge[edge.edge_id] for edge in combined_edges]
+    member_ids = sorted(
+        {
+            member_id
+            for group in combined_groups
+            for member_id in group.member_node_ids
+        }
+    )
+    source_edge_ids = sorted(
+        {
+            source_edge_id
+            for group in combined_groups
+            for source_edge_id in (
+                group.source_edge_ids
+                if group.category != "calculated_residual"
+                else [group.aggregate_edge_id]
+            )
+        }
+    )
+    graph_node = OwnershipGraphNode(
+        node_id=node_id,
+        name="其他单一持股未超过25%的投资者（合计）",
+        node_type=OwnershipNodeType.AGGREGATED,
+        level=2,
+        status=EvidenceStatus.VERIFIED,
+        source_ids=source_ids,
+        evidence_ids=evidence_ids,
+        aggregated_member_ids=member_ids,
+        ownership_percentage=combined_percentage,
+        percentage_origin=PercentageOrigin.AGGREGATED,
+    )
+    graph_edge = OwnershipGraphEdge(
+        edge_id=edge_id,
+        source_node_id=node_id,
+        target_node_id=target_id,
+        relation_type=OwnershipRelationType.EQUITY_OWNERSHIP,
+        percentage=combined_percentage,
+        percentage_origin=PercentageOrigin.AGGREGATED,
+        capital_scope=capital_scope,
+        as_of_date=dataset.as_of_date,
+        status=EvidenceStatus.VERIFIED,
+        source_ids=source_ids,
+        evidence_ids=evidence_ids,
+        synthetic=True,
+        aggregated_from_edge_ids=source_edge_ids,
+    )
+    group = AggregationGroup(
+        aggregate_node_id=node_id,
+        aggregate_edge_id=edge_id,
+        target_node_id=target_id,
+        category="other_investors_lte25_with_residual",
+        capital_scope=capital_scope,
+        member_node_ids=member_ids,
+        source_edge_ids=source_edge_ids,
+        percentage_calculated=True,
+    )
+    return graph.copy(
+        update={
+            "nodes": [
+                item for item in graph.nodes if item.node_id not in removed_node_ids
+            ]
+            + [graph_node],
+            "edges": [
+                item
+                for item in graph.edges
+                if not (
+                    item.target_node_id == target_id
+                    and item.source_node_id in removed_node_ids
+                )
+            ]
+            + [graph_edge],
+            "aggregation_groups": [
+                item
+                for item in graph.aggregation_groups
+                if item.aggregate_edge_id
+                not in {edge.edge_id for edge in combined_edges}
+            ]
+            + [group],
+        }
+    )
+
+
 class OwnershipDisclosureExtractor:
     def __init__(
         self, *, clock: Optional[Callable[[], datetime]] = None
@@ -561,6 +795,7 @@ class OwnershipDisclosureExtractor:
                 "top_shareholder_table_not_found",
                 "未能从官方年报唯一定位前十大股东名称和持股比例",
             )
+        capital_basis = _extract_share_capital_basis(pages, as_of_date=as_of_date)
 
         controlling_pages = [
             number
@@ -663,6 +898,15 @@ class OwnershipDisclosureExtractor:
             holder_evidence[_cell(row.name)] = add_evidence(
                 row.page_number, "前十大股东持股情况", row.raw_cells
             )
+        capital_evidence_id = (
+            add_evidence(
+                capital_basis.page_number,
+                "报告期末总股本",
+                [capital_basis.quote],
+            )
+            if capital_basis is not None
+            else None
+        )
         controlling_evidence: Dict[str, str] = {}
         for value, page_number, cells in controlling_rows:
             evidence_id = add_evidence(page_number, "控股股东情况", cells)
@@ -779,15 +1023,63 @@ class OwnershipDisclosureExtractor:
             )
             relation_index += 1
 
+        residual_supported = bool(
+            capital_basis is not None
+            and capital_evidence_id is not None
+            and _top_ten_supports_calculated_residual(holders, capital_basis)
+        )
+        top_ten_shares = (
+            sum(int(item.shares or 0) for item in holders)
+            if residual_supported
+            else None
+        )
+        unlisted_shares = (
+            capital_basis.total_shares - top_ten_shares
+            if residual_supported and capital_basis is not None and top_ten_shares is not None
+            else None
+        )
+        completeness_declarations = (
+            [
+                OwnershipCompletenessDeclaration(
+                    target_node_id=identity.entity_id,
+                    as_of_date=as_of_date,
+                    capital_scope="total_ordinary_share_capital",
+                    allow_calculated_residual=True,
+                    residual_label="其他未单列股东",
+                    source_ids=[source.source_id],
+                    evidence_ids=[capital_evidence_id],
+                    note=(
+                        "同一年度报告披露前十大股东精确持股数量及报告期末总股本；"
+                        "剩余股份仅作为匿名计算值，不推断未单列股东身份。"
+                    ),
+                )
+            ]
+            if residual_supported and capital_evidence_id is not None
+            else []
+        )
         missing = [
             MissingInformation(
                 missing_id="M001",
                 entity_id=identity.entity_id,
                 research_module=ResearchModule.OWNERSHIP_STRUCTURE,
-                topic="完整股东名册",
-                description="年报当前只结构化了前十大股东，不代表全部普通股股东。",
-                reason="未取得同一时点完整股东名册，未强行计算或命名剩余股东。",
-                evidence_ids=[first_evidence],
+                topic="未单列股东身份明细" if residual_supported else "完整股东名册",
+                description=(
+                    "年报只列示前十大股东；其余股份可按同日总股本计算，"
+                    "但未单列投资者姓名及逐户持股信息。"
+                    if residual_supported
+                    else "年报当前只结构化了前十大股东，不代表全部普通股股东。"
+                ),
+                reason=(
+                    "匿名剩余比例仅用于完整性校验和展示聚合，不推断具体股东。"
+                    if residual_supported
+                    else "未取得同一时点完整股东名册，未强行计算或命名剩余股东。"
+                ),
+                evidence_ids=list(
+                    dict.fromkeys(
+                        [first_evidence]
+                        + ([capital_evidence_id] if capital_evidence_id else [])
+                    )
+                ),
             ),
             MissingInformation(
                 missing_id="M002",
@@ -822,20 +1114,28 @@ class OwnershipDisclosureExtractor:
             }
         )
         limitations = [
-            "前十大股东表不是完整股东名册；已披露比例不足100%时默认保持信息不完整。",
-            "未核实同一时点完整分母前，不生成“其他未单列股东”差额节点。",
+            "前十大股东表不是完整股东名册；未单列投资者身份不得由差额推断。",
+            (
+                "已用同日总股本与前十大精确股数生成匿名剩余比例；该计算不代表掌握完整股东名册。"
+                if residual_supported
+                else "未核实同一时点完整分母前，不生成“其他未单列股东”差额节点。"
+            ),
             "年报控制关系方框图若没有可提取文本，不从图片猜测上层股东或比例。",
-            "部分股权图只展示已披露直接关系，formal_ready=false，不代表完整穿透。",
+            (
+                "图表比例已完成100%校验；未单列投资者身份及机构上层穿透仍以缺失项保留。"
+                if residual_supported
+                else "部分股权图只展示已披露直接关系，formal_ready=false，不代表完整穿透。"
+            ),
         ]
         dataset = OwnershipDataset(
-            schema_version="3.3c.0",
+            schema_version="3.3c.1",
             identity=identity,
             as_of_date=as_of_date,
             nodes=list(nodes.values()),
             ownership_edges=edges,
             control_relationships=controls,
             state_control_assessments=[],
-            completeness_declarations=[],
+            completeness_declarations=completeness_declarations,
             sources=[parsed_source],
             evidence=evidence,
             missing_information=missing,
@@ -848,6 +1148,8 @@ class OwnershipDisclosureExtractor:
                 "; ".join(item.message for item in validation.errors),
             )
         graph = build_ownership_graph(dataset, config, require_complete=False)
+        if residual_supported:
+            graph = _combine_other_direct_investors(graph, dataset)
         extraction = OwnershipDisclosureExtraction(
             status=(
                 OwnershipDisclosureStatus.SUCCESS
@@ -857,6 +1159,11 @@ class OwnershipDisclosureExtractor:
             identity=identity,
             source=parsed_source,
             as_of_date=as_of_date,
+            total_ordinary_shares=(
+                capital_basis.total_shares if capital_basis is not None else None
+            ),
+            disclosed_top_shareholder_shares=top_ten_shares,
+            calculated_unlisted_shares=unlisted_shares,
             top_shareholders=holders,
             controlling_shareholders=controlling,
             actual_controllers=actual,
