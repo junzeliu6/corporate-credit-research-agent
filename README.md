@@ -157,6 +157,24 @@ flowchart TD
 
    研究完成后，用户可以直接下载 Markdown 或 Word 报告。Word 导出只转换已有报告内容，不重新调用模型，也不会由 Python 改写 DeepSeek 的分析正文。任务部分失败时，系统保留已经完成的有效模块，并明确标记未完成内容。
 
+### 两个专业 Skill 的设计
+
+本项目没有把银行授信经验只写成一段宽泛的 Prompt，而是将其拆成可以执行、校验和测试的研究方法：
+
+`银行业务经验 → 检查对象与顺序 → 数据口径与触发规则 → Python 确定性计算和校验 → 异常与资料缺口处理 → DeepSeek 分析和写作`
+
+Skill 本身不是独立 Agent，也不会自行联网、计算或触发任务。DeepSeek 主 Agent 发起相应的 Function Calling 后，Python Runtime 才会从白名单中校验并加载 Skill，再执行与其绑定的 Python Tool；工具结果返回主 Agent 后，由 DeepSeek 继续分析和撰写报告。
+
+1. **`ownership-structure`：把股权核查经验转化为可验证的绘图流程**
+
+   银行授信中的股权研究不能只摘录股东名单，还需要核对主体、披露时点、持股口径和关系类型，并区分股权、表决权、一致行动及实际控制关系。该 Skill 将这些经验拆成主体与基准日核验、重要股东逐层穿透、小股东展示聚合、逐个被持股主体的比例完整性校验、正式出图条件及资料缺口处理。比例计算和绘图由 Python 确定性执行；在完整研究模式中，只有通过规则生成的股权图会被插入报告，资料不足或绘图失败不会阻断其他章节。
+
+2. **`financial-analysis`：把授信财务分析经验转化为结构化分析步骤**
+
+   银行财务分析的重点不是罗列报表数字，而是回答“发生了什么变化、为什么变化、解释是否合理、可能带来什么风险、还需要核实什么”。该 Skill 将这一经验固化为“金额 → 变化额及比例 → 原因及证据 → 跨指标合理性判断 → 授信关注点与尽调问题”的分析链条。Python 负责核对合并口径、期间、币种和单位，计算同比与财务比率，并按照重大变化和异常信号筛选重点科目；DeepSeek 基于这些结构化结果及可获得的附注资料完成关联分析和自然语言写作，未经确认的原因必须保留审慎表述。
+
+详细的触发条件、业务规则、数据模型、异常边界和验收标准见 [`ownership-structure/SKILL.md`](.agents/skills/ownership-structure/SKILL.md) 与 [`financial-analysis/SKILL.md`](.agents/skills/financial-analysis/SKILL.md)。
+
 完整说明见 [架构文档](docs/ARCHITECTURE.md)，版本演进见 [ROADMAP](ROADMAP.md)。
 
 ## 报告结构
