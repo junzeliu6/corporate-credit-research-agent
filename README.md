@@ -1,8 +1,228 @@
 # 企业授信研究Agent
 
-企业授信研究Agent（Corporate Credit Research Agent）是一个面向银行对公场景的学习型项目：从上市公司公开披露出发，逐步构建可追溯的企业研究辅助 Agent。
+企业授信研究Agent（Corporate Credit Research Agent）是一个面向银行对公授信研究场景的个人学习项目。用户输入受支持的 A 股上市公司代码后，系统从公开披露资料出发，准备年报和外部资料，调用两个专业 Skill 与 Python Tools，并由 DeepSeek 撰写企业授信研究报告初稿。
 
-当前代码版本已完成 **V3.3A—D 的离线实现**：沪深A股动态主体识别、官方年报准备、通用基本面/股权/财务提取，以及既有双Skill、完整Agent和Streamlit的自动资料准备链路；需求基线为 **v5**。V3.1/V3.2的任务管理、报告展示和Word导出继续复用。V3.3E目前已完成九州通和工业富联两家新企业网页Live：九州通正常交付六章报告；工业富联的DeepSeek首个JSON已包含六章和16项尽调问题，但尾随自我修正伪JSON导致原在线交付失败，现已离线恢复Markdown/Word并修复生产解析器。工业富联部分股权与财务提取仍为部分成功，独立盲测、北交所及更多公司版式尚未验证。当前可准确声明的是“沪深A股非金融企业通用接入架构已实现并通过两家新企业Live验证”，不能表述为所有A股均已兼容。Live调用仍需用户在网页中分别确认DeepSeek与百度搜索，CLI/Runtime保留第二层门禁。本项目不是授信审批系统，不给出授信额度、贷款定价或具有审批效力的结论。
+> 本项目只处理公开资料，不接入银行内部数据、征信或客户保密信息。报告属于 AI 研究初稿，必须由授信人员人工复核，不构成授信审批意见、额度建议或贷款定价依据。
+
+## MVP 状态
+
+- 已实现沪深 A 股非金融上市公司的动态主体识别、年度报告发现、下载、PDF 解析和任务级来源登记。
+- 已实现企业基本面、主要股东披露、合并财务报表的通用提取，并复用 `ownership-structure` 与 `financial-analysis` 两个 Skill。
+- 已接入 DeepSeek Agent Loop、百度搜索、网页/PDF 原文获取、工具预算、执行轨迹和部分成功机制。
+- 已实现 Streamlit 本地网页、历史任务恢复、Markdown 展示和 Word 导出。
+- 正式报告的专业分析正文由 DeepSeek 生成；Python 负责资料获取、数据结构化、确定性计算、图表和 Markdown/DOCX 组装，不使用固定模板替写模型正文。
+- 当前开发机在具备本地集成产物时完整回归为 `483 passed`；按发布索引创建的干净副本为 `471 passed, 12 skipped`，跳过项均需要未提交的真实年报/PDF 或历史任务产物。真实 Live 已覆盖以岭药业、九州通和工业富联，但覆盖范围仍不足以宣称所有沪深公司均已兼容。
+
+## 演示材料
+
+### 真实 Live 示例
+
+- [以岭药业完整授信研究报告](examples/live/yiling-002603-20261028/credit_research_report.md)
+- [示例说明](examples/live/yiling-002603-20261028/README.md)
+- [股权结构图 PNG](examples/live/yiling-002603-20261028/assets/ownership_structure.png)
+
+![以岭药业股权结构图](examples/live/yiling-002603-20261028/assets/ownership_structure.png)
+
+该示例来自 2026-10-28 的一次真实 DeepSeek + 百度搜索 Live 任务，已经人工检查报告展示和股权图。报告仍然是公开资料驱动的 AI 初稿，不应直接用于授信审批。
+
+### 无密钥 Mock 示例
+
+- [完整研究 Mock 报告](examples/v2_5_complete_mock/CN-A-SZSE-002603/credit_research_report.md)
+
+Mock 示例只验证 Agent 编排、双 Skill 调用、报告文件和界面展示，不代表真实模型研究质量，也不等同于 Live 验收。
+
+## 当前能力
+
+1. **企业和资料准备**：接受标准沪深 A 股代码，核验公司身份，发现最新年度报告全文和可比年度资料，下载后复核主体、代码、年度、PDF 文件头与 SHA-256。
+2. **企业基本面研究**：提取企业历史、主营业务、经营模式和主要产品；DeepSeek 结合可信资料撰写成立背景、改制/上市、重大里程碑、业务演变、行业定位、产业链位置及上下游角色。
+3. **股权结构图**：`ownership-structure` Skill 在后台指导股东披露校验、比例完整性判断和绘图。完整研究模式下，主模型只接收绘图状态，不接收股东名称、比例或控制关系用于常规文字分析；有有效图片时插入图和中性图注，无图时跳过且不阻断其他章节。单项股权研究仍可保留后台结构化结果和核验说明。
+4. **财务分析**：Python 从合并三张主表提取数据、处理单位/币种/空值/重述并计算指标；DeepSeek 依据数据和可获得附注撰写跨指标分析、风险与尽调问题，Python 不用模板替换正文。
+5. **行业、政策与外部资料**：DeepSeek 决定检索方向；百度搜索返回网页候选；Python 负责安全获取、缓存、正文提取和来源登记。搜索摘要不能直接作为已核验事实。
+6. **产品界面与导出**：Streamlit 提供任务输入、双 Live 确认、后台进度、历史报告、股权图、财务表和 Markdown/Word 下载。
+
+## 架构与职责分工
+
+```mermaid
+flowchart TD
+    UI[Streamlit / CLI] --> PREP[企业识别与年报准备]
+    PREP --> PDF[PDF解析与通用披露提取]
+    PDF --> OWN[ownership-structure Skill]
+    PDF --> FIN[financial-analysis Skill]
+    UI --> AGENT[DeepSeek 主 Agent]
+    OWN --> AGENT
+    FIN --> AGENT
+    AGENT --> SEARCH[百度 search_web]
+    SEARCH --> FETCH[fetch_source]
+    FETCH --> EVIDENCE[extract_evidence / 来源登记]
+    EVIDENCE --> AGENT
+    AGENT --> DRAFT[六章研究正文]
+    PDF --> REPORT[Python 报告组装]
+    OWN --> REPORT
+    DRAFT --> REPORT
+    REPORT --> MD[Markdown]
+    REPORT --> DOCX[Word]
+    MD --> UI
+```
+
+| 组件 | 主要职责 |
+| --- | --- |
+| DeepSeek 主 Agent | 理解任务、选择工具、组织检索、分析资料并撰写正式报告正文 |
+| SkillRegistry / SkillLoader | 白名单登记、运行时读取并校验两个 `SKILL.md` |
+| `ownership-structure` | 规定股权披露核验和绘图方法；完整报告中不驱动常规股权文字分析 |
+| `financial-analysis` | 规定银行授信视角下的财务分析框架和尽调要求 |
+| Python Tools | 企业识别、年报/PDF/网页获取、结构化提取、计算、校验、缓存、绘图和文件组装 |
+| Streamlit | 用户交互、显式 Live 确认、后台任务状态、报告查看和下载 |
+
+完整说明见 [架构文档](docs/ARCHITECTURE.md)，版本演进见 [ROADMAP](ROADMAP.md)。
+
+## 报告结构
+
+1. 企业基本情况：历史背景、重大事件、业务演变、行业/产业链定位及上下游角色；有有效股权图时插入图片和中性图注。
+2. 经营情况分析：主营业务、主要产品、采购、生产、销售和盈利模式。
+3. 行业环境与政策分析：趋势、竞争、监管政策及潜在影响。
+4. 财务分析：资产负债、收入利润、应收、存货、负债、偿债能力与现金流。
+5. 综合授信风险分析：关联经营、行业政策和财务表现，不给出审批结论或授信额度。
+6. 待补充资料及尽调问题。
+
+## 实际支持范围
+
+| 范围 | 当前状态 |
+| --- | --- |
+| 上交所/深交所 A 股非金融企业 | 通用接入架构已实现；仍需按公司版式逐步扩大验证 |
+| 以岭药业 `002603.SZ` | 完整 Live 成功，已整理公开示例 |
+| 九州通 `600998.SH` | 新企业通用 Live 已交付六章报告 |
+| 工业富联 `601138.SH` | 通用链路已验证；部分复杂股权/财务版式曾降级，原在线交付曾通过保存草稿离线恢复 |
+| 北交所 | 代码可识别，但官方主体全称适配未完成，当前显式拒绝 |
+| 银行、证券、保险 | 特殊财务报表不属于当前非金融财务管线支持范围 |
+| 港股、美股和其他证券品种 | 尚未支持 |
+
+不能把当前状态表述为“任意 A 股均已兼容”。建议在新企业上先检查资料准备、财务科目和股权图状态，再人工复核报告。
+
+## 安装
+
+要求 Python 3.10 或更高版本。建议始终从仓库根目录运行，因为 Agent 会在运行时读取 `.agents/skills/`。Graphviz `dot` 是可选依赖；缺少时项目使用内部树状 SVG/PNG 降级渲染器。
+
+Windows PowerShell：
+
+```powershell
+git clone <YOUR_PRIVATE_REPOSITORY_URL>
+Set-Location corporate-credit-research-agent
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev,ui]"
+```
+
+如果 Windows Python Launcher 未登记 3.11，但命令行中的 `python --version` 已满足 3.10+，可改用 `python -m venv .venv`。
+
+macOS / Linux：
+
+```bash
+git clone <YOUR_PRIVATE_REPOSITORY_URL>
+cd corporate-credit-research-agent
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e '.[dev,ui]'
+```
+
+仓库当前没有依赖锁文件；依赖版本范围以 `pyproject.toml` 为准。
+
+## 无密钥离线使用
+
+```powershell
+python -m pytest -q
+python -m streamlit run streamlit_app.py
+```
+
+未配置密钥时仍可以直接阅读 `examples/live/` 下的已保存报告、在 Streamlit 查看随仓库提供的 Mock 示例、运行离线测试，以及把已保存 Markdown 导出为 Word。
+
+```powershell
+python -m credit_research_agent.cli 002603.SZ `
+  --export-word "examples/live/yiling-002603-20261028/credit_research_report.md" `
+  --word-output "examples/live/yiling-002603-20261028/credit_research_report.docx" `
+  --word-image "examples/live/yiling-002603-20261028/assets/ownership_structure.png"
+```
+
+该导出不会调用 DeepSeek 或百度，生成的 `.docx` 属于本地输出，不要求提交 Git。
+
+## 配置并运行 Live 研究
+
+```powershell
+Copy-Item .env.example .env
+```
+
+在本地 `.env` 中填写：
+
+```dotenv
+DEEPSEEK_API_KEY=your_deepseek_api_key_here
+SEARCH_PROVIDER=baidu
+BAIDU_SEARCH_API_KEY=your_baidu_search_api_key_here
+BAIDU_SEARCH_BASE_URL=https://qianfan.baidubce.com/v2/ai_search/web_search
+BAIDU_SEARCH_AUTH_HEADER=Authorization
+```
+
+`.env` 和 `.streamlit/secrets.toml` 已被 Git 忽略。启动网页后输入标准沪深 A 股代码，选择研究类型，阅读费用提示并分别勾选 DeepSeek 与百度搜索 Live 确认。刷新或关闭页面不会自动重复提交已创建的后台任务。
+
+当前完整网页任务使用 Python 强制预算：最多 70 个 Agent 轮次、60 次总 Function Tool 调用、15 轮/15 次搜索调用/15 次真实搜索请求、20 次网页抓取和 20 次证据提取。预算是本地保护机制，不是供应商账单硬上限。
+
+### 费用说明
+
+- DeepSeek 按实际模型请求和 Token 计费；百度搜索按平台规则和实际请求计费。
+- 一次 Agent 任务通常包含多次模型请求和工具调用，勾选一次 Live 不代表只发送一次模型请求。
+- 项目只记录能够取得的 Token 和搜索调用数，最终费用以供应商控制台为准。
+- 失败后不会自动扩大预算或重复执行付费任务。
+
+## 项目结构
+
+```text
+.
+├─ .agents/skills/
+│  ├─ ownership-structure/SKILL.md
+│  └─ financial-analysis/SKILL.md
+├─ docs/
+│  ├─ ARCHITECTURE.md
+│  └─ GITHUB_RELEASE_PREP.md
+├─ examples/
+│  ├─ live/yiling-002603-20261028/
+│  └─ v2_5_complete_mock/CN-A-SZSE-002603/
+├─ src/credit_research_agent/
+├─ tests/
+├─ .env.example
+├─ pyproject.toml
+├─ ROADMAP.md
+└─ streamlit_app.py
+```
+
+运行必需的静态配置、Mock fixture 和历史 Seeds 位于 `src/credit_research_agent/data/`。根目录 `data/` 用于本地缓存、PDF、网页正文和任务产物，默认不提交 Git。
+
+## 测试与验证边界
+
+- 开发机完整离线回归（含本地、未提交的集成产物）：`483 passed in 23.68s`。
+- 从发布索引复制到独立目录、创建全新 Python 3.11.5 虚拟环境并安装 `.[dev,ui]` 后：`471 passed, 12 skipped in 19.82s`；跳过项只涉及未随 Git 发布的真实 PDF、缓存或历史任务产物。
+- 最新 UI、股权和财务组合回归：`94 passed`。
+- 离线 Mock 测试禁止真实 DeepSeek 和百度请求。
+- Mock 通过只能证明程序路径、预算、容错和文件交付，不证明真实年报版式或模型研究质量。
+- 真实 Live 结果按企业分别记录，不能从三家公司外推到所有上市公司。
+
+## 已知限制
+
+- 官方公告网页使用的内部查询接口不保证长期稳定；项目保存缓存和失败原因，但不绕过验证码或访问限制。
+- 年报表格版式差异可能造成科目缺失或部分成功，缺失值不会被其他公司数据或模型猜测填补。
+- 股权图只使用能够核验的披露关系；资料不足时可能跳过图片。
+- 外部资料可能只有单一来源或无法读取全文，报告会使用审慎措辞并保留资料缺口。
+- 当前没有添加开源许可证；首次发布建议使用 Private 仓库，检查后再决定是否公开及采用何种许可证。
+
+## 安全与合规
+
+- 只使用公开资料，不要把客户资料、银行内部报告、征信、私人流水或未授权文件放入项目目录。
+- 外部网页和 PDF 都是不可信输入，不能修改 Agent 指令或扩大工具权限。
+- URL 获取器拒绝本机、内网、云元数据地址和带凭据 URL。
+- `.env`、虚拟环境、PDF、网页缓存、完整运行日志和本地任务目录由 `.gitignore` 排除。
+- 当前发布审计见 [GitHub 发布检查](docs/GITHUB_RELEASE_PREP.md)。
+
+<details>
+<summary>开发版本记录（展开查看）</summary>
 
 ## V0.1—V0.4 已实现
 
@@ -889,4 +1109,6 @@ V3.3C/D通用基本面、前十大股东及控制关系、非金融范围门禁�
 ## 下一阶段
 
 V3.3A—D已完成“动态主体 → 官方年报 → 通用基本面/股权/财务 → 双Skill → 完整Agent/Streamlit”的离线接入。V3.3E当前为部分完成：九州通和工业富联网页Live均已验证通用路径，工业富联报告已从保存的完整首对象零网络恢复；下一步是使用此前未参与开发的沪深非金融公司盲测，并增量修复工业富联暴露的多行英文股东名称、净利润和经营现金流表格定位问题。北交所及金融企业需单独适配。未经授权不自动调用或重试DeepSeek、百度等付费服务。项目整理仍顺延至V3.4。
+
+</details>
 

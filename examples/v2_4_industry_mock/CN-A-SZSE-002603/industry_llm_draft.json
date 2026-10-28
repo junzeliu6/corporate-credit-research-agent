@@ -1,8 +1,0 @@
-{
-  "schema_version": "2.4.0",
-  "generated_at": "2026-10-23T12:01:50.577938+00:00",
-  "provider": "deepseek",
-  "model": "deepseek-flash",
-  "mode": "mock",
-  "raw_model_output": "{\"report_title\": \"以岭药业行业与政策研究（离线Mock）\", \"sections\": [{\"topic\": \"industry_overview_and_trends\", \"heading\": \"所属行业及发展趋势\", \"analysis_markdown\": \"离线夹具显示研究对象业务涉及创新中药。行业需求、发展阶段与周期判断仍需在真实联网研究中核验。\"}, {\"topic\": \"competition_and_market_position\", \"heading\": \"竞争格局和企业市场地位\", \"analysis_markdown\": \"离线夹具只验证竞争资料的检索和读取流程，未提供可用于确认市场份额或行业排名的数据，因此不作具体排名判断。\"}, {\"topic\": \"policy_and_regulation\", \"heading\": \"行业政策及监管环境\", \"analysis_markdown\": \"离线政策夹具用于验证政策原文、实施时间和适用范围的提取流程；其内容不得替代真实政策核验。一般政策是否适用于公司具体产品仍需逐项确认。\"}, {\"topic\": \"company_impact\", \"heading\": \"行业环境对企业的潜在影响\", \"analysis_markdown\": \"结合本地财务快照，可在真实研究中比较收入、毛利率、存货和经营现金流与行业变化的方向；当前夹具不足以确认具体因果关系。\"}, {\"topic\": \"credit_risks_and_due_diligence\", \"heading\": \"行业相关授信风险\", \"analysis_markdown\": \"需关注产品需求波动、价格与支付政策、质量监管以及竞争加剧对盈利和现金流的潜在影响，具体暴露程度尚未核验。\"}], \"due_diligence_questions\": [{\"question\": \"请说明核心产品适用的医保、集采及价格政策，并提供最新执行口径。\"}, {\"question\": \"请提供主要产品收入、库存和终端销售变化，以核验行业需求与公司财务表现的关系。\"}], \"limitations\": [\"离线Mock仅验证系统编排，不代表真实行业研究结论。\"]}"
-}

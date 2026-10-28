@@ -4,7 +4,7 @@
 
 ## 1. 当前仓库
 
-- 本地仓库：`E:\企业授信研究Agent开发\企业授信研究Agent_Codex启动包_以岭药业_v3\corporate-credit-research-agent`
+- 本地仓库：`<project-root>`
 - Python 包：`corporate-credit-research-agent 0.4.0`；源码包 `credit_research_agent`
 - Python：3.11.5
 - Git：`main`，当前仓库尚无 commit；现有项目文件均显示为 untracked。本轮未执行 reset、clean、checkout、commit 或其他破坏性/改写历史操作。

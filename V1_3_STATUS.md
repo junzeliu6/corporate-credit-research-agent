@@ -192,7 +192,7 @@ src/credit_research_agent/
 | `examples` SVG XML 解析 | 3 个 SVG，0 个失败 |
 | `git diff --check` | 无空白错误；仅提示 Windows 下未来可能发生 LF→CRLF 转换 |
 
-第一次在沙箱外启用 Graphviz 时，pytest 尝试访问系统临时目录 `C:\Users\14233\AppData\Local\Temp\pytest-of-14233`，出现 3 个 setup `PermissionError`（其余 19 项已通过）。将 `--basetemp` 指向已确认可写且原先不存在的独立目录后，22 项全部通过，因此该失败属于测试宿主临时目录权限，不是 V1.2 代码或 Graphviz 功能错误。
+第一次在沙箱外启用 Graphviz 时，pytest 尝试访问系统临时目录 `<system-temp>/pytest-of-user`，出现 3 个 setup `PermissionError`（其余 19 项已通过）。将 `--basetemp` 指向已确认可写且原先不存在的独立目录后，22 项全部通过，因此该失败属于测试宿主临时目录权限，不是 V1.2 代码或 Graphviz 功能错误。
 
 ### 意外关机残留检查
 

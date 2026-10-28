@@ -17,6 +17,8 @@ venv/
 .env
 .env.*
 !.env.example
+.streamlit-runtime/
+.streamlit/secrets.toml
 
 # Build output
 build/
@@ -40,6 +42,10 @@ data/streamlit_runtime/
 data/streamlit_server.*.log
 data/.pytest-tmp*/
 *.pdf
+
+# Historical generated examples remain on the developer machine, while the
+# release commit force-adds only curated demos and required offline fixtures.
+examples/**
 
 # Editors and operating systems
 .idea/
