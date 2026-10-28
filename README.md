@@ -75,24 +75,32 @@ Mock 示例只验证 Agent 编排、双 Skill 调用、报告文件和界面展�
 
 ```mermaid
 flowchart TD
-    UI[Streamlit / CLI] --> PREP[企业识别与年报准备]
-    PREP --> PDF[PDF解析与通用披露提取]
-    PDF --> OWN[ownership-structure Skill]
-    PDF --> FIN[financial-analysis Skill]
-    UI --> AGENT[DeepSeek 主 Agent]
-    OWN --> AGENT
-    FIN --> AGENT
-    AGENT --> SEARCH[百度 search_web]
-    SEARCH --> FETCH[fetch_source]
-    FETCH --> EVIDENCE[extract_evidence / 来源登记]
-    EVIDENCE --> AGENT
-    AGENT --> DRAFT[六章研究正文]
-    PDF --> REPORT[Python 报告组装]
-    OWN --> REPORT
-    DRAFT --> REPORT
+    UI[Streamlit / CLI] --> PREP[企业识别、年报准备与 PDF 解析]
+    PREP --> PLAN[SkillSelector：计划与白名单校验<br/>此处不执行 Skill]
+    PLAN --> CONTEXT[Python 构建结构化 Runtime Context]
+    CONTEXT --> AGENT[DeepSeek 主 Agent / Agent Loop]
+
+    AGENT -->|Function Calling| OWN_FUNC[run_ownership_research]
+    OWN_FUNC --> OWN_SKILL[SkillRuntime：校验并加载<br/>ownership-structure SKILL.md]
+    OWN_SKILL --> OWN_TOOL[股权校验与绘图 Python Tool]
+    OWN_TOOL -->|绘图状态与约束立即返回| AGENT
+
+    AGENT -->|Function Calling| FIN_FUNC[run_financial_research]
+    FIN_FUNC --> FIN_SKILL[SkillRuntime：校验并加载<br/>financial-analysis SKILL.md]
+    FIN_SKILL --> FIN_TOOL[财务提取与计算 Python Tool]
+    FIN_TOOL -->|结构化财务上下文立即返回| AGENT
+
+    AGENT -->|按需逐步、独立调用| RETRIEVAL[通用检索 Function Tools<br/>search_web / fetch_source / extract_evidence]
+    RETRIEVAL -->|每次调用结果立即返回| AGENT
+
+    AGENT --> DRAFT[DeepSeek 撰写六章研究正文]
+    DRAFT --> REPORT[Python 机械组装报告]
+    OWN_TOOL -->|可用股权图| REPORT
+    FIN_TOOL -->|财务表格| REPORT
     REPORT --> MD[Markdown]
-    REPORT --> DOCX[Word]
     MD --> UI
+    MD -.->|按需导出| DOCX[Word]
+    DOCX --> UI
 ```
 
 | 组件 | 主要职责 |
